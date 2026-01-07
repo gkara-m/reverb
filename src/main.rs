@@ -9,11 +9,18 @@ fn main () {
             .expect("open default audio stream");
 
     // Load a sound from a file, using a path relative to Cargo.toml
-    let file = BufReader::new(File::open("sample/sf.flac").unwrap());
+    //let file = BufReader::new(File::open("sample/sf.flac").unwrap());
+    let file_path = "sample/sf.flac";
+    let file = load_file(file_path);
+
     // Note that the playback stops when the sink is dropped
     let sink = rodio::play(&stream_handle.mixer(), file).unwrap();
 
     // The sound plays in a separate audio thread,
     // so we need to keep the main thread alive while it's playing.
     std::thread::sleep(std::time::Duration::from_secs(5));
+}
+
+fn load_file(file_path: &str) -> BufReader<File> {
+    BufReader::new(File::open(file_path).unwrap())
 }
