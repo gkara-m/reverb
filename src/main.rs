@@ -1,39 +1,34 @@
-// use std::fs::File;
-// use std::io::BufReader;
-// use rodio::{Decoder, OutputStream, source::Source, Sink};
-use std::mem;
+use crate::external::{external::External, local};
 
 mod external;
-// use external::*;
+mod internal;
 
 fn main () {
-    // Get an output stream handle to the default physical sound device.
-    // Note that the playback stops when the stream_handle is dropped.
-    let stream_handle = rodio::OutputStreamBuilder::open_default_stream()
-            .expect("open default audio stream");
+    let file_path = "sample/sf.mp3";
+    let mut local = external::local::Local::new();
 
-    // Load a sound from a file, using a path relative to Cargo.toml
-    //let file = BufReader::new(File::open("sample/sf.flac").unwrap());
-    let file_path = "sample/sf.flac";
-    let file = external::local::load_file(file_path);
+    let song_struct = internal::song::Song {
+        song_type: external::external::ExternalType::LOCAL(
+            local::LocalSong::new(file_path)
+        ),
+        title: String::from("SF"),
+        artist: String::from("artist??"),
+    };
 
-    // Note that the playback stops when the sink is dropped
-    // let sink = rodio::play(&stream_handle.mixer(), file).unwrap();
-    let song = external::local::play_file(&stream_handle, file);
+    local.play_song(song_struct);
 
-    // The sound plays in a separate audio thread,
-    // so we need to keep the main thread alive while it's playing.
-    std::thread::sleep(std::time::Duration::from_secs(1));
-
-    song.pause();
 
     std::thread::sleep(std::time::Duration::from_secs(1));
 
-    song.play();
+    local.pause();
 
     std::thread::sleep(std::time::Duration::from_secs(1));
 
-    mem::drop(song);
+    local.play();
+
+    std::thread::sleep(std::time::Duration::from_secs(1));
+
+    local.stop();
 
     std::thread::sleep(std::time::Duration::from_secs(3));
 }
