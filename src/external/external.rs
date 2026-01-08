@@ -1,14 +1,14 @@
-use crate::internal::song;
+use crate::internal::song::Song;
 use crate::external::local::LocalSong;
 
 pub trait External {
-    fn play_song(&mut self, song: song::Song) -> bool;
+    fn play_song(&mut self, song: Song) -> bool;
 
     fn pause(&self) -> bool;
 
     fn play(&self) -> bool;
 
-    fn stop(&mut self) -> Option<song::Song>;
+    fn stop(&mut self) -> Option<Song>;
 
     fn new() -> Self;
 }
