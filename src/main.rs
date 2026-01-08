@@ -1,9 +1,12 @@
 // use std::fs::File;
 // use std::io::BufReader;
 // use rodio::{Decoder, OutputStream, source::Source, Sink};
-use std::mem;
+// use std::mem;
+use ui::cli;
+
 
 mod external;
+mod ui;
 // use external::*;
 
 fn main () {
@@ -19,21 +22,12 @@ fn main () {
 
     // Note that the playback stops when the sink is dropped
     // let sink = rodio::play(&stream_handle.mixer(), file).unwrap();
-    let song = external::local::play_file(&stream_handle, file);
+    let mut song = external::local::play_file(&stream_handle, file);
 
     // The sound plays in a separate audio thread,
     // so we need to keep the main thread alive while it's playing.
-    std::thread::sleep(std::time::Duration::from_secs(1));
+    // std::thread::sleep(std::time::Duration::from_secs(10));
 
-    song.pause();
+    cli::run_cli(&mut song, &stream_handle);
 
-    std::thread::sleep(std::time::Duration::from_secs(1));
-
-    song.play();
-
-    std::thread::sleep(std::time::Duration::from_secs(1));
-
-    mem::drop(song);
-
-    std::thread::sleep(std::time::Duration::from_secs(3));
 }
