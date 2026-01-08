@@ -8,7 +8,7 @@ pub trait External {
 
     fn play(&self) -> bool;
 
-    fn stop(&self) -> Option<song::Song>;
+    fn stop(&mut self) -> Option<song::Song>;
 
     fn new() -> Self;
 }

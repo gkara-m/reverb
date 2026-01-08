@@ -11,31 +11,26 @@ pub struct Local{
 }
 
 pub(crate) struct LocalSong {
-    curr_song_path : String,
-    playing: Playing,
+    song_path : String,
+    sink: Option<Sink>,
 }
 
 impl LocalSong {
     pub fn new(song_path: &str) -> Self {
         LocalSong {
-            curr_song_path: song_path.to_string(),
-            playing: Playing::Stopped,
+            song_path: song_path.to_string(),
+            sink: None,
         }
     }
 }
 
-pub enum Playing {
-    Playing(Sink),
-    Paused(Sink),
-    Stopped,
-}
 
 impl external::External for Local {
     fn play_song(&mut self, mut song: song::Song) -> bool {
         if let external::ExternalType::LOCAL(ref mut local_song) = song.song_type {
-            let file = load_file(&local_song.curr_song_path);
+            let file = load_file(&local_song.song_path);
             let sink = play_file(&self.output_stream, file);
-            local_song.playing = Playing::Playing(sink);
+            local_song.sink = Some(sink);
 
             self.current_song = Some(song);
             true
@@ -45,17 +40,38 @@ impl external::External for Local {
     }
 
     fn pause(&self) -> bool {
-        // Implementation here
-        true
+        if let Some(ref song) = self.current_song {
+            if let external::ExternalType::LOCAL(ref local_song) = song.song_type {
+                if let Some(ref sink) = local_song.sink {
+                    sink.pause();
+                    return true;
+                }
+            }
+        }
+        false
     }
 
     fn play(&self) -> bool {
-        // Implementation here
-        true
+        if let Some(ref song) = self.current_song {
+            if let external::ExternalType::LOCAL(ref local_song) = song.song_type {
+                if let Some(ref sink) = local_song.sink {
+                    sink.play();
+                    return true;
+                }
+            }
+        }
+        false
     }
 
-    fn stop(&self) -> Option<song::Song> {
-        // Implementation here
+    fn stop(&mut self) -> Option<song::Song> {
+        if let Some(ref mut song) = self.current_song {
+            if let external::ExternalType::LOCAL(ref mut local_song) = song.song_type {
+                if let Some(sink) = local_song.sink.take() {
+                    std::mem::drop(sink);
+                    return self.current_song.take();
+                }
+            }
+        }
         None
     }
 
