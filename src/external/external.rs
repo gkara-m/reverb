@@ -16,8 +16,3 @@ pub enum ExternalSongType {
     LOCAL(LocalSong),
     YOUTUBE(String),
 }
-
-pub enum ExternalType {
-    LOCAL(Local),
-    YOUTUBE,
-}
