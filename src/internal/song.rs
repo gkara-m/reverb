@@ -1,7 +1,7 @@
-use crate::external::external::ExternalType;
+use crate::external::external::ExternalSongType;
 
 pub struct Song {
-    pub song_type: ExternalType,
+    pub song_type: ExternalSongType,
     pub title: String,
     pub artist: String,
 }

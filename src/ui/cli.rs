@@ -1,5 +1,5 @@
 use std::io::{self, BufRead};
-use crate::{external::{external::{External, ExternalType::LOCAL}, local::{self, Local}}, internal::song::Song};
+use crate::{external::{external::{External, ExternalSongType::LOCAL}, local::{self, Local}}, internal::song::Song};
 
 pub fn get_input() -> String {
     let stdin = io::stdin();
@@ -23,7 +23,7 @@ pub fn get_input() -> String {
         "play" => {local.play();}
         "pause" => {local.pause();}
         "play-new" => {
-            local.play_song(&Song {
+            local.play_new(&Song {
                 song_type: LOCAL(
                     local::LocalSong::new("sample/sf.mp3")
                 ),

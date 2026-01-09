@@ -1,19 +1,23 @@
 use crate::internal::song::Song;
-use crate::external::local::LocalSong;
+use crate::external::local::{Local, LocalSong};
 
 pub trait External {
-    fn play_song(&mut self, song: &Song) -> bool;
+    fn play_new(&self, song: &Song) -> bool;
 
     fn pause(&self) -> bool;
 
     fn play(&self) -> bool;
 
-    fn stop(&mut self) -> bool;
+    fn stop(&self) -> bool;
 
-    fn new() -> Self;
+}
+
+pub enum ExternalSongType {
+    LOCAL(LocalSong),
+    YOUTUBE(String),
 }
 
 pub enum ExternalType {
-    LOCAL(LocalSong),
-    OTHER,
+    LOCAL(Local),
+    YOUTUBE,
 }
