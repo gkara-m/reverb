@@ -1,5 +1,5 @@
 use std::io::{self, BufRead};
-use crate::{external::{external::{External, ExternalSong::LOCAL}, local::{self, Local}}, internal::{internal::Internal, song::Song}};
+use crate::{external::{external::{ExternalSong::LOCAL}, local}, internal::{internal::Internal, song::Song}};
 
 pub fn get_input() -> String {
     let stdin = io::stdin();

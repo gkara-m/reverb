@@ -1,6 +1,6 @@
 use std::fs::File;
 use std::io::BufReader;
-use rodio::{Decoder, OutputStream, source::Source, Sink, OutputStreamBuilder};
+use rodio::{Decoder, OutputStream, Sink, OutputStreamBuilder};
 
 use crate::external::{external::{self, External, ExternalSong::LOCAL}};
 use crate::internal::song::Song;
