@@ -58,7 +58,7 @@ impl ExternalSong {
     }
 }
 
-pub fn get_new_external_type_from_song(song: &Song) -> ExternalType {
+pub fn get_new_external_from_song(song: &Song) -> ExternalType {
     match &song.song_type {
         ExternalSong::LOCAL(_) => ExternalType::LOCAL(Local::new(song)),
         ExternalSong::YOUTUBE(_) => todo!(),

@@ -11,7 +11,7 @@ impl  Internal {
 
     pub fn new(song: Song) -> Self {
         Internal {
-            current_external: external::get_new_external_type_from_song(&song),
+            current_external: external::get_new_external_from_song(&song),
             current_song: song,
         }
     }
@@ -27,7 +27,7 @@ impl  Internal {
     pub fn play_new(&mut self, song :Song) -> bool {
         self.stop();
         if !song.song_type.same_type(&self.current_external) {
-            self.current_external = external::get_new_external_type_from_song(&song);
+            self.current_external = external::get_new_external_from_song(&song);
         }
         self.current_song = song;
         self.current_external.play_new(&self.current_song)
