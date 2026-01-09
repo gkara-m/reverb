@@ -1,13 +1,23 @@
 use ui::cli;
-use external::local;
+use internal::internal::Internal;
 
 mod external;
 mod ui;
 mod internal;
 
 fn main () {
-    let mut local = local::new();
 
-    cli::run_cli(&mut local);
+    let default_song = internal::song::Song {
+        song_type: external::external::ExternalSong::LOCAL(
+            external::local::LocalSong::new("sample/sf.mp3")
+        ),
+        title: String::from("SF"),
+        artist: String::from("artist??"),
+    };
+
+
+    let mut internal = Internal::new(default_song);
+
+    cli::run_cli(&mut internal);
 
 }

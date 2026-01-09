@@ -1,5 +1,5 @@
 use std::io::{self, BufRead};
-use crate::{external::{external::{External, ExternalSongType::LOCAL}, local::{self, Local}}, internal::song::Song};
+use crate::{external::{external::{External, ExternalSong::LOCAL}, local::{self, Local}}, internal::{internal::Internal, song::Song}};
 
 pub fn get_input() -> String {
     let stdin = io::stdin();
@@ -18,12 +18,12 @@ pub fn get_input() -> String {
 }
 
     
-    fn run_command(input: String, local: &mut Local) {
+    fn run_command(input: String, internal: &mut Internal) {
         match input.trim() {
-        "play" => {local.play();}
-        "pause" => {local.pause();}
+        "play" => {internal.play();}
+        "pause" => {internal.pause();}
         "play-new" => {
-            local.play_new(&Song {
+            internal.play_new(Song {
                 song_type: LOCAL(
                     local::LocalSong::new("sample/sf.mp3")
                 ),
@@ -31,7 +31,7 @@ pub fn get_input() -> String {
                 artist: String::from("artist??"),
             });
         }
-        "stop" => {local.stop();}
+        // "stop" => {internal.stop();}
         "help" | "h" => {println!("Placeholder help message")}
         "quit" | "q" | ":q" => {println!("Not implemented yet")}
         _ => {
@@ -44,12 +44,12 @@ pub fn get_input() -> String {
     }
 }
 
-pub fn run_cli(local: &mut Local) {
+pub fn run_cli(internal: &mut Internal) {
     println!("Please enter command or type 'help' for help.");
 
     loop {
         let input = get_input();
         if input.is_empty() {continue;}
-        run_command(input, local);
+        run_command(input, internal);
     }
 }
