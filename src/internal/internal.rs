@@ -1,9 +1,10 @@
-use crate::{external::{external::{self, External, ExternalType}}, internal::song::Song};
+use crate::{external::external::{self, External, ExternalType}, internal::song::{self, Song}};
+use std::collections::VecDeque;
 
 
 pub struct Internal{
     current_external: ExternalType,
-    current_song: Song,
+    queue: VecDeque<Song>,
 }
 
 
@@ -12,7 +13,7 @@ impl  Internal {
     pub fn new(song: Song) -> Self {
         Internal {
             current_external: external::get_new_external_from_song(&song),
-            current_song: song,
+            queue: VecDeque::from([song]),
         }
     }
 
@@ -29,12 +30,18 @@ impl  Internal {
         if !song.song_type.same_type(&self.current_external) {
             self.current_external = external::get_new_external_from_song(&song);
         }
-        self.current_song = song;
-        self.current_external.play_new(&self.current_song)
+        self.queue[0] = song;
+        self.current_external.play_new(&self.queue[0])
     }
 
     fn stop(&self) -> bool {
         self.current_external.stop()
     }
+
+    pub fn queue_add(&mut self, song: Song) -> () {}
+
+    pub fn queue_remove(&mut self, song: Song) -> () {}
+
+    pub fn queue_next(&mut self, song: Song) -> () {}
 
 }
