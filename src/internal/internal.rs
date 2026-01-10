@@ -1,9 +1,9 @@
-use crate::{external::external::{self, External, ExternalType}, internal::song::{self, Song}};
+use crate::{external::{external::{self, External, ExternalRun}}, internal::song::Song};
 use std::collections::VecDeque;
 
 
 pub struct Internal{
-    current_external: ExternalType,
+    current_external: ExternalRun,
     queue: VecDeque<Song>,
 }
 
