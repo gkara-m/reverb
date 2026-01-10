@@ -35,7 +35,8 @@ pub fn get_input() -> String {
         "quit" | "q" | ":q" => {true}
         "queue-add" => {println!("Not Implemented"); false}
         "queue-remove" => {println!("Not Implemented"); false}
-        "queue" | "queue-list" => {println!("Not Implemented"); false}
+        "queue" | "queue-list" => {internal.queue_list(); false}
+        "queue-next" | "skip" => {internal.queue_next(); false}
         _ => {println!("Invalid input: {input}");false}
     }
 }
