@@ -19,18 +19,6 @@ pub fn get_input() -> String {
     
     fn run_command(input: String, internal: &mut Internal) -> bool {
         match input.trim().split_once(" ") {
-        // "play-new" => {
-        //     internal.play_new(Song {
-        //         song_type: LOCAL(
-        //             local::LocalSong::new("sample/sf.mp3")
-        //         ),
-        //         title: String::from("SF"),
-        //         artist: String::from("artist??"),
-        //     });
-        //     false
-        // }
-        // "queue-add" => {println!("Not Implemented"); false}
-        // "queue-remove" => {println!("Not Implemented"); false}
         Some((command, param)) => {command_check_composite(command, param, internal)}
         None => {command_check_single(input.trim(), internal)}
     }
@@ -54,7 +42,7 @@ fn command_check_single(command: &str, internal: &mut Internal) -> bool {
         "help" => {println!("Placeholder help message"); false}
         "quit" | "q" | ":q" => {true}
         "queue" => {internal.queue_list(); false}
-        "skip" => {internal.queue_next(); false}
+        "skip" | "next" => {internal.queue_next(); false}
         _ => {println!("Invalid Input"); false}
     }
 }
@@ -66,7 +54,12 @@ fn command_check_composite(command: &str, param: &str, internal: &mut Internal) 
             return false
         }
         "queue-add" => {
-            
+            internal.queue_add(local_song_from_str(param));
+            return false
+        }
+        "queue-remove" => {
+            internal.queue_remove(param.parse().expect("Please enter valid song index"));
+            return false
         }
         _ => {println!("Invalid Input");}
     }
