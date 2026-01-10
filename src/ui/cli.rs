@@ -62,9 +62,11 @@ fn command_check_single(command: &str, internal: &mut Internal) -> bool {
 fn command_check_composite(command: &str, param: &str, internal: &mut Internal) -> bool {
     match command {
         "play-new" => {
-            println!("Not Implemented");
             internal.play_new(local_song_from_str(param));
             return false
+        }
+        "queue-add" => {
+            
         }
         _ => {println!("Invalid Input");}
     }
