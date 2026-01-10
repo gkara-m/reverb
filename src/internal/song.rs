@@ -8,7 +8,7 @@ pub struct Song {
 
 impl Song {
     // params format-> ExternalType external-info
-    fn new(params: &str) -> Option<Song> {
+    pub fn new(params: &str) -> Option<Song> {
         if let Some((external_type, external_info)) = params.split_once(' ') {
             if let Some(t) = ExternalType::get_from_str(external_type) {
                 if let Some(external_song) = t.new_external_song(external_info) {

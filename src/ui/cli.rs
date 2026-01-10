@@ -43,30 +43,29 @@ fn command_check_single(command: &str, internal: &mut Internal) -> bool {
         "quit" | "q" | ":q" => {true}
         "queue" => {internal.queue_list(); false}
         "skip" => {internal.queue_next(); false}
-        _ => {println!("Invalid Input"); false}
+        _ => {invalid_input(); false}
     }
 }
 
 fn command_check_composite(command: &str, param: &str, internal: &mut Internal) -> bool {
     match command {
         "play-new" => {
-            internal.play_new(local_song_from_str(param));
-            return false
+            match Song::new(param) {
+                Some(song) => {
+                    internal.play_new(song);
+                    return false
+                },
+                None => {invalid_input(); return false;}
+            }
         }
         "queue-add" => {
             
         }
-        _ => {println!("Invalid Input");}
+        _ => {invalid_input();}
     }
     false
 }
 
-fn local_song_from_str(param: &str) -> Song {
-    Song {
-        song_type: LOCAL(
-            local::LocalSong::new(param)
-        ),
-        title: String::from("Placeholder Song Name"),
-        artist: String::from("Placeholder Artist Name"),
-    }
+fn invalid_input() -> () {
+    println!("Invalid Input");
 }
