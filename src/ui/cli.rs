@@ -19,18 +19,6 @@ pub fn get_input() -> String {
     
     fn run_command(input: String, internal: &mut Internal) -> bool {
         match input.trim().split_once(" ") {
-        // "play-new" => {
-        //     internal.play_new(Song {
-        //         song_type: LOCAL(
-        //             local::LocalSong::new("sample/sf.mp3")
-        //         ),
-        //         title: String::from("SF"),
-        //         artist: String::from("artist??"),
-        //     });
-        //     false
-        // }
-        // "queue-add" => {println!("Not Implemented"); false}
-        // "queue-remove" => {println!("Not Implemented"); false}
         Some((command, param)) => {command_check_composite(command, param, internal)}
         None => {command_check_single(input.trim(), internal)}
     }
