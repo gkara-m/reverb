@@ -1,8 +1,8 @@
-use crate::{external::{external::{self, External, ExternalType}}, internal::song::Song};
+use crate::{external::{external::{self, External, ExternalRun}}, internal::song::Song};
 
 
 pub struct Internal{
-    current_external: ExternalType,
+    current_external: ExternalRun,
     current_song: Song,
 }
 

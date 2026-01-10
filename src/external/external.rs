@@ -12,16 +12,16 @@ pub trait External {
 
 }
 
-impl ExternalType {
+impl ExternalRun {
     pub fn as_external(&self) -> &dyn External {
         match self {
-            ExternalType::LOCAL(local) => local,
-            ExternalType::YOUTUBE() => todo!(),
+            ExternalRun::LOCAL(local) => local,
+            ExternalRun::YOUTUBE(_) => todo!(),
         }
     }
 }
 
-impl External for ExternalType {
+impl External for ExternalRun {
     fn play_new(&self, song: &Song) -> bool {
         self.as_external().play_new(song)
     }
@@ -39,28 +39,61 @@ impl External for ExternalType {
     }
 }
 
-pub enum ExternalType {
-    LOCAL(Local),
-    YOUTUBE(),
+macro_rules! external_types {
+    (
+        $(
+            $backend:ident {
+            Run:  $run:ty,
+            Song: $song:ty $(,)?
+        }
+        ),* $(,)?
+    ) => {
+
+    pub enum ExternalRun {
+        $(
+            $backend($run)
+        ),*
+    }
+
+    pub enum ExternalSong {
+        $(
+            $backend($song)
+        ),*
+    }
+
+    pub enum ExternalType {
+        $(
+            $backend
+        ),*
+    }
+
+    }
 }
-pub enum ExternalSong {
-    LOCAL(LocalSong),
-    YOUTUBE(String),
+
+external_types!{
+    LOCAL{
+        Run: Local,
+        Song: LocalSong
+    },
+    YOUTUBE{
+        Run: (),
+        Song: ()
+    },
 }
 
 impl ExternalSong {
-    pub fn same_type(&self, external_type: &ExternalType) -> bool {
+    pub fn same_type(&self, external_type: &ExternalRun) -> bool {
         match (self, external_type) {
-            (ExternalSong::LOCAL(_), ExternalType::LOCAL(_)) => true,
-            (ExternalSong::YOUTUBE(_), ExternalType::YOUTUBE()) => true,
+            (ExternalSong::LOCAL(_), ExternalRun::LOCAL(_)) => true,
+            (ExternalSong::YOUTUBE(_), ExternalRun::YOUTUBE(_)) => true,
             _ => false,
         }
     }
 }
 
-pub fn get_new_external_from_song(song: &Song) -> ExternalType {
+pub fn get_new_external_from_song(song: &Song) -> ExternalRun {
     match &song.song_type {
-        ExternalSong::LOCAL(_) => ExternalType::LOCAL(Local::new(song)),
+        ExternalSong::LOCAL(_) => ExternalRun::LOCAL(Local::new(song)),
         ExternalSong::YOUTUBE(_) => todo!(),
     }
 }
