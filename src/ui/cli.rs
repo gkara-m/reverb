@@ -16,12 +16,11 @@ pub fn get_input() -> String {
         }
     }
 }
-
     
-    fn run_command(input: String, internal: &mut Internal) {
+    fn run_command(input: String, internal: &mut Internal) -> bool {
         match input.trim() {
-        "play" => {internal.play();}
-        "pause" => {internal.pause();}
+        "play" => {internal.play(); false}
+        "pause" => {internal.pause(); false}
         "play-new" => {
             internal.play_new(Song {
                 song_type: LOCAL(
@@ -30,26 +29,24 @@ pub fn get_input() -> String {
                 title: String::from("SF"),
                 artist: String::from("artist??"),
             });
+            false
         }
-        // "stop" => {internal.stop();}
-        "help" | "h" => {println!("Placeholder help message")}
-        "quit" | "q" | ":q" => {println!("Not implemented yet")}
-        _ => {
-            println!("Invalid input: {input}");
-            // if let Some(("play-new", file_path)) = input.trim().split_once(" ") {
-            //     let file = local::load_file(file_path);
-            //     let mut song = local::play_file(stream_handle, file);
-            
-        }
+        "help" | "h" => {println!("Placeholder help message"); false}
+        "quit" | "q" | ":q" => {true}
+        "queue-add" => {println!("Not Implemented"); false}
+        "queue-remove" => {println!("Not Implemented"); false}
+        "queue" | "queue-list" => {println!("Not Implemented"); false}
+        _ => {println!("Invalid input: {input}");false}
     }
 }
 
 pub fn run_cli(internal: &mut Internal) {
     println!("Please enter command or type 'help' for help.");
 
-    loop {
+    'inputs: loop {
         let input = get_input();
         if input.is_empty() {continue;}
-        run_command(input, internal);
+        let quit = run_command(input, internal);
+        if quit {break 'inputs;};
     }
 }
