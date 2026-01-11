@@ -10,6 +10,7 @@ fn main () {
     let default_song = internal::song::Song {
         song_type: external::external::ExternalSong::LOCAL(
             external::local::LocalSong::new("sample/sf.mp3")
+            .expect("Failed to find default sample/sf.mp3 file")
         ),
         title: String::from("SF"),
         artist: String::from("artist??"),

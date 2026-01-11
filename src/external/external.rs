@@ -83,7 +83,7 @@ macro_rules! make_external_types {
         pub fn new_external_song(&self, string: &str) -> Option<ExternalSong> {
             match self {
                 $(
-                    ExternalType::$backend => Some(ExternalSong::$backend($song_new(string))),
+                    ExternalType::$backend => $song_new(string).map(ExternalSong::$backend),
                 )*
             }
         }
@@ -102,7 +102,7 @@ make_external_types!{
     YOUTUBE{
         Run: (),
         Song: (),
-        SongNew: |_: &str| (),
+        SongNew: |_: &str| Some(()),
         string_name: youtube,
     },
 }

@@ -16,9 +16,14 @@ pub(crate) struct LocalSong {
 }
 
 impl LocalSong {
-    pub fn new(song_path: &str) -> Self {
-        LocalSong {
-            song_path: song_path.to_string(),
+    pub fn new(path_str: &str) -> Option<Self> { // Change return type to Option
+        let path = std::path::Path::new(path_str);
+        
+        if path.exists() {
+            Some(LocalSong { song_path: path_str.to_string() })
+        } else {
+            // This is the "None" that will tell your CLI "Invalid Input"
+            None 
         }
     }
 }
