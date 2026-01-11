@@ -39,12 +39,14 @@ impl External for ExternalRun {
     }
 }
 
-macro_rules! external_types {
+macro_rules! make_external_types {
     (
         $(
             $backend:ident {
             Run:  $run:ty,
-            Song: $song:ty $(,)?
+            Song: $song:ty,
+            SongNew: $song_new:expr,
+            string_name: $name:ident $(,)?
         }
         ),* $(,)?
     ) => {
@@ -67,17 +69,40 @@ macro_rules! external_types {
         ),*
     }
 
+    impl ExternalType {
+        pub fn get_from_str(string: &str) -> Option<ExternalType> {
+            match string {
+                $(
+                    stringify!($name) => Some(ExternalType::$backend),
+                )*
+                _ => None
+            }
+        }
+
+        pub fn new_external_song(&self, string: &str) -> Option<ExternalSong> {
+            match self {
+                $(
+                    ExternalType::$backend => Some(ExternalSong::$backend($song_new(string))),
+                )*
+            }
+        }
+    }
+
     }
 }
 
-external_types!{
+make_external_types!{
     LOCAL{
         Run: Local,
-        Song: LocalSong
+        Song: LocalSong,
+        SongNew: LocalSong::new,
+        string_name: local,
     },
     YOUTUBE{
         Run: (),
-        Song: ()
+        Song: (),
+        SongNew: |_: &str| (),
+        string_name: youtube,
     },
 }
 

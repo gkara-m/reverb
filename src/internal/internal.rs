@@ -38,8 +38,9 @@ impl  Internal {
         self.current_external.stop()
     }
 
-    pub fn queue_add(&mut self, song: Song) -> () {
-        self.queue.push_back(song)
+    pub fn queue_add(&mut self, song: Song) -> bool {
+        self.queue.push_back(song);
+        true
     }
 
     pub fn queue_remove(&mut self, song_index: usize) -> bool {
