@@ -10,6 +10,7 @@ pub struct Local{
     sink: Sink,
 }
 
+#[derive(Clone, Debug)]
 pub(crate) struct LocalSong {
     song_path : String,
 }

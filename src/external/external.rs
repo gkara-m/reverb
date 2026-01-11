@@ -57,6 +57,7 @@ macro_rules! make_external_types {
         ),*
     }
 
+    #[derive(Clone, Debug)]
     pub enum ExternalSong {
         $(
             $backend($song)

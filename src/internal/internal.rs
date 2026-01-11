@@ -62,7 +62,7 @@ impl  Internal {
     pub fn queue_next(&mut self) -> bool {
         if self.queue.len() > 1 {
             self.queue.pop_front();
-            if let Some(next_song) = self.queue.pop_front() {
+            if let Some(next_song) = self.queue.front().cloned() {
                 return self.play_new(next_song);
             }
         }

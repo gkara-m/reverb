@@ -1,5 +1,6 @@
 use crate::external::external::{ExternalSong, ExternalType};
 
+#[derive(Clone, Debug)]
 pub struct Song {
     pub song_type: ExternalSong,
     pub title: String,
