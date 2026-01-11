@@ -1,5 +1,5 @@
 use std::io::{self, BufRead};
-use crate::{external::{external::{ExternalSong::LOCAL}, local}, internal::{internal::Internal, song::Song}};
+use crate::{internal::{internal::Internal, song::Song}};
 
 pub fn get_input() -> String {
     let stdin = io::stdin();
@@ -59,7 +59,6 @@ fn command_check_composite(command: &str, param: &str, internal: &mut Internal) 
             match Song::new(param) {
                 Some(song) => {internal.queue_add(song);}
                 None => {invalid_input();}
-                _ => {invalid_input();}
             }
             false
         }

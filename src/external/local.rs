@@ -1,8 +1,9 @@
 use std::fs::File;
 use std::io::BufReader;
+use std::path::Path;
 use rodio::{Decoder, OutputStream, Sink, OutputStreamBuilder};
 
-use crate::external::{external::{self, External, ExternalSong::LOCAL}};
+use crate::external::{external::{External, ExternalSong::LOCAL}};
 use crate::internal::song::Song;
 
 pub struct Local{
@@ -17,7 +18,7 @@ pub(crate) struct LocalSong {
 
 impl LocalSong {
     pub fn new(path_str: &str) -> Option<Self> { // Change return type to Option
-        let path = std::path::Path::new(path_str);
+        let path = Path::new(path_str);
         
         if path.exists() {
             Some(LocalSong { song_path: path_str.to_string() })
