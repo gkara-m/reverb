@@ -1,5 +1,10 @@
-use crate::{external::external::ExternalType, internal::song::Song};
+use std::fs::File;
+use std::io::Write;
 
+use serde::{Deserialize, Serialize};
+
+use crate::{PLAYLIST_FOLDER, external::external::ExternalType, internal::{playlist, song::Song}};
+#[derive(Serialize, Deserialize, Debug)]
 pub(crate) struct Playlist {
     name: String,
     songs: Vec<Song>,
@@ -42,6 +47,24 @@ impl Playlist {
     }
 
     fn move_song(&mut self, from: usize, to: usize) -> bool {
-        todo!()
+        if from >= self.songs.len() || to >= self.songs.len() {
+            false
+        } else {
+            let song = self.songs.remove(from);
+            self.songs.insert(to, song);
+            true
+        }
+    }
+
+    fn save(&self) -> Result<(), Box<dyn std::error::Error>> {
+        let file = File::create(PLAYLIST_FOLDER.to_string() + &self.name + ".json")?;
+        serde_json::to_writer_pretty(file, self)?;
+        Ok(())
+    }
+
+    fn load(name: &str) -> Result<Playlist, Box<dyn std::error::Error>> {
+        let file = File::open(PLAYLIST_FOLDER.to_string() + name + ".json")?;
+        let playlist: Playlist = serde_json::from_reader(file)?;
+        Ok(playlist)
     }
 }

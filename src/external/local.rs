@@ -2,6 +2,7 @@ use std::fs::File;
 use std::io::BufReader;
 use std::path::Path;
 use rodio::{Decoder, OutputStream, Sink, OutputStreamBuilder};
+use serde::{Deserialize, Serialize};
 
 use crate::external::{external::{External, ExternalSong::LOCAL}};
 use crate::internal::song::Song;
@@ -11,19 +12,18 @@ pub struct Local{
     sink: Sink,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub(crate) struct LocalSong {
     song_path : String,
 }
 
 impl LocalSong {
-    pub fn new(path_str: &str) -> Option<Self> { // Change return type to Option
+    pub fn new(path_str: &str) -> Option<Self> {
         let path = Path::new(path_str);
         
         if path.exists() {
             Some(LocalSong { song_path: path_str.to_string() })
         } else {
-            // This is the "None" that will tell your CLI "Invalid Input"
             None 
         }
     }

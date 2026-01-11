@@ -1,3 +1,5 @@
+use serde::{Deserialize, Serialize};
+
 use crate::internal::song::Song;
 use crate::external::local::{Local, LocalSong};
 
@@ -57,13 +59,14 @@ macro_rules! make_external_types {
         ),*
     }
 
-    #[derive(Clone, Debug)]
+    #[derive(Clone, Debug, Serialize, Deserialize)]
     pub enum ExternalSong {
         $(
             $backend($song)
         ),*
     }
 
+    #[derive(Clone, Debug, Serialize, Deserialize)]
     pub enum ExternalType {
         $(
             $backend
@@ -79,7 +82,7 @@ macro_rules! make_external_types {
                 _ => None
             }
         }
-
+        
         pub fn new_external_song(&self, string: &str) -> Option<ExternalSong> {
             match self {
                 $(

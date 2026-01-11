@@ -1,6 +1,8 @@
+use serde::{Deserialize, Serialize};
+
 use crate::external::external::{ExternalSong, ExternalType};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Song {
     pub song_type: ExternalSong,
     pub title: String,
