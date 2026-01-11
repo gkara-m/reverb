@@ -39,11 +39,11 @@ fn command_check_single(command: &str, internal: &mut Internal) -> bool {
     match command {
         "play" => {internal.play(); false}
         "pause" => {internal.pause(); false}
-        "help" => {println!("Placeholder help message"); false}
+        "help" | "h" => {println!("Placeholder help message"); false}
         "quit" | "q" | ":q" => {true}
         "queue" => {internal.queue_list(); false}
         "skip" => {internal.queue_next(); false}
-        _ => {invalid_input(); false}
+        _ => return invalid_input()
     }
 }
 
@@ -51,15 +51,17 @@ fn command_check_composite(command: &str, param: &str, internal: &mut Internal) 
     match command {
         "play-new" => {
             match Song::new(param) {
-                Some(song) => return internal.play_new(song),
+                Some(song) => {internal.play_new(song); return false},
                 None => return invalid_input()
             }
         }
         "queue-add" => {
             match Song::new(param) {
-                Some(song) => return internal.queue_add(song),
-                None => return invalid_input()
+                Some(song) => {internal.queue_add(song);}
+                None => {invalid_input();}
+                _ => {invalid_input();}
             }
+            false
         }
         "queue-remove" => {
             internal.queue_remove(param.parse().expect("Please enter valid song index"));
