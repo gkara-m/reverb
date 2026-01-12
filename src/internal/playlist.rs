@@ -57,7 +57,9 @@ impl Playlist {
     }
 
     pub fn save(&self) -> Result<(), Box<dyn std::error::Error>> {
-        let file = File::create(PLAYLIST_FOLDER.to_string() + &self.name + ".json")?;
+        std::fs::create_dir_all(PLAYLIST_FOLDER)?;
+        let path = format!("{}{}.json", PLAYLIST_FOLDER, self.name);
+        let file = File::create(path)?;
         serde_json::to_writer_pretty(file, self)?;
         Ok(())
     }
