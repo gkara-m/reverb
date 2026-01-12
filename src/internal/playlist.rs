@@ -12,41 +12,41 @@ pub(crate) struct Playlist {
 }
 
 impl Playlist {
-    fn new(name: String, external_type: Option<ExternalType>) -> Playlist {
+    pub fn new(name: &str, external_type: Option<ExternalType>) -> Playlist {
         Playlist {
-            name,
+            name: name.to_string(),
             songs: Vec::new(),
             external_type,
         }
     }
 
-    fn add(&mut self, song: Song) -> bool {
+    pub fn add(&mut self, song: Song) -> bool {
         self.songs.push(song);
         true
     }
 
-    fn remove(&mut self, from: usize) -> bool {
-        if from >= self.songs.len() {
+    pub fn remove(&mut self, index: usize) -> bool {
+        if index >= self.songs.len() {
             false
         } else {
-            self.songs.remove(from);
+            self.songs.remove(index);
             true
         }
     }
 
-    fn get_songs(&self) -> &Vec<Song> {
+    pub fn get_songs(&self) -> &Vec<Song> {
         &self.songs
     }
 
-    fn get_song(&self, index: usize) -> Option<&Song> {
+    pub fn get_song(&self, index: usize) -> Option<&Song> {
         self.songs.get(index)
     }
 
-    fn get_name(&self) -> &String {
+    pub fn get_name(&self) -> &String {
         &self.name
     }
 
-    fn move_song(&mut self, from: usize, to: usize) -> bool {
+    pub fn move_song(&mut self, from: usize, to: usize) -> bool {
         if from >= self.songs.len() || to >= self.songs.len() {
             false
         } else {
@@ -56,13 +56,13 @@ impl Playlist {
         }
     }
 
-    fn save(&self) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn save(&self) -> Result<(), Box<dyn std::error::Error>> {
         let file = File::create(PLAYLIST_FOLDER.to_string() + &self.name + ".json")?;
         serde_json::to_writer_pretty(file, self)?;
         Ok(())
     }
 
-    fn load(name: &str) -> Result<Playlist, Box<dyn std::error::Error>> {
+    pub fn load(name: &str) -> Result<Playlist, Box<dyn std::error::Error>> {
         let file = File::open(PLAYLIST_FOLDER.to_string() + name + ".json")?;
         let playlist: Playlist = serde_json::from_reader(file)?;
         Ok(playlist)

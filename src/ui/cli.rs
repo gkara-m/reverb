@@ -1,5 +1,5 @@
 use std::io::{self, BufRead};
-use crate::{internal::{internal::Internal, song::Song}};
+use crate::{external::external::ExternalType, internal::{internal::Internal, playlist, song::Song}};
 
 pub fn get_input() -> String {
     let stdin = io::stdin();
@@ -37,22 +37,23 @@ pub fn run_cli(internal: &mut Internal) {
 
 fn command_check_single(command: &str, internal: &mut Internal) -> bool {
     match command {
-        "play" => {internal.play(); false}
-        "pause" => {internal.pause(); false}
-        "help" | "h" => {println!("Placeholder help message"); false}
-        "quit" | "q" | ":q" => {true}
-        "queue" => {internal.queue_list(); false}
-        "skip" => {internal.queue_next(); false}
-        _ => return invalid_input()
+        "play" => {internal.play();}
+        "pause" => {internal.pause();}
+        "help" | "h" => {println!("Placeholder help message");}
+        "quit" | "q" | ":q" => {return true;}
+        "queue" => {internal.queue_list();}
+        "skip" => {internal.queue_next();}
+        _ => {invalid_input();}
     }
+    false
 }
 
 fn command_check_composite(command: &str, param: &str, internal: &mut Internal) -> bool {
     match command {
         "play-new" => {
             match Song::new(param) {
-                Some(song) => {internal.play_new(song); return false},
-                None => return invalid_input()
+                Some(song) => {internal.play_new(song);},
+                None => {invalid_input();}
             }
         }
         "queue-add" => {
@@ -60,17 +61,64 @@ fn command_check_composite(command: &str, param: &str, internal: &mut Internal) 
                 Some(song) => {internal.queue_add(song);}
                 None => {invalid_input();}
             }
-            false
         }
         "queue-remove" => {
             internal.queue_remove(param.parse().expect("Please enter valid song index"));
-            return false
         }
-        _ => return invalid_input()
+        "playlist-new" => {
+            match param.split_once(" ") {
+                Some((name, external_type)) => {
+                    match ExternalType::get_from_str(external_type) {
+                        Some(external_type) => {
+                            if !internal.new_playlist(name, Some(external_type)) {
+                                print!("ahhhhh");
+                            }
+                        }
+                        None => {invalid_input();}
+                    }
+                }
+                None => {internal.new_playlist(param, None);}
+            }
+        }
+        "playlist-add" => {
+            match Song::new(param) {
+                Some(song) => {internal.playlist_add(song);}
+                None => {invalid_input();}
+            }
+        }
+        "playlist-remove" => {
+            match param.parse() {
+                Ok(index) => {internal.playlist_remove(index);}
+                Err(_) => {invalid_input();}
+            }
+        }
+        "playlist-load" => {
+            if !internal.load_playlist(param) {
+                print!("ahhhhh");
+            }
+        }
+        "playlist-move" => {
+            match param.split_once(" ") {
+                Some((from_str, to_str)) => {
+                    match (from_str.parse(), to_str.parse()) {
+                        (Ok(from), Ok(to)) => {internal.playlist_move_song(from, to);}
+                        _ => {invalid_input();}
+                    }
+                }
+                None => {invalid_input();}
+            }
+        }
+        "playlist-list" => {
+            let songs = internal.playlist_get_songs();
+            for (index, song) in songs.iter().enumerate() {
+                println!("{}: {} - {}", index, song.artist, song.title);
+            }
+        }
+        _ => {invalid_input();}
     }
+    false
 }
 
-fn invalid_input() -> bool {
+fn invalid_input() {
     println!("Invalid Input");
-    false
 }
