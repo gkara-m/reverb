@@ -4,13 +4,13 @@ use crate::internal::song::Song;
 use crate::external::local::{Local, LocalSong};
 
 pub trait External {
-    fn play_new(&self, song: &Song) -> bool;
+    fn play_new(&self, song: &Song) -> Result<(), String>;
 
-    fn pause(&self) -> bool;
+    fn pause(&self) -> Result<(), String>;
 
-    fn play(&self) -> bool;
+    fn play(&self) -> Result<(), String>;
 
-    fn stop(&self) -> bool;
+    fn stop(&self) -> Result<(), String>;
 
 }
 
@@ -24,19 +24,19 @@ impl ExternalRun {
 }
 
 impl External for ExternalRun {
-    fn play_new(&self, song: &Song) -> bool {
+    fn play_new(&self, song: &Song) -> Result<(), String> {
         self.as_external().play_new(song)
     }
 
-    fn pause(&self) -> bool {
+    fn pause(&self) -> Result<(), String> {
         self.as_external().pause()
     }
 
-    fn play(&self) -> bool {
+    fn play(&self) -> Result<(), String> {
         self.as_external().play()
     }
 
-    fn stop(&self) -> bool {
+    fn stop(&self) -> Result<(), String> {
         self.as_external().stop()
     }
 }
@@ -74,16 +74,16 @@ macro_rules! make_external_types {
     }
 
     impl ExternalType {
-        pub fn get_from_str(string: &str) -> Option<ExternalType> {
+        pub fn get_from_str(string: &str) -> Result<ExternalType, String> {
             match string {
                 $(
-                    stringify!($name) => Some(ExternalType::$backend),
+                    stringify!($name) => Ok(ExternalType::$backend),
                 )*
-                _ => None
+                _ => Err(format!("Unknown external type: {}", string))
             }
         }
         
-        pub fn new_external_song(&self, string: &str) -> Option<ExternalSong> {
+        pub fn new_external_song(&self, string: &str) -> Result<ExternalSong, String> {
             match self {
                 $(
                     ExternalType::$backend => $song_new(string).map(ExternalSong::$backend),
@@ -105,7 +105,7 @@ make_external_types!{
     YOUTUBE{
         Run: (),
         Song: (),
-        SongNew: |_: &str| Some(()),
+        SongNew: |_: &str| Ok(()),
         string_name: youtube,
     },
 }
@@ -120,9 +120,9 @@ impl ExternalSong {
     }
 }
 
-pub fn get_new_external_from_song(song: &Song) -> ExternalRun {
+pub fn get_new_external_from_song(song: &Song) -> Result<ExternalRun, String> {
     match &song.song_type {
-        ExternalSong::LOCAL(_) => ExternalRun::LOCAL(Local::new(song)),
+        ExternalSong::LOCAL(_) => Ok(ExternalRun::LOCAL(Local::new(song)?)),
         ExternalSong::YOUTUBE(_) => todo!(),
     }
 }

@@ -11,18 +11,18 @@ pub struct Song {
 
 impl Song {
     // params format-> ExternalType external-info
-    pub fn new(params: &str) -> Option<Song> {
-        if let Some((external_type, external_info)) = params.split_once(' ') {
-            if let Some(t) = ExternalType::get_from_str(external_type) {
-                if let Some(external_song) = t.new_external_song(external_info) {
-                    return Some(Song {
-                        song_type: external_song,
-                        title: String::from("Unknown Title"),
-                        artist: String::from("Unknown Artist"),
-                    });
-                }
+    pub fn new(params: &str) -> Result<Song, String> {
+        match params.split_once(' ') {
+            Some((external_type, external_info)) => {
+                let t = ExternalType::get_from_str(external_type)?;
+                let external_song = t.new_external_song(external_info)?;
+                Ok(Song {
+                    song_type: external_song,
+                    title: String::from("Unknown Title"),
+                    artist: String::from("Unknown Artist"),
+                })
             }
+            None => Err(format!("invalid song parameters: {}", params)),
         }
-        None
     }
 }

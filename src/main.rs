@@ -22,7 +22,13 @@ fn main () {
     };
 
 
-    let mut internal = Internal::new(default_song);
+    let mut internal = match Internal::new(default_song) {
+        Err(e) => {
+            println!("Failed to initialize internal state: {}", e);
+            return;
+        }
+        Ok(internal) => { internal }
+    };
 
     cli::run_cli(&mut internal);
 

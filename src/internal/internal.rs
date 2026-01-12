@@ -11,113 +11,103 @@ pub struct Internal{
 
 impl  Internal {
 
-    pub fn new(song: Song) -> Self {
-        Internal {
-            current_external: external::get_new_external_from_song(&song),
+    pub fn new(song: Song) -> Result<Self, String> {
+        Ok(Internal {
+            current_external: external::get_new_external_from_song(&song)?,
             current_playlist: Playlist::new("TODO: add playlist name as param", None),
             queue: VecDeque::from([song]),
-        }
+        })
     }
 
-    pub fn play(&self) -> bool {
+    pub fn play(&self) -> Result<(), String> {
         self.current_external.play()
     }
 
-    pub fn pause(&self) -> bool {
+    pub fn pause(&self) -> Result<(), String> {
         self.current_external.pause()
     }
 
-    pub fn play_new(&mut self, song :Song) -> bool {
+    pub fn play_new(&mut self, song :Song) -> Result<(), String> {
         self.stop();
         if !song.song_type.same_type(&self.current_external) {
-            self.current_external = external::get_new_external_from_song(&song);
+            self.current_external = external::get_new_external_from_song(&song)?;
         }
         self.queue[0] = song;
         self.current_external.play_new(&self.queue[0])
     }
 
-    fn stop(&self) -> bool {
+    fn stop(&self) -> Result<(), String> {
         self.current_external.stop()
     }
 }
 
 impl Internal{
-    pub fn load_playlist(&mut self, playlist_name: &str) -> bool {
-        if (self.save_playlist()) == false {
-            return false;
-        }
-        match Playlist::load(playlist_name) {
-            Err(_) => return false,
-            Ok(playlist) => {
-                self.current_playlist = playlist
-                //TODO: load into queue
-            },
-        }
-        true
+    pub fn load_playlist(&mut self, playlist_name: &str) -> Result<(), String> {
+        self.save_playlist()?;
+        let playlist = Playlist::load(playlist_name)?;
+        self.current_playlist = playlist;
+        Ok(())
     }
 
-    fn save_playlist(&self) -> bool {
-        match self.current_playlist.save() {
-            Ok(_) => true,
-            Err(_) => false,
-        }
+    fn save_playlist(&self) -> Result<(), String> {
+        self.current_playlist.save()
     }
 
-    pub fn new_playlist(&mut self, name: &str, external_type: Option<ExternalType>) -> bool{
-        if (self.save_playlist()) == false {
-            return false;
-        }
+    pub fn new_playlist(&mut self, name: &str, external_type: Option<ExternalType>) -> Result<(), String>{
+        self.save_playlist()?;
         self.current_playlist = Playlist::new(name, external_type);
-        true
+        Ok(())
     }
 
-    pub fn playlist_add(&mut self, song: Song) -> bool{
+    pub fn playlist_add(&mut self, song: Song) -> Result<(), String>{
         self.current_playlist.add(song)
     }
 
-    pub fn playlist_remove(&mut self, index: usize) -> bool{
+    pub fn playlist_remove(&mut self, index: usize) -> Result<(), String>{
         self.current_playlist.remove(index)
     }
 
-    pub fn playlist_move_song(&mut self, from: usize, to: usize) -> bool{
+    pub fn playlist_move_song(&mut self, from: usize, to: usize) -> Result<(), String>{
         self.current_playlist.move_song(from, to)
     }
 
-    pub fn playlist_get_songs(&self) -> &Vec<Song>{
+    pub fn playlist_get_songs(&self) -> Result<&Vec<Song>, String>{
         self.current_playlist.get_songs()
     }
 }
 
 impl Internal{
-    pub fn queue_add(&mut self, song: Song) -> bool {
+    pub fn queue_add(&mut self, song: Song) -> Result<(), String> {
         self.queue.push_back(song);
-        true
+        Ok(())
     }
 
-    pub fn queue_remove(&mut self, song_index: usize) -> bool {
-        if self.queue.len() > 1 && song_index > 0 && song_index < self.queue.len() {
-            self.queue.remove(song_index);
-            return true;
-        } 
-        false
+    pub fn queue_remove(&mut self, song_index: usize) -> Result<(), String> {
+        if self.queue.len() <= 1 { return Err(String::from("Cannot remove song from queue: only one song in queue")); }
+        if song_index <= 0 { return Err(String::from("Cannot remove currently playing song from queue")); }
+        if song_index >= self.queue.len() { return Err(format!("Invalid song index (too large): {}", song_index)); }
+        self.queue.remove(song_index);
+        return Ok(());
     }
 
-    pub fn queue_list(&mut self) -> () {
+    pub fn queue_list(&mut self) -> Result<(), String> {
         let mut count = 0;
         for song in &self.queue {
             println!("{count}: {} - {}", song.artist, song.title);
             count += 1;
         }
+        Ok(())
     }
 
-    pub fn queue_next(&mut self) -> bool {
+    pub fn queue_next(&mut self) -> Result<(), String> {
         if self.queue.len() > 1 {
             self.queue.pop_front();
             if let Some(next_song) = self.queue.front().cloned() {
                 return self.play_new(next_song);
             }
+            return Err(String::from("Queue is empty"))
         }
-        false
+        Err(String::from("Queue has only one song or is empty"))
     }
 
 }

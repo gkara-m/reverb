@@ -20,53 +20,72 @@ impl Playlist {
         }
     }
 
-    pub fn add(&mut self, song: Song) -> bool {
+    pub fn add(&mut self, song: Song) -> Result<(), String> {
         self.songs.push(song);
-        true
-    }
-
-    pub fn remove(&mut self, index: usize) -> bool {
-        if index >= self.songs.len() {
-            false
-        } else {
-            self.songs.remove(index);
-            true
-        }
-    }
-
-    pub fn get_songs(&self) -> &Vec<Song> {
-        &self.songs
-    }
-
-    pub fn get_song(&self, index: usize) -> Option<&Song> {
-        self.songs.get(index)
-    }
-
-    pub fn get_name(&self) -> &String {
-        &self.name
-    }
-
-    pub fn move_song(&mut self, from: usize, to: usize) -> bool {
-        if from >= self.songs.len() || to >= self.songs.len() {
-            false
-        } else {
-            let song = self.songs.remove(from);
-            self.songs.insert(to, song);
-            true
-        }
-    }
-
-    pub fn save(&self) -> Result<(), Box<dyn std::error::Error>> {
-        std::fs::create_dir_all(PLAYLIST_FOLDER)?;
-        let path = format!("{}{}.json", PLAYLIST_FOLDER, self.name);
-        let file = File::create(path)?;
-        serde_json::to_writer_pretty(file, self)?;
         Ok(())
     }
 
-    pub fn load(name: &str) -> Result<Playlist, Box<dyn std::error::Error>> {
-        let file = File::open(PLAYLIST_FOLDER.to_string() + name + ".json")?;
-        let playlist: Playlist = serde_json::from_reader(file)?;
-        Ok(playlist)
+    pub fn remove(&mut self, index: usize) -> Result<(), String> {
+        if index >= self.songs.len() {
+            Err(format!("invalid song index: {}", index))
+        } else {
+            self.songs.remove(index);
+            Ok(())
+        }
+    }
+
+    pub fn get_songs(&self) -> Result<&Vec<Song>, String> {
+        Ok(&self.songs)
+    }
+
+    pub fn get_song(&self, index: usize) -> Result<&Song, String> {
+        match self.songs.get(index) {
+            Some(song) => Ok(song),
+            None => Err(format!("invalid song index: {}", index)),
+        }
+    }
+
+    pub fn get_name(&self) -> Result<&String, String> {
+        Ok(&self.name)
+    }
+
+    pub fn move_song(&mut self, from: usize, to: usize) -> Result<(), String> {
+        if from >= self.songs.len() || to >= self.songs.len() {
+            Err(format!("invalid song indices: from {}, to {}", from, to))
+        } else {
+            let song = self.songs.remove(from);
+            self.songs.insert(to, song);
+            Ok(())
+        }
+    }
+
+    pub fn save(&self) -> Result<(), String> {
+        match std::fs::create_dir_all(PLAYLIST_FOLDER) {
+            Err(e) => return Err(format!("Failed to create playlist directory: {}", e)),
+            Ok(_) => {}
+        }
+        let path = format!("{}{}.json", PLAYLIST_FOLDER, self.name);
+        match File::create(path) {
+            Err(e) => return Err(format!("Failed to create playlist file: {}", e)),
+            Ok(file) => {
+                match serde_json::to_writer_pretty(file, self) {
+                    Err(e) => return Err(format!("Failed to write to playlist file: {}", e)),
+                    Ok(_) => {}
+                }
+            }
+        }
+        Ok(())
+    }
+
+    pub fn load(name: &str) -> Result<Playlist, String> {
+        match File::open(PLAYLIST_FOLDER.to_string() + name + ".json") {
+            Err(e) => return Err(format!("Failed to open playlist file: {}", e)),
+            Ok(file) => {
+                match serde_json::from_reader(file) {
+                    Err(e) => return Err(format!("Failed to parse playlist file: {}", e)),
+                    Ok(playlist) => return Ok(playlist),
+                }
+            }
+        }
     }
 }
