@@ -50,20 +50,14 @@ fn command_check_single(command: &str, internal: &mut Internal) -> bool {
 
 fn command_check_composite(command: &str, args: &str, internal: &mut Internal) -> bool {
     match command {
-        "play-new" => {
+        "play new" => {
             match Song::new(args) {
                 Some(song) => {internal.play_new(song);},
                 None => {invalid_input();}
             }
         }
-        "queue-add" => {
-            match Song::new(args) {
-                Some(song) => {internal.queue_add(song);}
-                None => {invalid_input();}
-            }
-        }
-        "queue-remove" => {
-            internal.queue_remove(args.parse().expect("Please enter valid song index"));
+        "queue" => {
+            handle_queue(internal, args);
         }
         "playlist" => {
             handle_playlist(internal, args);
@@ -71,6 +65,21 @@ fn command_check_composite(command: &str, args: &str, internal: &mut Internal) -
         _ => {invalid_input();}
     }
     false
+}
+
+fn handle_queue(internal: &mut Internal, args: &str) {
+    match args {
+        "add" => {
+            match Song::new(args) {
+                Some(song) => {internal.queue_add(song);}
+                None => {invalid_input();}
+            }
+        }
+        "remove" => {
+            internal.queue_remove(args.parse().expect("Please enter valid song index"));
+        }
+        _ => {invalid_input();}
+    }
 }
 
 fn handle_playlist(internal: &mut Internal, args: &str) {
