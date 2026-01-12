@@ -50,10 +50,15 @@ fn command_check_single(command: &str, internal: &mut Internal) -> bool {
 
 fn command_check_composite(command: &str, args: &str, internal: &mut Internal) -> bool {
     match command {
-        "play new" => {
-            match Song::new(args) {
-                Some(song) => {internal.play_new(song);},
-                None => {invalid_input();}
+        "play" => {
+            match args {
+                "new" => {
+                    match Song::new(args) {
+                        Some(song) => {internal.play_new(song);},
+                        None => {invalid_input();}
+                    }
+                }
+                _ => {invalid_input();}
             }
         }
         "queue" => {
