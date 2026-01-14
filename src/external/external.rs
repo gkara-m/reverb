@@ -42,6 +42,43 @@ impl External for ExternalRun {
     }
 }
 
+/*
+    Macro to generate ExternalRun, ExternalSong, and ExternalType enums,
+    as well as implementations to create new ExternalSong and ExternalType instances from strings.
+
+    will expand to something like:
+    pub enum ExternalRun {
+        LOCAL(Local),
+        YOUTUBE(()),
+    }
+    pub enum ExternalSong {
+        LOCAL(LocalSong),
+        YOUTUBE(()),
+    }
+    pub enum ExternalType {
+        LOCAL,
+        YOUTUBE,
+    }
+
+    impl ExternalType {
+        pub fn get_from_str(string: &str) -> Result<ExternalType, String> {
+            match string {
+                "local" => Ok(ExternalType::LOCAL),
+                "youtube" => Ok(ExternalType::YOUTUBE),
+                _ => Err(format!("Unknown external type: {}", string))
+            }
+        }
+        
+        pub fn new_external_song(&self, string: &str) -> Result<ExternalSong, String> {
+            match self {
+                ExternalType::LOCAL => LocalSong::new(string).map(ExternalSong::LOCAL),
+                ExternalType::YOUTUBE => Ok(ExternalSong::YOUTUBE(())),
+            }
+        }
+    }
+*/
+
+
 macro_rules! make_external_types {
     (
         $(
