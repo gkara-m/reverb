@@ -1,11 +1,10 @@
-use crate::{external::external::{self, External, ExternalRun, ExternalType}, internal::{self, playlist::{self, Playlist}, song::Song}};
-use std::collections::VecDeque;
+use crate::{external::external::{self, External, ExternalRun, ExternalType}, internal::{playlist::{Playlist}, queue::Queue, song::Song}};
 
 
 pub struct Internal{
     current_external: ExternalRun,
     current_playlist: Playlist,
-    queue: VecDeque<Song>,
+    queue: Queue,
 }
 
 
@@ -15,7 +14,7 @@ impl  Internal {
         Ok(Internal {
             current_external: external::get_new_external_from_song(&song)?,
             current_playlist: Playlist::new("TODO: add playlist name as param", None),
-            queue: VecDeque::from([song]),
+            queue: Queue::new(song)
         })
     }
 
@@ -32,8 +31,8 @@ impl  Internal {
         if !song.song_type.same_type(&self.current_external) {
             self.current_external = external::get_new_external_from_song(&song)?;
         }
-        self.queue[0] = song;
-        self.current_external.play_new(&self.queue[0])
+        self.queue.queued_songs[0] = song;
+        self.current_external.play_new(&self.queue.queued_songs[0])
     }
 
     fn stop(&self) -> Result<(), String> {
@@ -74,40 +73,32 @@ impl Internal{
     pub fn playlist_get_songs(&self) -> Result<&Vec<Song>, String>{
         self.current_playlist.get_songs()
     }
+
 }
 
 impl Internal{
+
     pub fn queue_add(&mut self, song: Song) -> Result<(), String> {
-        self.queue.push_back(song);
+        self.queue.add(song);
         Ok(())
     }
 
     pub fn queue_remove(&mut self, song_index: usize) -> Result<(), String> {
-        if self.queue.len() <= 1 { return Err(String::from("Cannot remove song from queue: only one song in queue")); }
-        if song_index <= 0 { return Err(String::from("Cannot remove currently playing song from queue")); }
-        if song_index >= self.queue.len() { return Err(format!("Invalid song index (too large): {}", song_index)); }
         self.queue.remove(song_index);
-        return Ok(());
+        Ok(())
     }
 
     pub fn queue_list(&mut self) -> Result<(), String> {
-        let mut count = 0;
-        for song in &self.queue {
-            println!("{count}: {} - {}", song.artist, song.title);
-            count += 1;
-        }
+        self.queue.list();
         Ok(())
     }
 
     pub fn queue_next(&mut self) -> Result<(), String> {
-        if self.queue.len() > 1 {
-            self.queue.pop_front();
-            if let Some(next_song) = self.queue.front().cloned() {
-                return self.play_new(next_song);
-            }
-            return Err(String::from("Queue is empty"))
+        let next_song = self.queue.next()?;
+        if let song = &next_song {
+            self.play_new(next_song);
         }
-        Err(String::from("Queue has only one song or is empty"))
+        Ok(())
     }
 
 }

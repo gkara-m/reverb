@@ -5,11 +5,14 @@ use serde::{Deserialize, Serialize};
 
 use crate::{PLAYLIST_FOLDER, external::external::ExternalType, internal::{playlist, song::Song}};
 #[derive(Serialize, Deserialize, Debug)]
+
+
 pub(crate) struct Playlist {
     name: String,
     songs: Vec<Song>,
     external_type: Option<ExternalType>,
 }
+
 
 impl Playlist {
     pub fn new(name: &str, external_type: Option<ExternalType>) -> Playlist {

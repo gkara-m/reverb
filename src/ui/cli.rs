@@ -1,5 +1,6 @@
-use std::{fmt::format, io::{self, BufRead}};
-use crate::{external::external::ExternalType, internal::{internal::Internal, playlist, song::Song}};
+use std::io::{self, BufRead};
+use crate::{external::external::ExternalType, internal::{internal::Internal, song::Song}};
+
 
 pub fn get_input() -> String {
     let stdin = io::stdin();
@@ -140,7 +141,6 @@ fn handle_playlist(internal: &mut Internal, args: &str) -> Result<bool, String> 
     Ok(false)
 }
                 
-
 fn invalid_input(err_msg: String) {
     println!("{}\n use help for help", err_msg);
 }

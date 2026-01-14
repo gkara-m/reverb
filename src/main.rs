@@ -8,9 +8,8 @@ mod internal;
 
 pub static PLAYLIST_FOLDER: &str = "playlists/";
 
-fn main () {
 
-    
+fn main () {
 
     let default_song = Song {
         song_type: ExternalSong::LOCAL(
