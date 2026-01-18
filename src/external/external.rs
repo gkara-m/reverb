@@ -157,7 +157,7 @@ impl ExternalSong {
     }
 }
 
-pub fn get_new_external_from_song(song: &Song) -> Result<ExternalRun, String> {
+pub fn get_new_external_run_from_song(song: &Song) -> Result<ExternalRun, String> {
     match &song.song_type {
         ExternalSong::LOCAL(_) => Ok(ExternalRun::LOCAL(Local::new(song)?)),
         ExternalSong::YOUTUBE(_) => todo!(),

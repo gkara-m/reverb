@@ -11,10 +11,10 @@ pub struct Internal{
 
 impl  Internal {
 
-    pub fn new(song: Song) -> Result<Self, String> {
+    pub fn new(song: Song, playlist: Playlist) -> Result<Self, String> {
         Ok(Internal {
-            current_external: external::get_new_external_from_song(&song)?,
-            current_playlist: Playlist::new("TODO: add playlist name as param", None),
+            current_external: external::get_new_external_run_from_song(&song)?,
+            current_playlist: playlist,
             queue: VecDeque::from([song]),
         })
     }
@@ -28,9 +28,9 @@ impl  Internal {
     }
 
     pub fn play_new(&mut self, song :Song) -> Result<(), String> {
-        self.stop();
+        self.stop()?;
         if !song.song_type.same_type(&self.current_external) {
-            self.current_external = external::get_new_external_from_song(&song)?;
+            self.current_external = external::get_new_external_run_from_song(&song)?;
         }
         self.queue[0] = song;
         self.current_external.play_new(&self.queue[0])
@@ -55,12 +55,12 @@ impl Internal{
 
     pub fn new_playlist(&mut self, name: &str, external_type: Option<ExternalType>) -> Result<(), String>{
         self.save_playlist()?;
-        self.current_playlist = Playlist::new(name, external_type);
+        self.current_playlist = Playlist::new(name, external_type)?;
         Ok(())
     }
 
     pub fn playlist_add(&mut self, song: Song) -> Result<(), String>{
-        self.current_playlist.add(song)
+        self.current_playlist.add(&song)
     }
 
     pub fn playlist_remove(&mut self, index: usize) -> Result<(), String>{
@@ -109,5 +109,4 @@ impl Internal{
         }
         Err(String::from("Queue has only one song or is empty"))
     }
-
 }

@@ -1,27 +1,33 @@
-use std::fs::File;
+use std::{fs::File, path::PathBuf};
 use std::io::Write;
 
 use serde::{Deserialize, Serialize};
 
-use crate::{PLAYLIST_FOLDER, external::external::ExternalType, internal::{playlist, song::Song}};
+use crate::{DATA_FOLDER, external::external::ExternalType, internal::{playlist, song::Song}};
 #[derive(Serialize, Deserialize, Debug)]
 pub(crate) struct Playlist {
     name: String,
     songs: Vec<Song>,
     external_type: Option<ExternalType>,
+    playlist_folder: PathBuf,
 }
 
 impl Playlist {
-    pub fn new(name: &str, external_type: Option<ExternalType>) -> Playlist {
-        Playlist {
+    pub fn new(name: &str, external_type: Option<ExternalType>) -> Result<Playlist, String> {
+        let dir_str = DATA_FOLDER.get().ok_or("DATA_FOLDER not set".to_string())?;
+        let mut dir = PathBuf::from(dir_str);
+        dir.push("playlists");
+        std::fs::create_dir_all(&dir).map_err(|e| format!("Failed to create playlist directory: {}", e))?;
+        Ok(Playlist {
             name: name.to_string(),
             songs: Vec::new(),
             external_type,
-        }
+            playlist_folder: dir,
+        })
     }
 
-    pub fn add(&mut self, song: Song) -> Result<(), String> {
-        self.songs.push(song);
+    pub fn add(&mut self, song: &Song) -> Result<(), String> {
+        self.songs.push(song.clone());
         Ok(())
     }
 
@@ -60,32 +66,17 @@ impl Playlist {
     }
 
     pub fn save(&self) -> Result<(), String> {
-        match std::fs::create_dir_all(PLAYLIST_FOLDER) {
-            Err(e) => return Err(format!("Failed to create playlist directory: {}", e)),
-            Ok(_) => {}
-        }
-        let path = format!("{}{}.json", PLAYLIST_FOLDER, self.name);
-        match File::create(path) {
-            Err(e) => return Err(format!("Failed to create playlist file: {}", e)),
-            Ok(file) => {
-                match serde_json::to_writer_pretty(file, self) {
-                    Err(e) => return Err(format!("Failed to write to playlist file: {}", e)),
-                    Ok(_) => {}
-                }
-            }
-        }
+        let path  = self.playlist_folder.join(format!("{}.json", &self.name));
+        let file = File::create(path).map_err(|e| format!("Failed to create playlist file: {}", e))?;
+        serde_json::to_writer_pretty(file, self).map_err(|e| format!("Failed to write to playlist file: {}", e))?;
         Ok(())
     }
 
     pub fn load(name: &str) -> Result<Playlist, String> {
-        match File::open(PLAYLIST_FOLDER.to_string() + name + ".json") {
-            Err(e) => return Err(format!("Failed to open playlist file: {}", e)),
-            Ok(file) => {
-                match serde_json::from_reader(file) {
-                    Err(e) => return Err(format!("Failed to parse playlist file: {}", e)),
-                    Ok(playlist) => return Ok(playlist),
-                }
-            }
-        }
+        let dir_str = DATA_FOLDER.get().ok_or("DATA_FOLDER not set".to_string())?;
+        let mut dir = PathBuf::from(dir_str);
+        dir.push("playlists");
+        let file = File::open(dir.join(format!("{}.json", name))).map_err(|e| format!("Failed to open playlist file: {}", e))?;
+        serde_json::from_reader(file).map_err(|e| format!("Failed to parse playlist file: {}", e))
     }
 }
