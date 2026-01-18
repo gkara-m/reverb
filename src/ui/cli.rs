@@ -100,7 +100,7 @@ fn handle_playlist(internal: &mut Internal, args: &str) -> Result<bool, String> 
                 }
                 "remove" => {
                     match args.parse() {
-                        Ok(index) => {internal.playlist_remove(index);}
+                        Ok(index) => {internal.playlist_remove(index)?;}
                         Err(e) => {return Err(format!("Invalid song index: {}", e));}
                     }
                 }

@@ -63,7 +63,7 @@ impl External for Local {
 impl Local {
     fn load_new(&self, song: &Song) -> Result<(), String> {
         if let LOCAL(ref local_song) = song.song_type {
-            self.stop();
+            self.stop()?;
             let decoder = load_decoder(&local_song.song_path);
             self.sink.append(decoder);
             Ok(())

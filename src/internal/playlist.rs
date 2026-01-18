@@ -1,9 +1,8 @@
 use std::{fs::File, path::PathBuf};
-use std::io::Write;
 
 use serde::{Deserialize, Serialize};
 
-use crate::{DATA_FOLDER, external::external::ExternalType, internal::{playlist, song::Song}};
+use crate::{DATA_FOLDER, external::external::ExternalType, internal::song::Song};
 #[derive(Serialize, Deserialize, Debug)]
 
 

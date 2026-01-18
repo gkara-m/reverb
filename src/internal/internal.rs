@@ -42,6 +42,12 @@ impl  Internal {
     pub fn current_song(&self) -> Result<Song, String> {
         self.queue.current_song()
     }
+    
+    pub fn shutdown(&self) -> Result<(), String> {
+        self.current_playlist.save()?;
+        self.current_external.shutdown()?;
+        Ok(())
+    }
 }
 
 impl Internal{
@@ -81,36 +87,28 @@ impl Internal{
     pub fn playlist_get_name(&self) -> Result<&String, String> {
         self.current_playlist.get_name()
     }
-
-    pub fn shutdown(&self) -> Result<(), String> {
-        self.current_playlist.save()?;
-        self.current_external.shutdown()?;
-        Ok(())
-    }
 }
 
 impl Internal{
 
     pub fn queue_add(&mut self, song: Song) -> Result<(), String> {
-        self.queue.add(song);
+        self.queue.add(song)?;
         Ok(())
     }
 
     pub fn queue_remove(&mut self, song_index: usize) -> Result<(), String> {
-        self.queue.remove(song_index);
+        self.queue.remove(song_index)?;
         Ok(())
     }
 
     pub fn queue_list(&mut self) -> Result<(), String> {
-        self.queue.list();
+        self.queue.list()?;
         Ok(())
     }
 
     pub fn queue_next(&mut self) -> Result<(), String> {
         let next_song = self.queue.next()?;
-        if let song = &next_song {
-            self.play_new(next_song);
-        }
+        self.play_new(next_song)?;
         Ok(())
     }
 }
