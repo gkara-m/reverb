@@ -22,7 +22,10 @@ fn main () {
 
 
     let mut internal = match startup() {
-        Ok(i) => i,
+        Ok(i) => {
+            println!("Startup successful!");
+            i
+        }
         Err(e) => {
             eprintln!("Startup error: {}", e);
             return;
@@ -33,7 +36,7 @@ fn main () {
 
     loop {
         match shutdown(&internal) {
-            Ok(_) => {print!("Shutdown successfull \n exiting");
+            Ok(_) => {println!("Shutdown successfull \n exiting");
             break;
         },
             Err(e) => eprintln!("Shutdown error: {} \n trying again press ^C to force exit", e),
@@ -95,20 +98,19 @@ fn startup() -> Result<Internal, String> {
     };
         
 
-
     Ok(Internal::new(startup_data.last_played_song, playlist)?)
 }
 
 fn shutdown (internal: &Internal) -> Result<(), String> {
-    print!("Shutting down... ");
+    println!("Shutting down... ");
 
-    print!("Saving startup data... ");
+    println!("Saving startup data... ");
     StartupData {
         last_played_song: internal.current_song()?,
         last_played_playlist: internal.playlist_get_name()?.clone(),
     }.save()?;
 
-    print!("Shutting down internal... ");
+    println!("Shutting down internal... ");
     internal.shutdown()?;
 
     Ok(())

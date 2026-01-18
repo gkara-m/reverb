@@ -1,5 +1,5 @@
 use std::io::{self, BufRead};
-use crate::{external::external::ExternalType, internal::{internal::Internal, song::Song}};
+use crate::{external::external::ExternalType, internal::{internal::Internal, playlist, song::Song}};
 
 
 pub fn get_input() -> String {
@@ -42,9 +42,25 @@ fn command_check_single(command: &str, internal: &mut Internal) -> Result<bool, 
     match command {
         "play" => {internal.play()?;}
         "pause" => {internal.pause()?;}
-        "help" | "h" => {println!("No help for you! GET GOOD LOOSER");}
+        "help" | "h" => {println!("
+        project is a WIP help may be out of date:
+        avaliliable commands:
+        play (composite): play commands
+        pause: used to pause the current song
+        help: display this help message
+        quit: quit the application
+        skip: skip the current song
+        playlist (composite): manage playlists
+        queue (composite): manage the song queue
+        use \"<command> help\" for more detailed help for composite commands");}
         "quit" | "q" | ":q" => {return Ok(true);}
         "queue" => {internal.queue_list()?;}
+        "playlist" => {
+                    let songs = internal.playlist_get_songs()?;
+                    for (index, song) in songs.iter().enumerate() {
+                        println!("{}: {} - {}", index, song.artist, song.title);
+                    }
+                }
         "skip" => {internal.queue_next()?;}
         _ => {Err(format!("Unknown command: {}", command))?;}
     }
@@ -58,6 +74,12 @@ fn command_check_composite(command: &str, args: &str, internal: &mut Internal) -
                 "new" => {
                     let song = Song::new(args)?;
                     internal.play_new(song)?;
+                }
+                "help" => {
+                    println!("avaliliable play commands:
+                    play: play the current song
+                    play new <song>: play a new song from the given path
+                    play help: display this help message for play commands");
                 }
                 _ => {return Err(format!("Unknown play command: {}", args))}
             }
@@ -75,6 +97,13 @@ fn command_check_composite(command: &str, args: &str, internal: &mut Internal) -
 
 fn handle_queue(internal: &mut Internal, args: &str) -> Result<bool, String> {
     match args {
+        "help" => {
+            println!("avaliliable queue commands:
+            queue: list the current song queue
+            queue add <song_type> <song>: add a song to the queue
+            queue remove <index>: remove a song from the queue at the given index
+            queue help: display this help message for queue commands");
+        }
         "add" => {
             let song = Song::new(args)?;
             internal.queue_add(song)?;
@@ -118,12 +147,6 @@ fn handle_playlist(internal: &mut Internal, args: &str) -> Result<bool, String> 
                         None => {return Err(format!("Invalid input for move command: {}", args));}
                     }
                 }
-                "list" => {
-                    let songs = internal.playlist_get_songs()?;
-                    for (index, song) in songs.iter().enumerate() {
-                        println!("{}: {} - {}", index, song.artist, song.title);
-                    }
-                }
                 "new" => {
                     match args.split_once(" ") {
                         Some((name, external_type)) => {
@@ -141,7 +164,22 @@ fn handle_playlist(internal: &mut Internal, args: &str) -> Result<bool, String> 
                 _ => {return Err(format!("Unknown playlist command: {}", args));}
             }
         }
-        None => {return Err(format!("No playlist command provided"));}
+        None => {
+            match args {
+                "help" => {
+                    println!("avaliliable playlist commands:
+                    playlist: list all songs in the current playlist
+                    playlist new <name> [external_type]: create a new playlist with the given name and optional external type
+                    playlist load <name>: load the playlist with the given name
+                    playlist add <song_type> <song>: add a song to the current playlist
+                    playlist remove <index>: remove a song from the current playlist at the given index
+                    playlist move <from_index> <to_index>: move a song in the current playlist from one index to another
+                    playlist get <index>: list the song at the given index in the current playlist
+                    playlist help: display this help message for playlist commands");
+                }
+                _ => return Err(format!("invalid playlist command provided")),
+            }
+        }
     }
     Ok(false)
 }
