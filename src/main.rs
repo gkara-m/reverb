@@ -1,14 +1,13 @@
 use std::path::Path;
 
-use rodio::play;
 use serde::{Serialize, Deserialize};
 use toml;
 use once_cell::sync::OnceCell;
 use ui::cli;
 use internal::{internal::Internal, song::Song};
-use external::{external::{ExternalSong, ExternalType}, local::LocalSong};
+use external::{external::ExternalSong, local::LocalSong};
 
-use crate::internal::playlist::{self, Playlist};
+use crate::internal::playlist::Playlist;
 
 mod external;
 mod ui;
@@ -69,8 +68,7 @@ fn startup() -> Result<Internal, String> {
     } else {
         std::fs::create_dir_all(data_folder).map_err(|e| format!("Failed to create data folder: {}", e))?;
         startup_data = StartupData::new_default()?;
-        startup_data.save()?;
-        print!("First run?: \n Default startup data created in {} \n no need to restart \n continuing automatically\n enjoy REVERB!", data_folder.display());
+        print!("First run?: \n Default startup data created in {} \n no need to restart, continuing automatically\n enjoy REVERB!", data_folder.display());
     }
 
     // check if last played playlist exists, if not create default
@@ -133,10 +131,12 @@ impl StartupData {
             title: String::from("Default Song"),
             artist: String::from("REVERB"),
         };
-        Ok(StartupData {
+        let startup_data = StartupData {
             last_played_song: song,
             last_played_playlist: "Default Startup Playlist".to_string(),
-        })
+        };
+        startup_data.save()?;
+        Ok(startup_data)
     }
 
     fn save(&self) -> Result<(), String> {
