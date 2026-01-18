@@ -52,7 +52,7 @@ fn startup() -> Result<Internal, String> {
         Err(_) => {
             print!("Config file not found, creating default... ");
             let default = Config::new_default()?;
-            let content = toml::to_string(&default).map_err(|e| format!("Failed to make default config: {}", e))?;
+            toml::to_string(&default).map_err(|e| format!("Failed to make default config: {}", e))?;
             Err(format!("First run?: \n Default config created in {} \n check config and restart \n exiting automatically", CONFIG_FOLDER))
         }
     }?;
