@@ -52,7 +52,9 @@ fn command_check_single(command: &str, internal: &mut Internal) -> Result<bool, 
         skip: skip the current song
         playlist (composite): manage playlists
         queue (composite): manage the song queue
-        use \"<command> help\" for more detailed help for composite commands");}
+        use \"<command> help\" for more detailed help for composite commands
+        source code available at: https://github.com/SixOneFiveZero/reverb
+        ");}
         "quit" | "q" | ":q" => {return Ok(true);}
         "queue" => {internal.queue_list()?;}
         "playlist" => {
