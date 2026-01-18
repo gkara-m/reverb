@@ -133,6 +133,11 @@ fn handle_playlist(internal: &mut Internal, args: &str) -> Result<bool, String> 
                         None => {internal.new_playlist(args, None)?;}
                     }
                 }
+                "get" => {
+                    let index: usize = args.parse().map_err(|_| format!("Invalid song index: {}", args))?;
+                    let song = internal.playlist_get_song(index)?;
+                    println!("{} - {}", song.artist, song.title);
+                }
                 _ => {return Err(format!("Unknown playlist command: {}", args));}
             }
         }
