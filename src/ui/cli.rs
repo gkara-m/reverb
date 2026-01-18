@@ -1,5 +1,5 @@
 use std::io::{self, BufRead};
-use crate::{external::external::ExternalType, internal::{internal::Internal, playlist, song::Song}};
+use crate::{external::external::ExternalType, internal::{internal::Internal, song::Song}};
 
 
 pub fn get_input() -> String {
