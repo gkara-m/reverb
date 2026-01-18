@@ -53,6 +53,11 @@ impl External for Local {
         Ok(())
     }
 
+    fn shutdown(&self) -> Result<(), String> {
+        // nothing to be done
+        Ok(())
+    }
+
 }
 
 impl Local {

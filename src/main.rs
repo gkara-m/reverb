@@ -31,20 +31,33 @@ fn main () {
 
     cli::run_cli(&mut internal);
 
+    loop {
+        match shutdown(&internal) {
+            Ok(_) => {print!("Shutdown successfull \n exiting");
+            break;
+        },
+            Err(e) => eprintln!("Shutdown error: {} \n trying again press ^C to force exit", e),
+        }
+    }
 }
 
 
 fn startup() -> Result<Internal, String> {
+    println!("Starting up... ");
+
     // Check for config file, create default if not exists
+    println!("Reading config... ");
     let content = match std::fs::read_to_string(format!("{}config.toml", CONFIG_FOLDER)) {
         Ok(c) => Ok(c),
         Err(_) => {
+            print!("Config file not found, creating default... ");
             let default = Config::new_default()?;
             let content = toml::to_string(&default).map_err(|e| format!("Failed to make default config: {}", e))?;
             Err(format!("First run?: \n Default config created in {} \n check config and restart \n exiting automatically", CONFIG_FOLDER))
         }
     }?;
 
+    println!("Setting global variables... ");
     //read config
     let config: Config = toml::from_str(&content).map_err(|e| format!("Failed to read config file: {}", e))?;
 
@@ -59,6 +72,7 @@ fn startup() -> Result<Internal, String> {
     let data_folder = Path::new(DATA_FOLDER.get().unwrap());
     
     // if exists, use it if not create and use
+    println!("Loading startup data... ");
     let startup_data ;
     if data_folder.join("startup.toml").exists() {
         startup_data = toml::from_str(
@@ -68,7 +82,7 @@ fn startup() -> Result<Internal, String> {
     } else {
         std::fs::create_dir_all(data_folder).map_err(|e| format!("Failed to create data folder: {}", e))?;
         startup_data = StartupData::new_default()?;
-        print!("First run?: \n Default startup data created in {} \n no need to restart, continuing automatically\n enjoy REVERB!", data_folder.display());
+        println!("First run?: \n Default startup data created in {} \n no need to restart, continuing automatically\n enjoy REVERB!", data_folder.display());
     }
 
     // check if last played playlist exists, if not create default
@@ -76,6 +90,7 @@ fn startup() -> Result<Internal, String> {
     if data_folder.join("playlists").join(format!("{}.json", startup_data.last_played_playlist)).exists() {
         Playlist::load(&startup_data.last_played_playlist)?
     } else {
+        println!("Last played playlist not found, creating default playlist... ");
         Playlist::new("Default Playlist", None)?
     };
         
@@ -84,6 +99,20 @@ fn startup() -> Result<Internal, String> {
     Ok(Internal::new(startup_data.last_played_song, playlist)?)
 }
 
+fn shutdown (internal: &Internal) -> Result<(), String> {
+    print!("Shutting down... ");
+
+    print!("Saving startup data... ");
+    StartupData {
+        last_played_song: internal.current_song()?,
+        last_played_playlist: internal.playlist_get_name()?.clone(),
+    }.save()?;
+
+    print!("Shutting down internal... ");
+    internal.shutdown()?;
+
+    Ok(())
+}
 
 // Config struct represents the config file
 #[derive(Serialize, Deserialize)]

@@ -12,6 +12,7 @@ pub trait External {
 
     fn stop(&self) -> Result<(), String>;
 
+    fn shutdown(&self) -> Result<(), String>;
 }
 
 
@@ -39,6 +40,10 @@ impl External for ExternalRun {
 
     fn stop(&self) -> Result<(), String> {
         self.as_external().stop()
+    }
+
+    fn shutdown(&self) -> Result<(), String> {
+        self.as_external().shutdown()
     }
 }
 

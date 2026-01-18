@@ -43,4 +43,10 @@ impl Queue {
         }
         Err(String::from("Queue has only one song or is empty"))
     }
+
+    pub fn current_song(&self) -> Result<Song, String> {
+        self.queued_songs.get(0)
+            .cloned()
+            .ok_or_else(|| String::from("Queue is empty"))
+    }
 }

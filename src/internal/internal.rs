@@ -38,6 +38,10 @@ impl  Internal {
     fn stop(&self) -> Result<(), String> {
         self.current_external.stop()
     }
+
+    pub fn current_song(&self) -> Result<Song, String> {
+        self.queue.current_song()
+    }
 }
 
 impl Internal{
@@ -74,6 +78,15 @@ impl Internal{
         self.current_playlist.get_songs()
     }
 
+    pub fn playlist_get_name(&self) -> Result<&String, String> {
+        self.current_playlist.get_name()
+    }
+
+    pub fn shutdown(&self) -> Result<(), String> {
+        self.current_playlist.save()?;
+        self.current_external.shutdown()?;
+        Ok(())
+    }
 }
 
 impl Internal{
