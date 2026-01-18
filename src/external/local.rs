@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use crate::external::{external::{External, ExternalSong::LOCAL}};
 use crate::internal::song::Song;
 
+
 pub struct Local{
     output_stream: OutputStream,
     sink: Sink,
@@ -16,6 +17,7 @@ pub struct Local{
 pub(crate) struct LocalSong {
     song_path : String,
 }
+
 
 impl LocalSong {
     pub fn new(path_str: &str) -> Result<Self, String> {
@@ -78,8 +80,6 @@ impl Local {
         Ok(local)
     }
 }
-
-
 
 
 fn load_decoder(file_path: &str) -> Decoder<BufReader<File>> {
