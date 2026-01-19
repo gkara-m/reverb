@@ -1,5 +1,5 @@
 use std::io::{self, BufRead};
-use crate::{external::external::ExternalType, internal::{internal::Internal, song::Song}};
+use crate::{external::external::ExternalType, internal::{internal::Internal, playlist::Playlist, song::Song}};
 
 
 pub fn get_input() -> String {
@@ -99,25 +99,41 @@ fn command_check_composite(command: &str, args: &str, internal: &mut Internal) -
 }
 
 fn handle_queue(internal: &mut Internal, args: &str) -> Result<bool, String> {
-    match args {
-        "help" => {
-            println!("avaliliable queue commands:
-            queue: list the current song queue
-            queue add <song_type> <song>: add a song to the queue
-            queue remove <index>: remove a song from the queue at the given index
-            queue help: display this help message for queue commands");
+    match args.split_once(" ") {
+        Some((action, args)) => {
+            match action {
+                "add" => {
+                    let song = Song::new(args)?;
+                    internal.queue_add(song)?;
+                }
+                "remove" => {
+                    internal.queue_remove(match args.parse() {
+                        Ok(index) => index,
+                        Err(e) => {return Err(format!("Invalid song index: {}", e));}
+                    })?;
+                }
+                "playlist" => {
+                    let playlist = Playlist::load(args)?;
+                    internal.queue_playlist(&playlist)?;
+                }
+                _ => {return Err(format!("Unknown command: queue {} {}", action, args));}
+            }
         }
-        "add" => {
-            let song = Song::new(args)?;
-            internal.queue_add(song)?;
+        None => match args {
+            "help" => {
+                println!("avaliliable queue commands:
+                queue: list the current song queue
+                queue add <song_type> <song>: add a song to the queue
+                queue remove <index>: remove a song from the queue at the given index
+                queue playlist <playlist_name>: add all songs from the given playlist to the queue
+                queue playlist: add all songs from the current playlist to the queue
+                queue help: display this help message for queue commands");
+            }
+            "playlist" => {
+                internal.queue_current_playlist()?;
+            }
+            _ => {return Err(format!("Unknown command: queue {}", args));}
         }
-        "remove" => {
-            internal.queue_remove(match args.parse() {
-                Ok(index) => index,
-                Err(e) => {return Err(format!("Invalid song index: {}", e));}
-            })?;
-        }
-        _ => {return Err(format!("Unknown queue command: {}", args));}
     }
     Ok(false)
 }
@@ -167,7 +183,7 @@ fn handle_playlist(internal: &mut Internal, args: &str) -> Result<bool, String> 
                 "name" => {
                     internal.playlist_set_name(args)?;
                 }
-                _ => {return Err(format!("Unknown playlist command: {}", args));}
+                _ => {return Err(format!("Unknown command: playlist {} {}", action, args));}
             }
         }
         None => {
@@ -188,7 +204,7 @@ fn handle_playlist(internal: &mut Internal, args: &str) -> Result<bool, String> 
                     playlist name <new_name>: set the name of the current playlist
                     playlist help: display this help message for playlist commands");
                 }
-                _ => return Err(format!("invalid playlist command provided")),
+                _ => return Err(format!("Unknown command: playlist {}", args)),
             }
         }
     }

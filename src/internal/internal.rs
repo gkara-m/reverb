@@ -65,19 +65,22 @@ impl Internal{
     pub fn new_playlist(&mut self, name: &str, external_type: Option<ExternalType>) -> Result<(), String>{
         self.save_playlist()?;
         self.current_playlist = Playlist::new(name, external_type)?;
-        Ok(())
+        self.save_playlist()
     }
 
     pub fn playlist_add(&mut self, song: Song) -> Result<(), String>{
-        self.current_playlist.add(&song)
+        self.current_playlist.add(&song)?;
+        self.save_playlist()
     }
 
     pub fn playlist_remove(&mut self, index: usize) -> Result<(), String>{
-        self.current_playlist.remove(index)
+        self.current_playlist.remove(index)?;
+        self.save_playlist()
     }
 
     pub fn playlist_move_song(&mut self, from: usize, to: usize) -> Result<(), String>{
-        self.current_playlist.move_song(from, to)
+        self.current_playlist.move_song(from, to)?;
+        self.save_playlist()
     }
 
     pub fn playlist_get_songs(&self) -> Result<&Vec<Song>, String>{
@@ -89,7 +92,8 @@ impl Internal{
     }
 
     pub fn playlist_set_name(&mut self, name: &str) -> Result<(), String> {
-        self.current_playlist.set_name(name)
+        self.current_playlist.set_name(name)?;
+        self.save_playlist()
     }
 
     pub fn playlist_get_song(&self, index: usize) -> Result<&Song, String> {
@@ -117,6 +121,16 @@ impl Internal{
     pub fn queue_next(&mut self) -> Result<(), String> {
         let next_song = self.queue.next()?;
         self.play_new(next_song)?;
+        Ok(())
+    }
+
+    pub fn queue_playlist(&mut self, playlist: &Playlist) -> Result<(), String> {
+        self.queue.load_playlist(playlist)?;
+        Ok(())
+    }
+
+    pub fn queue_current_playlist(&mut self) -> Result<(), String> {
+        self.queue.load_playlist(&self.current_playlist)?;
         Ok(())
     }
 }

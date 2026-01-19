@@ -1,5 +1,5 @@
 use std::collections::VecDeque;
-use crate::internal::{song::Song};
+use crate::internal::{playlist::Playlist, song::Song};
 
 
 pub(super) struct Queue {
@@ -16,7 +16,14 @@ impl Queue {
     pub fn add(&mut self, song: Song) -> Result<(), String> {
         self.queued_songs.push_back(song);
         Ok(())
-    }    
+    }
+
+    pub fn load_playlist(&mut self, playlist: &Playlist) -> Result<(), String> {
+        for song in playlist.get_songs()?.clone().into_iter().rev() {
+            self.queued_songs.push_front(song);
+        }
+        Ok(())
+    }
 
     pub fn remove(&mut self, song_index: usize) -> Result<(), String> {
         if self.queued_songs.len() <= 1 { return Err(String::from("Cannot remove song from queue: only one song in queue")); }

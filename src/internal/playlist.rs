@@ -6,7 +6,7 @@ use crate::{DATA_FOLDER, external::external::ExternalType, internal::song::Song}
 #[derive(Serialize, Deserialize, Debug)]
 
 
-pub(crate) struct Playlist {
+pub struct Playlist {
     name: String,
     songs: Vec<Song>,
     external_type: Option<ExternalType>,
