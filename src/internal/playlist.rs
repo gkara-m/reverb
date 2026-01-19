@@ -3,9 +3,10 @@ use std::{fs::File, path::PathBuf};
 use serde::{Deserialize, Serialize};
 
 use crate::{DATA_FOLDER, external::external::ExternalType, internal::song::Song};
+
+
+
 #[derive(Serialize, Deserialize, Debug)]
-
-
 pub struct Playlist {
     name: String,
     songs: Vec<Song>,
@@ -94,4 +95,8 @@ impl Playlist {
         let file = File::open(dir.join(format!("{}.json", name))).map_err(|e| format!("Failed to open playlist file: {}", e))?;
         serde_json::from_reader(file).map_err(|e| format!("Failed to parse playlist file: {}", e))
     }
+
+    pub fn iter(&self) -> std::slice::Iter<'_, Song> {
+        self.songs.iter()
+    } 
 }

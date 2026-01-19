@@ -19,8 +19,8 @@ impl Queue {
     }
 
     pub fn load_playlist(&mut self, playlist: &Playlist) -> Result<(), String> {
-        for song in playlist.get_songs()?.clone().into_iter().rev() {
-            self.queued_songs.push_front(song);
+        for song in playlist.iter().rev() {
+            self.queued_songs.push_front(song.clone());
         }
         Ok(())
     }
