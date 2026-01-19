@@ -2,7 +2,7 @@ use std::{fs::File, path::PathBuf};
 
 use serde::{Deserialize, Serialize};
 
-use crate::{DATA_FOLDER, external::external::ExternalType, internal::{queue::Queue, song::Song}};
+use crate::{DATA_FOLDER, external::external::ExternalType, internal::song::Song};
 
 
 
