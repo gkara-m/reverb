@@ -21,12 +21,14 @@ impl Playlist {
         let mut dir = PathBuf::from(dir_str);
         dir.push("playlists");
         std::fs::create_dir_all(&dir).map_err(|e| format!("Failed to create playlist directory: {}", e))?;
-        Ok(Playlist {
+        let playlist = Playlist {
             name: name.to_string(),
             songs: Vec::new(),
             external_type,
             playlist_folder: dir,
-        })
+        };
+        playlist.save()?;
+        Ok(playlist)
     }
 
     pub fn add(&mut self, song: &Song) -> Result<(), String> {
@@ -82,18 +84,24 @@ impl Playlist {
     }
 
     pub fn save(&self) -> Result<(), String> {
-        let path  = self.playlist_folder.join(format!("{}.json", &self.name));
-        let file = File::create(path).map_err(|e| format!("Failed to create playlist file: {}", e))?;
-        serde_json::to_writer_pretty(file, self).map_err(|e| format!("Failed to write to playlist file: {}", e))?;
-        Ok(())
+        match std::fs::write(
+            self.playlist_folder.join(format!("{}.toml", &self.name)),
+            toml::to_string(self).map_err(|e| format!("Failed to serialize startup data: {}", e))?,
+        ) {
+            Err(e) => Err(format!("Failed to write startup file: {}", e)),
+            Ok(_) => Ok(()),
+        }
     }
 
     pub fn load(name: &str) -> Result<Playlist, String> {
         let dir_str = DATA_FOLDER.get().ok_or("DATA_FOLDER not set".to_string())?;
         let mut dir = PathBuf::from(dir_str);
         dir.push("playlists");
-        let file = File::open(dir.join(format!("{}.json", name))).map_err(|e| format!("Failed to open playlist file: {}", e))?;
-        serde_json::from_reader(file).map_err(|e| format!("Failed to parse playlist file: {}", e))
+
+        Ok(toml::from_str(
+            &std::fs::read_to_string(dir.join(format!("{}.toml", name)))
+            .map_err(|e| format!("Failed to read playlist data: {}", e))?
+        ).map_err(|e| format!("Failed to parse playlist data: {}", e))?)
     }
 
     pub fn iter(&self) -> std::slice::Iter<'_, Song> {
