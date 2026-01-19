@@ -2,7 +2,7 @@ use std::{fs::File, path::PathBuf};
 
 use serde::{Deserialize, Serialize};
 
-use crate::{DATA_FOLDER, external::external::ExternalType, internal::song::Song};
+use crate::{DATA_FOLDER, external::external::ExternalType, internal::{queue::Queue, song::Song}};
 
 
 
@@ -95,6 +95,14 @@ impl Playlist {
         let file = File::open(dir.join(format!("{}.json", name))).map_err(|e| format!("Failed to open playlist file: {}", e))?;
         serde_json::from_reader(file).map_err(|e| format!("Failed to parse playlist file: {}", e))
     }
+
+    pub fn from_queue(name: &str, queue: &Queue) -> Result<Playlist, String> {
+        let mut playlist = Playlist::new(name, None)?;
+        for song in queue.iter() {
+            playlist.add(song)?;
+        }
+        Ok(playlist)
+    }   
 
     pub fn iter(&self) -> std::slice::Iter<'_, Song> {
         self.songs.iter()

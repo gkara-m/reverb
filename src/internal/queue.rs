@@ -56,4 +56,8 @@ impl Queue {
             .cloned()
             .ok_or_else(|| String::from("Queue is empty"))
     }
+
+    pub fn iter(&self) -> std::collections::vec_deque::Iter<'_, Song> {
+        self.queued_songs.iter()
+    } 
 }
