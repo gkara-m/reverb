@@ -65,6 +65,10 @@ fn command_check_single(command: &str, internal: &mut Internal) -> Result<bool, 
                     }
                 }
         "skip" => {internal.queue_next()?;}
+        "song" => {
+            let song = internal.current_song()?;
+            println!("Currently playing: {} - {}", song.artist, song.title);
+        }
         _ => {Err(format!("Unknown command: {}", command))?;}
     }
     Ok(false)

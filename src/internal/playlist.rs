@@ -96,14 +96,6 @@ impl Playlist {
         serde_json::from_reader(file).map_err(|e| format!("Failed to parse playlist file: {}", e))
     }
 
-    pub fn from_queue(name: &str, queue: &Queue) -> Result<Playlist, String> {
-        let mut playlist = Playlist::new(name, None)?;
-        for song in queue.iter() {
-            playlist.add(song)?;
-        }
-        Ok(playlist)
-    }   
-
     pub fn iter(&self) -> std::slice::Iter<'_, Song> {
         self.songs.iter()
     } 

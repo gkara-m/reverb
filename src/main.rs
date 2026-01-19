@@ -7,7 +7,7 @@ use ui::cli;
 use internal::{internal::Internal, song::Song};
 use external::{external::ExternalSong, local::LocalSong};
 
-use crate::internal::playlist::Playlist;
+use crate::internal::{playlist::Playlist, queue::Queue};
 
 mod external;
 mod ui;
@@ -53,7 +53,7 @@ fn startup() -> Result<Internal, String> {
     let content = match std::fs::read_to_string(format!("{}config.toml", CONFIG_FOLDER)) {
         Ok(c) => Ok(c),
         Err(_) => {
-            print!("Config file not found, creating default... ");
+            println!("Config file not found, creating default... ");
             let default = Config::new_default()?;
             toml::to_string(&default).map_err(|e| format!("Failed to make default config: {}", e))?;
             Err(format!("First run?: \n Default config created in {} \n check config and restart \n exiting automatically", CONFIG_FOLDER))
@@ -98,7 +98,7 @@ fn startup() -> Result<Internal, String> {
     };
         
 
-    Ok(Internal::new(startup_data.last_played_song, playlist)?)
+    Ok(Internal::new(startup_data.queue, playlist)?)
 }
 
 fn shutdown (internal: &Internal) -> Result<(), String> {
@@ -106,8 +106,8 @@ fn shutdown (internal: &Internal) -> Result<(), String> {
 
     println!("Saving startup data... ");
     StartupData {
-        last_played_song: internal.current_song()?,
         last_played_playlist: internal.playlist_get_name()?.clone(),
+        queue: internal.queue_get()?.clone(),
     }.save()?;
 
     println!("Shutting down internal... ");
@@ -150,8 +150,8 @@ impl Config {
 
 #[derive(Serialize, Deserialize)]
 struct StartupData {
-    last_played_song: Song,
     last_played_playlist: String,
+    queue: Queue,
 }
 
 impl StartupData {
@@ -163,8 +163,8 @@ impl StartupData {
             artist: String::from("REVERB"),
         };
         let startup_data = StartupData {
-            last_played_song: song,
             last_played_playlist: "Default Startup Playlist".to_string(),
+            queue: Queue::new(song)?,
         };
         startup_data.save()?;
         Ok(startup_data)

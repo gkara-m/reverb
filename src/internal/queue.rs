@@ -1,16 +1,19 @@
 use std::collections::VecDeque;
+
+use serde::{Deserialize, Serialize};
+
 use crate::internal::{playlist::Playlist, song::Song};
 
-
-pub(super) struct Queue {
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Queue {
     pub(super) queued_songs: VecDeque<Song>
 }
 
 
 impl Queue {
 
-    pub fn new(song: Song) -> Queue {
-        Queue {queued_songs: VecDeque::from([song])}
+    pub fn new(song: Song) -> Result<Queue, String> {
+        Ok(Queue {queued_songs: VecDeque::from([song])})
     }
 
     pub fn add(&mut self, song: Song) -> Result<(), String> {
@@ -56,8 +59,4 @@ impl Queue {
             .cloned()
             .ok_or_else(|| String::from("Queue is empty"))
     }
-
-    pub fn iter(&self) -> std::collections::vec_deque::Iter<'_, Song> {
-        self.queued_songs.iter()
-    } 
 }

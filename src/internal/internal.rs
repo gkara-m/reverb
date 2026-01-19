@@ -10,11 +10,11 @@ pub struct Internal{
 
 impl  Internal {
 
-    pub fn new(song: Song, playlist: Playlist) -> Result<Self, String> {
+    pub fn new(queue: Queue, playlist: Playlist) -> Result<Self, String> {
         Ok(Internal {
-            current_external: external::get_new_external_run_from_song(&song)?,
+            current_external: external::get_new_external_run_from_song(&queue.current_song()?)?,
             current_playlist: playlist,
-            queue: Queue::new(song),
+            queue,
         })
     }
 
@@ -132,5 +132,9 @@ impl Internal{
     pub fn queue_current_playlist(&mut self) -> Result<(), String> {
         self.queue.load_playlist(&self.current_playlist)?;
         Ok(())
+    }
+
+    pub fn queue_get(&self) -> Result<&Queue, String> {
+        Ok(&self.queue)
     }
 }
