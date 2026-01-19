@@ -58,6 +58,7 @@ fn command_check_single(command: &str, internal: &mut Internal) -> Result<bool, 
         "quit" | "q" | ":q" => {return Ok(true);}
         "queue" => {internal.queue_list()?;}
         "playlist" => {
+                    println!("{}:", internal.playlist_get_name()?);
                     let songs = internal.playlist_get_songs()?;
                     for (index, song) in songs.iter().enumerate() {
                         println!("{}: {} - {}", index, song.artist, song.title);
@@ -163,11 +164,17 @@ fn handle_playlist(internal: &mut Internal, args: &str) -> Result<bool, String> 
                     let song = internal.playlist_get_song(index)?;
                     println!("{} - {}", song.artist, song.title);
                 }
+                "name" => {
+                    internal.playlist_set_name(args)?;
+                }
                 _ => {return Err(format!("Unknown playlist command: {}", args));}
             }
         }
         None => {
             match args {
+                "name" => {
+                    println!("{}", internal.playlist_get_name()?);
+                }
                 "help" => {
                     println!("avaliliable playlist commands:
                     playlist: list all songs in the current playlist
@@ -177,6 +184,8 @@ fn handle_playlist(internal: &mut Internal, args: &str) -> Result<bool, String> 
                     playlist remove <index>: remove a song from the current playlist at the given index
                     playlist move <from_index> <to_index>: move a song in the current playlist from one index to another
                     playlist get <index>: list the song at the given index in the current playlist
+                    playlist name: prints the current playlist name
+                    playlist name <new_name>: set the name of the current playlist
                     playlist help: display this help message for playlist commands");
                 }
                 _ => return Err(format!("invalid playlist command provided")),

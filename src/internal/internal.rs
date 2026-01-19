@@ -88,6 +88,10 @@ impl Internal{
         self.current_playlist.get_name()
     }
 
+    pub fn playlist_set_name(&mut self, name: &str) -> Result<(), String> {
+        self.current_playlist.set_name(name)
+    }
+
     pub fn playlist_get_song(&self, index: usize) -> Result<&Song, String> {
         self.current_playlist.get_song(index)
     }

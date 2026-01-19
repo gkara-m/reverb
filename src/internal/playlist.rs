@@ -57,6 +57,19 @@ impl Playlist {
         Ok(&self.name)
     }
 
+    pub fn set_name(&mut self, name: &str) -> Result<(), String> {
+        let new_path = self.playlist_folder.join(format!("{}.json", name));
+        if new_path.exists() {
+            return Err(format!("a playlist with the name '{}' already exists \n use playlist load {} to load it", name, name));
+        }
+        let old_path = self.playlist_folder.join(format!("{}.json", &self.name));
+        if old_path.exists() {
+            std::fs::rename(&old_path, &new_path).map_err(|e| format!("failed to rename playlist file: {}", e))?;
+        }
+        self.name = name.to_string();
+        Ok(())
+    }
+
     pub fn move_song(&mut self, from: usize, to: usize) -> Result<(), String> {
         if from >= self.songs.len() || to >= self.songs.len() {
             Err(format!("invalid song indices: from {}, to {}", from, to))

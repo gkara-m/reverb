@@ -27,7 +27,7 @@ fn main () {
             i
         }
         Err(e) => {
-            eprintln!("Startup error: {}", e);
+            eprintln!("Startup error: {} \n exiting", e);
             return;
         }
     };
