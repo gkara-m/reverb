@@ -9,7 +9,7 @@ use crate::internal::song::Song;
 
 
 pub struct Local{
-    output_stream: OutputStream,
+    _output_stream: OutputStream,
     sink: Sink,
 }
 
@@ -78,7 +78,7 @@ impl Local {
         let sink = Sink::connect_new(&output_stream.mixer());
         sink.pause();
         let local = Local {
-            output_stream,
+            _output_stream: output_stream,
             sink,
         };
         local.load_new(song)?;
