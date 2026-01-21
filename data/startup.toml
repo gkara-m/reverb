@@ -1,9 +1,0 @@
-last_played_playlist = "Default Playlist"
-last_shutdown_clean = true
-
-[[queue.queued_songs]]
-title = "Default Song"
-artist = "REVERB"
-
-[queue.queued_songs.song_type.LOCAL]
-song_path = "sample/default_song.mp3"
