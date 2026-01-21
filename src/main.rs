@@ -205,3 +205,38 @@ impl StartupData {
         }
     }
 }
+
+enum Command {
+    Play,
+    Pause,
+    PlayNew(Song),
+    Stop,
+    CurrentSong(mpsc::Sender<Song>),
+    Shutdown,
+    PlaylistLoad(&str),
+    PlaylistSave,
+    PlaylistNew {
+        name: &str,
+        external_type: Option<ExternalType>,
+    },
+    PlaylistAdd(Song),
+    PlaylistRemove(usize),
+    PlaylistMoveSong {
+        from: usize,
+        to: usize,
+    },
+    PlaylistGetSongs(mpsc::Sender<&Vec<Song>>),
+    PlaylistGetName(mpsc::Sender<&String>),
+    PlaylistSetName(&str),
+    PlaylistGetSong {
+        song: mpsc::Sender<&Song>,
+        index: usize,
+    },
+    QueueAdd(Song),
+    QueueRemove(usize),
+    QueueList,
+    QueueNext,
+    QueuePlaylist(&Playlist),
+    QueueCurrentPlaylist,
+    QueueGet(mpsc::Sender<&Queue>),
+}
