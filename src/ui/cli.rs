@@ -1,4 +1,6 @@
 use std::io::{self, BufRead};
+use std::sync::mpsc::{self, Sender};
+
 use crate::{external::external::ExternalType, internal::{internal::Internal, playlist::Playlist, song::Song}};
 
 
@@ -18,30 +20,30 @@ pub fn get_input() -> String {
     }
 }
     
-    fn run_command(input: String, internal: &mut Internal) -> Result<bool, String> {
+    fn run_command(input: String, transmit: Sender<Command>) -> Result<bool, String> {
         match input.trim().split_once(" ") {
-        Some((command, args)) => {command_check_composite(command, args, internal)}
-        None => {command_check_single(input.trim(), internal)}
+        Some((command, args)) => {command_check_composite(command, args, transmit)}
+        None => {command_check_single(input.trim(), transmit)}
     }
 }
 
-pub fn run_cli(internal: &mut Internal) {
+pub fn run_cli(transmit: Sender<Command>) {
     println!("Please enter command or type 'help' for help.");
 
     loop {
         let input = get_input();
         if input.is_empty() {continue;}
-        match run_command(input, internal) {
+        match run_command(input, transmit.clone()) {
             Ok(quit) => if quit { break; },
             Err(err) => invalid_input(err),
         }
     }
 }
 
-fn command_check_single(command: &str, internal: &mut Internal) -> Result<bool, String> {
+fn command_check_single(command: &str, transmit: Sender<Command>) -> Result<bool, String> {
     match command {
-        "play" => {internal.play()?;}
-        "pause" => {internal.pause()?;}
+        "play" => {play(transmit)?;}
+        "pause" => {pause(transmit)?;}
         "help" | "h" => {println!("
         project is a WIP help may be out of date:
         avaliliable commands:
@@ -56,15 +58,20 @@ fn command_check_single(command: &str, internal: &mut Internal) -> Result<bool, 
         source code available at: https://github.com/SixOneFiveZero/reverb
         ");}
         "quit" | "q" | ":q" => {return Ok(true);}
-        "queue" => {internal.queue_list()?;}
+        "queue" => {transmit.send(Command::QueueList)?;}
         "playlist" => {
-                    println!("{}:", internal.playlist_get_name()?);
-                    let songs = internal.playlist_get_songs()?;
+                    let (tx, rx) = mpsc::channel();
+                    transmit.send(Command::PlaylistGetName(tx))?;
+                    println!("{}:", rx.recv()?);
+
+                    let (tx, rx) = mpsc::channel();
+                    transmit.send(Command::PlaylistGetSongs(tx))?;
+                    let songs = rx.recv()?;
                     for (index, song) in songs.iter().enumerate() {
                         println!("{}: {} - {}", index, song.artist, song.title);
                     }
                 }
-        "skip" => {internal.queue_next()?;}
+        "skip" => {transmit.send(Command::QueueNext)?;}
         "song" => {
             let song = internal.current_song()?;
             println!("Currently playing: {} - {}", song.artist, song.title);
@@ -217,4 +224,19 @@ fn handle_playlist(internal: &mut Internal, args: &str) -> Result<bool, String> 
                 
 fn invalid_input(err_msg: String) {
     println!("{}\n use help for help", err_msg);
+}
+
+
+
+// helper functions
+fn play(transmit: Sender<Command>) -> Result<(), String> {
+    transmit.send(Command::Play).map_err(|e| format!("Failed to send play command: {}", e))
+}
+
+fn pause(transmit: Sender<Command>) -> Result<(), String> {
+    transmit.send(Command::Pause).map_err(|e| format!("Failed to send pause command: {}", e))
+}
+
+fn queue_list(transmit: Sender<Command>) -> Result<(), String> {
+    transmit.send(Command::QueueList).map_err(|e| format!("Failed to send queue list command: {}", e))
 }
