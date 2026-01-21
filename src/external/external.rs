@@ -16,39 +16,8 @@ pub trait External {
 }
 
 
-impl ExternalRun {
-    pub fn as_external(&self) -> &dyn External {
-        match self {
-            ExternalRun::LOCAL(local) => local,
-            ExternalRun::YOUTUBE(_) => todo!(),
-        }
-    }
-}
-
-impl External for ExternalRun {
-    fn play_new(&self, song: &Song) -> Result<(), String> {
-        self.as_external().play_new(song)
-    }
-
-    fn pause(&self) -> Result<(), String> {
-        self.as_external().pause()
-    }
-
-    fn play(&self) -> Result<(), String> {
-        self.as_external().play()
-    }
-
-    fn stop(&self) -> Result<(), String> {
-        self.as_external().stop()
-    }
-
-    fn shutdown(&self) -> Result<(), String> {
-        self.as_external().shutdown()
-    }
-}
-
 /*
-    Macro to generate ExternalRun, ExternalSong, and ExternalType enums,
+Macro to generate ExternalRun, ExternalSong, and ExternalType enums,
     as well as implementations to create new ExternalSong and ExternalType instances from strings.
 
     will expand to something like:
@@ -71,70 +40,81 @@ impl External for ExternalRun {
                 "local" => Ok(ExternalType::LOCAL),
                 "youtube" => Ok(ExternalType::YOUTUBE),
                 _ => Err(format!("Unknown external type: {}", string))
+                }
             }
-        }
         
-        pub fn new_external_song(&self, string: &str) -> Result<ExternalSong, String> {
+            pub fn new_external_song(&self, string: &str) -> Result<ExternalSong, String> {
             match self {
                 ExternalType::LOCAL => LocalSong::new(string).map(ExternalSong::LOCAL),
                 ExternalType::YOUTUBE => Ok(ExternalSong::YOUTUBE(())),
+                }
             }
-        }
     }
-*/
-
-
-macro_rules! make_external_types {
-    (
+    */
+    
+    
+    macro_rules! make_external_types {
+        (
         $(
             $backend:ident {
-            Run:  $run:ty,
-            Song: $song:ty,
-            SongNew: $song_new:expr,
-            string_name: $name:ident $(,)?
-        }
+                Run:  $run:ty,
+                Song: $song:ty,
+                SongNew: $song_new:expr,
+                string_name: $name:ident $(,)?
+            }
         ),* $(,)?
     ) => {
+        
+        pub enum ExternalRun {
+            $(
+                $backend($run)
+            ),*
+        }
 
-    pub enum ExternalRun {
-        $(
-            $backend($run)
-        ),*
-    }
-
-    #[derive(Clone, Debug, Serialize, Deserialize)]
-    pub enum ExternalSong {
-        $(
-            $backend($song)
-        ),*
-    }
-
-    #[derive(Clone, Debug, Serialize, Deserialize)]
-    pub enum ExternalType {
-        $(
-            $backend
-        ),*
-    }
-
-    impl ExternalType {
-        pub fn get_from_str(string: &str) -> Result<ExternalType, String> {
-            match string {
-                $(
-                    stringify!($name) => Ok(ExternalType::$backend),
-                )*
-                _ => Err(format!("Unknown external type: {}", string))
+        #[derive(Clone, Debug, Serialize, Deserialize)]
+        pub enum ExternalSong {
+            $(
+                $backend($song)
+            ),*
+        }
+        
+        #[derive(Clone, Debug, Serialize, Deserialize)]
+        pub enum ExternalType {
+            $(
+                $backend
+            ),*
+        }
+        
+        impl ExternalType {
+            pub fn get_from_str(string: &str) -> Result<ExternalType, String> {
+                match string {
+                    $(
+                        stringify!($name) => Ok(ExternalType::$backend),
+                    )*
+                    _ => Err(format!("Unknown external type: {}", string))
+                }
+            }
+            
+            pub fn new_external_song(&self, string: &str) -> Result<ExternalSong, String> {
+                match self {
+                    $(
+                        ExternalType::$backend => $song_new(string).map(ExternalSong::$backend),
+                    )*
+                }
             }
         }
         
-        pub fn new_external_song(&self, string: &str) -> Result<ExternalSong, String> {
-            match self {
-                $(
-                    ExternalType::$backend => $song_new(string).map(ExternalSong::$backend),
-                )*
+        
+
+        impl ExternalRun {
+            pub fn as_external(&self) -> &dyn External {
+                match self {
+                    $(
+                        ExternalRun::$backend(external) => external,
+                    )*
+                }
             }
         }
-    }
-
     }
 }
 
@@ -151,6 +131,29 @@ make_external_types!{
         SongNew: |_: &str| Ok(()),
         string_name: youtube,
     },
+}
+
+
+impl External for ExternalRun {
+    fn play_new(&self, song: &Song) -> Result<(), String> {
+        self.as_external().play_new(song)
+    }
+
+    fn pause(&self) -> Result<(), String> {
+        self.as_external().pause()
+    }
+
+    fn play(&self) -> Result<(), String> {
+        self.as_external().play()
+    }
+
+    fn stop(&self) -> Result<(), String> {
+        self.as_external().stop()
+    }
+
+    fn shutdown(&self) -> Result<(), String> {
+        self.as_external().shutdown()
+    }
 }
 
 impl ExternalSong {
