@@ -58,7 +58,10 @@ fn command_check_single(command: &str, transmit: &Sender<Command>) -> Result<boo
         use \"<command> help\" for more detailed help for composite commands
         source code available at: https://github.com/SixOneFiveZero/reverb
         ");}
-        "quit" | "q" | ":q" => {return Ok(true);}
+        "quit" | "q" | ":q" => {
+            ui::shutdown(transmit)?;
+            return Ok(true);
+        }
         "queue" => {ui::queue_list(transmit)?;}
         "playlist" => {
                     println!("{}:", ui::playlist_get_name(transmit)?);
@@ -219,6 +222,6 @@ fn handle_playlist(transmit: &Sender<Command>, args: &str) -> Result<bool, Strin
     Ok(false)
 }
                 
-fn invalid_input(err_msg: String) {
+pub fn invalid_input(err_msg: String) {
     println!("{}\n use help for help", err_msg);
 }

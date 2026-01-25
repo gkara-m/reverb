@@ -90,13 +90,12 @@ fn main () {
                     Err(e) => Err(e),
                 }
             },
+            Command::Shutdown => break,
         }  {
-            println!("Error: {}", e);
+            cli::invalid_input(e);
         }
 
     }
-
-    ui_thread.join().unwrap();
 
     loop {
         match shutdown(&internal) {
@@ -290,4 +289,5 @@ enum Command {
     QueuePlaylist(Playlist),
     QueueCurrentPlaylist,
     QueueGet(mpsc::Sender<Queue>),
+    Shutdown,
 }

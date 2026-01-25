@@ -92,3 +92,7 @@ pub(super) fn playlist_get_song(transmit: &Sender<Command>, index: usize) -> Res
 pub(super) fn playlist_set_name(transmit: &Sender<Command>, name: &str) -> Result<(), String> {
     transmit.clone().send(Command::PlaylistSetName(name.to_string())).map_err(|e| format!("Failed to send playlist set name command: {}", e))
 }
+
+pub(super) fn shutdown(transmit: &Sender<Command>) -> Result<(), String> {
+    transmit.clone().send(Command::Shutdown).map_err(|e| format!("Failed to send shutdown command: {}", e))
+}
