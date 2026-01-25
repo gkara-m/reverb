@@ -53,36 +53,36 @@ impl  Internal {
 }
 
 impl Internal{
-    pub fn load_playlist(&mut self, playlist_name: &str) -> Result<(), String> {
-        self.save_playlist()?;
+    pub fn playlist_load(&mut self, playlist_name: &str) -> Result<(), String> {
+        self.playlist_save()?;
         let playlist = Playlist::load(playlist_name)?;
         self.current_playlist = playlist;
         Ok(())
     }
 
-    fn save_playlist(&self) -> Result<(), String> {
+    fn playlist_save(&self) -> Result<(), String> {
         self.current_playlist.save()
     }
 
-    pub fn new_playlist(&mut self, name: &str, external_type: Option<ExternalType>) -> Result<(), String>{
-        self.save_playlist()?;
+    pub fn playlist_new(&mut self, name: &str, external_type: Option<ExternalType>) -> Result<(), String>{
+        self.playlist_save()?;
         self.current_playlist = Playlist::new(name, external_type)?;
-        self.save_playlist()
+        self.playlist_save()
     }
 
     pub fn playlist_add(&mut self, song: Song) -> Result<(), String>{
         self.current_playlist.add(&song)?;
-        self.save_playlist()
+        self.playlist_save()
     }
 
     pub fn playlist_remove(&mut self, index: usize) -> Result<(), String>{
         self.current_playlist.remove(index)?;
-        self.save_playlist()
+        self.playlist_save()
     }
 
     pub fn playlist_move_song(&mut self, from: usize, to: usize) -> Result<(), String>{
         self.current_playlist.move_song(from, to)?;
-        self.save_playlist()
+        self.playlist_save()
     }
 
     pub fn playlist_get_songs(&self) -> Result<&Vec<Song>, String>{
@@ -95,7 +95,7 @@ impl Internal{
 
     pub fn playlist_set_name(&mut self, name: &str) -> Result<(), String> {
         self.current_playlist.set_name(name)?;
-        self.save_playlist()
+        self.playlist_save()
     }
 
     pub fn playlist_get_song(&self, index: usize) -> Result<&Song, String> {

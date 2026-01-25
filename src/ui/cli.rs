@@ -1,7 +1,8 @@
 use std::io::{self, BufRead};
-use std::sync::mpsc::{self, Sender};
+use std::sync::mpsc::Sender;
 
-use crate::{external::external::ExternalType, internal::{internal::Internal, playlist::Playlist, song::Song}};
+use crate::{Command, ui::ui};
+use crate::{external::external::ExternalType, internal::{playlist::Playlist, song::Song}};
 
 
 pub fn get_input() -> String {
@@ -20,7 +21,7 @@ pub fn get_input() -> String {
     }
 }
     
-    fn run_command(input: String, transmit: Sender<Command>) -> Result<bool, String> {
+    fn run_command(input: String, transmit: &Sender<Command>) -> Result<bool, String> {
         match input.trim().split_once(" ") {
         Some((command, args)) => {command_check_composite(command, args, transmit)}
         None => {command_check_single(input.trim(), transmit)}
@@ -33,17 +34,17 @@ pub fn run_cli(transmit: Sender<Command>) {
     loop {
         let input = get_input();
         if input.is_empty() {continue;}
-        match run_command(input, transmit.clone()) {
+        match run_command(input, &transmit) {
             Ok(quit) => if quit { break; },
             Err(err) => invalid_input(err),
         }
     }
 }
 
-fn command_check_single(command: &str, transmit: Sender<Command>) -> Result<bool, String> {
+fn command_check_single(command: &str, transmit: &Sender<Command>) -> Result<bool, String> {
     match command {
-        "play" => {play(transmit)?;}
-        "pause" => {pause(transmit)?;}
+        "play" => {ui::play(transmit)?;}
+        "pause" => {ui::pause(transmit)?;}
         "help" | "h" => {println!("
         project is a WIP help may be out of date:
         avaliliable commands:
@@ -58,22 +59,17 @@ fn command_check_single(command: &str, transmit: Sender<Command>) -> Result<bool
         source code available at: https://github.com/SixOneFiveZero/reverb
         ");}
         "quit" | "q" | ":q" => {return Ok(true);}
-        "queue" => {transmit.send(Command::QueueList)?;}
+        "queue" => {ui::queue_list(transmit)?;}
         "playlist" => {
-                    let (tx, rx) = mpsc::channel();
-                    transmit.send(Command::PlaylistGetName(tx))?;
-                    println!("{}:", rx.recv()?);
-
-                    let (tx, rx) = mpsc::channel();
-                    transmit.send(Command::PlaylistGetSongs(tx))?;
-                    let songs = rx.recv()?;
+                    println!("{}:", ui::playlist_get_name(transmit)?);
+                    let songs = ui::playlist_get_songs(transmit)?;
                     for (index, song) in songs.iter().enumerate() {
                         println!("{}: {} - {}", index, song.artist, song.title);
                     }
                 }
-        "skip" => {transmit.send(Command::QueueNext)?;}
+        "skip" => {ui::queue_next(transmit)?;}
         "song" => {
-            let song = internal.current_song()?;
+            let song = ui::current_song(transmit)?;
             println!("Currently playing: {} - {}", song.artist, song.title);
         }
         _ => {Err(format!("Unknown command: {}", command))?;}
@@ -81,13 +77,13 @@ fn command_check_single(command: &str, transmit: Sender<Command>) -> Result<bool
     Ok(false)
 }
 
-fn command_check_composite(command: &str, args: &str, internal: &mut Internal) -> Result<bool, String> {
+fn command_check_composite(command: &str, args: &str, transmit: &Sender<Command>) -> Result<bool, String> {
     match command {
         "play" => {
             match args {
                 "new" => {
                     let song = Song::new(args)?;
-                    internal.play_new(song)?;
+                    ui::play_new(transmit, song)?;
                 }
                 "help" => {
                     println!("avaliliable play commands:
@@ -99,33 +95,33 @@ fn command_check_composite(command: &str, args: &str, internal: &mut Internal) -
             }
         }
         "queue" => {
-            handle_queue(internal, args)?;
+            handle_queue(transmit, args)?;
         }
         "playlist" => {
-            handle_playlist(internal, args)?;
+            handle_playlist(transmit, args)?;
         }
         _ => {return Err(format!("Unknown command: {}", command));}
     }
     Ok(false)
 }
 
-fn handle_queue(internal: &mut Internal, args: &str) -> Result<bool, String> {
+fn handle_queue(transmit: &Sender<Command>, args: &str) -> Result<bool, String> {
     match args.split_once(" ") {
         Some((action, args)) => {
             match action {
                 "add" => {
                     let song = Song::new(args)?;
-                    internal.queue_add(song)?;
+                    ui::queue_add(transmit, song)?;
                 }
                 "remove" => {
-                    internal.queue_remove(match args.parse() {
+                    ui::queue_remove(transmit, match args.parse() {
                         Ok(index) => index,
                         Err(e) => {return Err(format!("Invalid song index: {}", e));}
                     })?;
                 }
                 "playlist" => {
                     let playlist = Playlist::load(args)?;
-                    internal.queue_playlist(&playlist)?;
+                    ui::queue_playlist(transmit, &playlist)?;
                 }
                 _ => {return Err(format!("Unknown command: queue {} {}", action, args));}
             }
@@ -141,7 +137,7 @@ fn handle_queue(internal: &mut Internal, args: &str) -> Result<bool, String> {
                 queue help: display this help message for queue commands");
             }
             "playlist" => {
-                internal.queue_current_playlist()?;
+                ui::queue_current_playlist(transmit)?;
             }
             _ => {return Err(format!("Unknown command: queue {}", args));}
         }
@@ -149,28 +145,28 @@ fn handle_queue(internal: &mut Internal, args: &str) -> Result<bool, String> {
     Ok(false)
 }
 
-fn handle_playlist(internal: &mut Internal, args: &str) -> Result<bool, String> {
+fn handle_playlist(transmit: &Sender<Command>, args: &str) -> Result<bool, String> {
     match args.split_once(" ") {
         Some((action, args)) => {
             match action {
                 "add" => {
                     let song = Song::new(args)?;
-                    internal.playlist_add(song)?;
+                    ui::playlist_add(transmit, song)?;
                 }
                 "remove" => {
                     match args.parse() {
-                        Ok(index) => {internal.playlist_remove(index)?;}
+                        Ok(index) => {ui::playlist_remove(transmit, index)?;}
                         Err(e) => {return Err(format!("Invalid song index: {}", e));}
                     }
                 }
                 "load" => {
-                    internal.load_playlist(args)?;
+                    ui::playlist_load(transmit, args)?;
                 }
                 "move" => {
                     match args.split_once(" ") {
                         Some((from_str, to_str)) => {
                             match (from_str.parse(), to_str.parse()) {
-                                (Ok(from), Ok(to)) => {internal.playlist_move_song(from, to)?;}
+                                (Ok(from), Ok(to)) => {ui::playlist_move_song(transmit, from, to)?;}
                                 _ => {return Err(format!("Invalid song indices: from: {}, to: {}", from_str, to_str));} 
                             }
                         }
@@ -181,18 +177,18 @@ fn handle_playlist(internal: &mut Internal, args: &str) -> Result<bool, String> 
                     match args.split_once(" ") {
                         Some((name, external_type)) => {
                             let external_type =  ExternalType::get_from_str(external_type)?;
-                            internal.new_playlist(name, Some(external_type))?;
+                            ui::playlist_new(transmit, name, Some(external_type))?;
                         }
-                        None => {internal.new_playlist(args, None)?;}
+                        None => {ui::playlist_new(transmit, args, None)?;}
                     }
                 }
                 "get" => {
                     let index: usize = args.parse().map_err(|_| format!("Invalid song index: {}", args))?;
-                    let song = internal.playlist_get_song(index)?;
+                    let song = ui::playlist_get_song(transmit, index)?;
                     println!("{} - {}", song.artist, song.title);
                 }
                 "name" => {
-                    internal.playlist_set_name(args)?;
+                    ui::playlist_set_name(transmit, args)?;
                 }
                 _ => {return Err(format!("Unknown command: playlist {} {}", action, args));}
             }
@@ -200,7 +196,7 @@ fn handle_playlist(internal: &mut Internal, args: &str) -> Result<bool, String> 
         None => {
             match args {
                 "name" => {
-                    println!("{}", internal.playlist_get_name()?);
+                    println!("{}", ui::playlist_get_name(transmit)?);
                 }
                 "help" => {
                     println!("avaliliable playlist commands:
@@ -224,19 +220,4 @@ fn handle_playlist(internal: &mut Internal, args: &str) -> Result<bool, String> 
                 
 fn invalid_input(err_msg: String) {
     println!("{}\n use help for help", err_msg);
-}
-
-
-
-// helper functions
-fn play(transmit: Sender<Command>) -> Result<(), String> {
-    transmit.send(Command::Play).map_err(|e| format!("Failed to send play command: {}", e))
-}
-
-fn pause(transmit: Sender<Command>) -> Result<(), String> {
-    transmit.send(Command::Pause).map_err(|e| format!("Failed to send pause command: {}", e))
-}
-
-fn queue_list(transmit: Sender<Command>) -> Result<(), String> {
-    transmit.send(Command::QueueList).map_err(|e| format!("Failed to send queue list command: {}", e))
 }
