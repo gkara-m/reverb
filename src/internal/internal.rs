@@ -6,16 +6,18 @@ pub struct Internal{
     current_external: ExternalRun,
     current_playlist: Playlist,
     queue: Queue,
+    sender: std::sync::mpsc::Sender<crate::Command>,
 }
 
 
 impl  Internal {
 
-    pub fn new(queue: Queue, playlist: Playlist) -> Result<Self, String> {
+    pub fn new(queue: Queue, playlist: Playlist, sender: std::sync::mpsc::Sender<crate::Command>) -> Result<Self, String> {
         Ok(Internal {
             current_external: external::get_new_external_run_from_song(&queue.current_song()?)?,
             current_playlist: playlist,
             queue,
+            sender,
         })
     }
 
@@ -85,11 +87,11 @@ impl Internal{
         self.playlist_save()
     }
 
-    pub fn playlist_get_songs(&self) -> Result<&Vec<Song>, String>{
+    pub fn playlist_get_songs(&self) -> Result<Vec<Song>, String>{
         self.current_playlist.get_songs()
     }
 
-    pub fn playlist_get_name(&self) -> Result<&String, String> {
+    pub fn playlist_get_name(&self) -> Result<String, String> {
         self.current_playlist.get_name()
     }
 
@@ -98,7 +100,7 @@ impl Internal{
         self.playlist_save()
     }
 
-    pub fn playlist_get_song(&self, index: usize) -> Result<&Song, String> {
+    pub fn playlist_get_song(&self, index: usize) -> Result<Song, String> {
         self.current_playlist.get_song(index)
     }
 }
@@ -141,10 +143,10 @@ impl Internal{
     }
 
     pub fn eepy_thread(& mut self) -> Result<(), String> {
-        thread::spawn(|| {
-            self.current_external.sleep_until_song_end();
-            self.queue_next();
-        });
+        // thread::spawn(|| {
+        //     self.current_external.sleep_until_song_end();
+        //     let _ = self.sender.send(crate::Command::QueueNext);
+        // });
         Ok(())
     }
 }

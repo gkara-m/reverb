@@ -21,8 +21,8 @@ pub fn get_input() -> String {
     }
 }
     
-    fn run_command(input: String, transmit: &Sender<Command>) -> Result<bool, String> {
-        match input.trim().split_once(" ") {
+fn run_command(input: String, transmit: &Sender<Command>) -> Result<bool, String> {
+    match input.trim().split_once(" ") {
         Some((command, args)) => {command_check_composite(command, args, transmit)}
         None => {command_check_single(input.trim(), transmit)}
     }
@@ -82,6 +82,7 @@ fn command_check_composite(command: &str, args: &str, transmit: &Sender<Command>
         "play" => {
             match args {
                 "new" => {
+                    let (_, args) = args.split_once(' ').ok_or("Missing song argument for play new command")?;
                     let song = Song::new(args)?;
                     ui::play_new(transmit, song)?;
                 }
@@ -121,7 +122,7 @@ fn handle_queue(transmit: &Sender<Command>, args: &str) -> Result<bool, String> 
                 }
                 "playlist" => {
                     let playlist = Playlist::load(args)?;
-                    ui::queue_playlist(transmit, &playlist)?;
+                    ui::queue_playlist(transmit, playlist)?;
                 }
                 _ => {return Err(format!("Unknown command: queue {} {}", action, args));}
             }

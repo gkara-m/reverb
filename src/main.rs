@@ -9,7 +9,7 @@ use ui::cli;
 use internal::{internal::Internal, song::Song};
 use external::{external::ExternalSong, local::LocalSong};
 
-use crate::internal::{playlist::Playlist, queue::Queue};
+use crate::{external::external::ExternalType, internal::{playlist::Playlist, queue::Queue}};
 
 mod external;
 mod ui;
@@ -22,8 +22,9 @@ pub static LOCAL_SONG_FOLDER_PATH: OnceCell<String> = OnceCell::new();
 
 fn main () {
 
+    let (transmit, receive) = mpsc::channel::<Command>();
 
-    let mut internal = match startup() {
+    let mut internal = match startup(transmit.clone()) {
         Ok(i) => {
             println!("Startup successful!");
             i
@@ -34,16 +35,68 @@ fn main () {
         }
     };
 
-    let (transmit, receive) = mpsc::channel::<Command>();    
 
-    let transmit_input = transmit.clone();
     let ui_thread = thread::spawn(
         move || {
-            cli::run_cli(transmit_input);
+            cli::run_cli(transmit);
         }
     );
     
-    for command in receive {}
+    for command in receive {
+        if let Err(e) = match command {
+            Command::Play => internal.play(),
+            Command::Pause => internal.pause(),
+            Command::PlayNew(song) => internal.play_new(song),
+            Command::Stop => Err("Stop command not implemented".to_string()),
+            Command::CurrentSong(sender) => {
+                match internal.current_song() {
+                    Ok(song) => sender.send(song).map_err(|e| format!("Failed to send current song: {}", e)),
+                    Err(e) => Err(e),
+                }
+            },
+            Command::PlaylistLoad(name) => internal.playlist_load(&name),
+            Command::PlaylistNew { name, external_type } => internal.playlist_new(&name, external_type),
+            Command::PlaylistAdd(song) => internal.playlist_add(song),
+            Command::PlaylistRemove(index) => internal.playlist_remove(index),
+            Command::PlaylistMoveSong { from, to } => internal.playlist_move_song(from, to),
+            Command::PlaylistGetSongs(sender) => {
+                match internal.playlist_get_songs() {
+                    Ok(songs) => sender.send(songs).map_err(|e| format!("Failed to send playlist songs: {}", e)),
+                    Err(e) => Err(e),
+                }
+            },
+            Command::PlaylistGetName(sender) => {
+                match internal.playlist_get_name() {
+                    Ok(name) => sender.send(name).map_err(|e| format!("Failed to send playlist name: {}", e)),
+                    Err(e) => Err(e),
+                }
+            },
+            Command::PlaylistSetName(name) => internal.playlist_set_name(name.as_str()),
+            Command::PlaylistGetSong { song, index } => {
+                match internal.playlist_get_song(index) {
+                    Ok(s) => song.send(s).map_err(|e| format!("Failed to send playlist song: {}", e)),
+                    Err(e) => Err(e),
+                }
+            },
+            Command::QueueAdd(song) => internal.queue_add(song),
+            Command::QueueRemove(index) => internal.queue_remove(index),
+            Command::QueueList => internal.queue_list(),
+            Command::QueueNext => internal.queue_next(),
+            Command::QueuePlaylist(playlist) => internal.queue_playlist(&playlist),
+            Command::QueueCurrentPlaylist => internal.queue_current_playlist(),
+            Command::QueueGet(sender) => {
+                match internal.queue_get() {
+                    Ok(queue) => sender.send(queue.clone()).map_err(|e| format!("Failed to send queue: {}", e)),
+                    Err(e) => Err(e),
+                }
+            },
+        }  {
+            println!("Error: {}", e);
+        }
+
+    }
+
+    ui_thread.join().unwrap();
 
     loop {
         match shutdown(&internal) {
@@ -56,7 +109,7 @@ fn main () {
 }
 
 
-fn startup() -> Result<Internal, String> {
+fn startup(transmit: std::sync::mpsc::Sender<crate::Command>) -> Result<Internal, String> {
     println!("Starting up... ");
 
     // Check for config file, create default if not exists
@@ -116,7 +169,7 @@ fn startup() -> Result<Internal, String> {
     };
         
 
-    Ok(Internal::new(startup_data.queue, playlist)?)
+    Ok(Internal::new(startup_data.queue, playlist, transmit)?)
 }
 
 fn shutdown (internal: &Internal) -> Result<(), String> {
@@ -212,11 +265,9 @@ enum Command {
     PlayNew(Song),
     Stop,
     CurrentSong(mpsc::Sender<Song>),
-    Shutdown,
-    PlaylistLoad(&str),
-    PlaylistSave,
+    PlaylistLoad(String),
     PlaylistNew {
-        name: &str,
+        name: String,
         external_type: Option<ExternalType>,
     },
     PlaylistAdd(Song),
@@ -225,18 +276,18 @@ enum Command {
         from: usize,
         to: usize,
     },
-    PlaylistGetSongs(mpsc::Sender<&Vec<Song>>),
-    PlaylistGetName(mpsc::Sender<&String>),
-    PlaylistSetName(&str),
+    PlaylistGetSongs(mpsc::Sender<Vec<Song>>),
+    PlaylistGetName(mpsc::Sender<String>),
+    PlaylistSetName(String),
     PlaylistGetSong {
-        song: mpsc::Sender<&Song>,
+        song: mpsc::Sender<Song>,
         index: usize,
     },
     QueueAdd(Song),
     QueueRemove(usize),
     QueueList,
     QueueNext,
-    QueuePlaylist(&Playlist),
+    QueuePlaylist(Playlist),
     QueueCurrentPlaylist,
-    QueueGet(mpsc::Sender<&Queue>),
+    QueueGet(mpsc::Sender<Queue>),
 }

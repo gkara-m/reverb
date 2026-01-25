@@ -17,14 +17,14 @@ pub(super) fn queue_list(transmit: &Sender<Command>) -> Result<(), String> {
     transmit.clone().send(Command::QueueList).map_err(|e| format!("Failed to send queue list command: {}", e))
 }
 
-pub(super) fn playlist_get_name(transmit: &Sender<Command>) -> Result<&String, String> {
+pub(super) fn playlist_get_name(transmit: &Sender<Command>) -> Result<String, String> {
     let (tx, rx) = mpsc::channel();
     transmit.clone().send(Command::PlaylistGetName(tx)).map_err(|e| format!("Failed to send playlist get name command: {}", e))?;
     let name= rx.recv().map_err(|e| format!("Failed to receive playlist name: {}", e))?;
     Ok(name)
 }
 
-pub(super) fn playlist_get_songs(transmit: &Sender<Command>) -> Result<&Vec<Song>, String> {
+pub(super) fn playlist_get_songs(transmit: &Sender<Command>) -> Result<Vec<Song>, String> {
     let (tx, rx) = mpsc::channel();
     transmit.clone().send(Command::PlaylistGetSongs(tx)).map_err(|e| format!("Failed to send playlist get songs command: {}", e))?;
     let songs = rx.recv().map_err(|e| format!("Failed to receive playlist songs: {}", e))?;
@@ -54,7 +54,7 @@ pub(super) fn queue_remove(transmit: &Sender<Command>, song_index: usize) -> Res
     transmit.clone().send(Command::QueueRemove(song_index)).map_err(|e| format!("Failed to send queue remove command: {}", e))
 }
 
-pub(super) fn queue_playlist(transmit: &Sender<Command>, playlist: &Playlist) -> Result<(), String> {
+pub(super) fn queue_playlist(transmit: &Sender<Command>, playlist: Playlist) -> Result<(), String> {
     transmit.clone().send(Command::QueuePlaylist(playlist)).map_err(|e| format!("Failed to send queue playlist command: {}", e))
 }
 
@@ -71,7 +71,7 @@ pub(super) fn playlist_remove(transmit: &Sender<Command>, index: usize) -> Resul
 }
 
 pub(super) fn playlist_load(transmit: &Sender<Command>, name: &str) -> Result<(), String> {
-    transmit.clone().send(Command::PlaylistLoad(name)).map_err(|e| format!("Failed to send playlist load command: {}", e))
+    transmit.clone().send(Command::PlaylistLoad(name.to_string())).map_err(|e| format!("Failed to send playlist load command: {}", e))
 }
 
 pub(super) fn playlist_move_song(transmit: &Sender<Command>, from: usize, to: usize) -> Result<(), String> {
@@ -79,10 +79,10 @@ pub(super) fn playlist_move_song(transmit: &Sender<Command>, from: usize, to: us
 }
 
 pub(super) fn playlist_new(transmit: &Sender<Command>, name: &str, external_type: Option<ExternalType>) -> Result<(), String> {
-    transmit.clone().send(Command::PlaylistNew { name, external_type }).map_err(|e| format!("Failed to send playlist new command: {}", e))
+    transmit.clone().send(Command::PlaylistNew { name: name.to_string(), external_type }).map_err(|e| format!("Failed to send playlist new command: {}", e))
 }
 
-pub(super) fn playlist_get_song(transmit: &Sender<Command>, index: usize) -> Result<&Song, String> {
+pub(super) fn playlist_get_song(transmit: &Sender<Command>, index: usize) -> Result<Song, String> {
     let (tx, rx) = mpsc::channel();
     transmit.clone().send(Command::PlaylistGetSong { song: tx, index }).map_err(|e| format!("Failed to send playlist get song command: {}", e))?;
     let song = rx.recv().map_err(|e| format!("Failed to receive playlist song: {}", e))?;
@@ -90,5 +90,5 @@ pub(super) fn playlist_get_song(transmit: &Sender<Command>, index: usize) -> Res
 }
 
 pub(super) fn playlist_set_name(transmit: &Sender<Command>, name: &str) -> Result<(), String> {
-    transmit.clone().send(Command::PlaylistSetName(name)).map_err(|e| format!("Failed to send playlist set name command: {}", e))
+    transmit.clone().send(Command::PlaylistSetName(name.to_string())).map_err(|e| format!("Failed to send playlist set name command: {}", e))
 }
