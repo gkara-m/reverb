@@ -9,7 +9,7 @@ use ui::cli;
 use internal::{internal::Internal, song::Song};
 use external::{external::ExternalSong, local::LocalSong};
 
-use crate::{external::external::ExternalType, internal::{playlist::Playlist, queue::Queue}};
+use crate::{external::external::{ExternalSongTrait, ExternalType}, internal::{playlist::Playlist, queue::Queue}};
 
 mod external;
 mod ui;
@@ -231,8 +231,10 @@ impl StartupData {
         let song = Song {
             song_type: ExternalSong::LOCAL(
                 LocalSong::new("sample/default_song.mp3")?),
-            title: String::from("Default Song"),
-            artist: String::from("REVERB"),
+            info: crate::internal::song::SongInfo {
+                title: String::from("Default Song"),
+                artist: String::from("REVERB"),
+            }
         };
         let startup_data = StartupData {
             last_played_playlist: "Default Startup Playlist".to_string(),

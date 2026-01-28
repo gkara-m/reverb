@@ -4,7 +4,7 @@ use std::path::Path;
 use rodio::{Decoder, OutputStream, Sink, OutputStreamBuilder};
 use serde::{Deserialize, Serialize};
 
-use crate::external::{external::{External, ExternalSong::LOCAL}};
+use crate::external::external::{External, ExternalSong::LOCAL, ExternalSongTrait};
 use crate::internal::song::Song;
 
 
@@ -18,9 +18,15 @@ pub(crate) struct LocalSong {
     song_path : String,
 }
 
+impl ExternalSongTrait for LocalSong {
+    fn info(&self) -> Result<crate::internal::song::SongInfo, String> {
+        Ok(crate::internal::song::SongInfo {
+            title: format!("Local Song at path: {}", self.song_path),
+            artist: String::from("Unknown Artist"),
+        })
+    }
 
-impl LocalSong {
-    pub fn new(path_str: &str) -> Result<Self, String> {
+    fn new(path_str: &str) -> Result<Self, String> {
         let path = Path::new(path_str);
         
         if path.exists() {
@@ -32,6 +38,21 @@ impl LocalSong {
 }
 
 impl External for Local {
+    fn new(song:&Song) -> Result<Local, String> {
+        let output_stream = match OutputStreamBuilder::open_default_stream() {
+            Err(e) => return Err(format!("Failed to open output stream: {}", e)),
+            Ok(output_stream) => output_stream,
+        };
+        let sink = Sink::connect_new(&output_stream.mixer());
+        sink.pause();
+        let local = Local {
+            _output_stream: output_stream,
+            sink,
+        };
+        local.load_new(song)?;
+        Ok(local)
+    }
+    
     fn play_new(&self, song: &Song) -> Result<(), String> {
         self.load_new(song)?;
         self.sink.play();
@@ -57,11 +78,6 @@ impl External for Local {
         // nothing to be done
         Ok(())
     }
-    
-    fn sleep_until_song_end(&self) -> Result<(), String> {
-        self.sink.sleep_until_end();
-        Ok(())
-    }
 }
 
 impl Local {
@@ -72,21 +88,6 @@ impl Local {
             self.sink.append(decoder);
             Ok(())
         } else {Err(String::from("Invalid song type for Local external"))}
-    }
-
-    pub fn new(song:&Song) -> Result<Local, String> {
-        let output_stream = match OutputStreamBuilder::open_default_stream() {
-            Err(e) => return Err(format!("Failed to open output stream: {}", e)),
-            Ok(output_stream) => output_stream,
-        };
-        let sink = Sink::connect_new(&output_stream.mixer());
-        sink.pause();
-        let local = Local {
-            _output_stream: output_stream,
-            sink,
-        };
-        local.load_new(song)?;
-        Ok(local)
     }
 }
 

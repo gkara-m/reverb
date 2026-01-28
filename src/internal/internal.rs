@@ -36,7 +36,8 @@ impl  Internal {
         }
         self.queue.queued_songs[0] = song;
         self.current_external.play_new(&self.queue.queued_songs[0])?;
-        self.eepy_thread()
+        // self.eepy_thread()
+        Ok(())
     }
 
     fn stop(&self) -> Result<(), String> {
@@ -142,11 +143,12 @@ impl Internal{
         Ok(&self.queue)
     }
 
-    pub fn eepy_thread(& mut self) -> Result<(), String> {
-        // thread::spawn(|| {
-        //     self.current_external.sleep_until_song_end();
-        //     let _ = self.sender.send(crate::Command::QueueNext);
-        // });
-        Ok(())
-    }
+    // pub fn eepy_thread(& mut self) -> Result<thread::JoinHandle<()>, String> {
+    //     Ok(
+    //         thread::spawn(|| {
+    //             self.current_external.sleep_until_song_end();
+    //             let _ = self.sender.send(crate::Command::QueueNext);
+    //         });
+    //     )
+    // }
 }
