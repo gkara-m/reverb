@@ -24,15 +24,6 @@ pub trait ExternalSongTrait {
 }
 
 
-impl ExternalRun {
-    pub fn as_external(&self) -> &dyn External {
-        match self {
-            ExternalRun::LOCAL(local) => local,
-            ExternalRun::YOUTUBE(_) => todo!(),
-        }
-    }
-}
-
 impl External for ExternalRun {
     fn new(song: &Song) -> Result<Self, String> where Self: Sized {
         get_new_external_run_from_song(song)
@@ -106,7 +97,7 @@ impl External for ExternalRun {
             }
         }
     }
-
+    
     impl ExternalSong {
         pub fn same_type(&self, external_type: &ExternalRun) -> bool {
             match (self, external_type) {
@@ -123,6 +114,15 @@ impl External for ExternalRun {
             ExternalSong::YOUTUBE(_) => todo!(),
         }
     }
+    
+    impl ExternalRun {
+        pub fn as_external(&self) -> &dyn External {
+            match self {
+                ExternalRun::LOCAL(local) => local,
+                ExternalRun::YOUTUBE(_) => todo!(),
+            }
+        }
+    }
 */
 
 
@@ -130,8 +130,8 @@ macro_rules! make_external_types {
     (
         $(
             $backend:ident {
-            Run:  $run:ty,
-            Song: $song:ty,
+                Run:  $run:ty,
+                Song: $song:ty,
             string_name: $name:ident $(,)?
         }
         ),* $(,)?
@@ -208,6 +208,16 @@ macro_rules! make_external_types {
                     ExternalSong::$backend(_) => Ok(ExternalRun::$backend(<$run>::new(song)?)),
                 )*
                 _ => Err("No matching external run found for song".to_string()),
+            }
+        }
+
+        impl ExternalRun {
+            pub fn as_external(&self) -> &dyn External {
+                match self {
+                    $(
+                        ExternalRun::$backend(instance) => instance,
+                    )*
+                }
             }
         }
     }
