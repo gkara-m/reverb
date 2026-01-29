@@ -207,7 +207,6 @@ macro_rules! make_external_types {
                 $(
                     ExternalSong::$backend(_) => Ok(ExternalRun::$backend(<$run>::new(song)?)),
                 )*
-                _ => Err("No matching external run found for song".to_string()),
             }
         }
 

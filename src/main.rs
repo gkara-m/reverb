@@ -94,7 +94,6 @@ fn main () {
         }  {
             cli::invalid_input(e);
         }
-
     }
 
     loop {

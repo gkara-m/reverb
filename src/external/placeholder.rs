@@ -4,18 +4,16 @@ use crate::{external::external::{External, ExternalSongTrait}, internal::song};
 
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub(super) struct PlaceholderExternalSong;
+pub struct PlaceholderExternalSong;
 
-pub(super) struct PlaceholderRun;
-
-
+pub struct PlaceholderRun;
 
 impl ExternalSongTrait for PlaceholderExternalSong {
     fn info(&self) -> Result<crate::internal::song::SongInfo, String> {
         todo!()
     }
     
-    fn new(info: &str) -> Result<Self, String> where Self: Sized {
+    fn new(_info: &str) -> Result<Self, String> where Self: Sized {
         todo!()
     }
 }
