@@ -178,6 +178,9 @@ macro_rules! make_external_types {
         }
 
         impl ExternalSongTrait for ExternalSong {
+            // Note: This function is not intended to be used; it's here to satisfy the trait requirement.
+            // Use ExternalType::new_external_song instead.
+            // TODO: this will be chnaged later to remove confusion
             fn new(_info: &str) -> Result<Self, String> where Self: Sized {
                 Err("Use ExternalType::new_external_song instead".to_string())
             }
