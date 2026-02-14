@@ -1,4 +1,4 @@
-/target
+/target/*
 /sample/*
 /.vscode
 /playlists/*
