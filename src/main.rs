@@ -13,7 +13,7 @@ use toml;
 use ui::cli;
 
 use crate::{
-    external::external::ExternalType,
+    external::external::{ExternalSongTrait, ExternalType},
     internal::{playlist::Playlist, queue::Queue},
 };
 
@@ -256,9 +256,12 @@ struct StartupData {
 impl StartupData {
     fn new_default() -> Result<StartupData, String> {
         let song = Song {
-            song_type: ExternalSong::LOCAL(LocalSong::new("sample/default_song.mp3")?),
-            title: String::from("Default Song"),
-            artist: String::from("REVERB"),
+            song_type: ExternalSong::LOCAL(
+                LocalSong::new("sample/default_song.mp3")?),
+            info: crate::internal::song::SongInfo {
+                title: String::from("Default Song"),
+                artist: String::from("REVERB"),
+            }
         };
         let startup_data = StartupData {
             last_played_playlist: "Default Startup Playlist".to_string(),

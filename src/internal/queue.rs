@@ -38,7 +38,7 @@ impl Queue {
 
     pub fn list(&mut self) -> Result<(), String> {
         for song in self.queued_songs.iter() {
-            println!("{} - {}", song.artist, song.title);
+            println!("{} - {}", song.info.artist, song.info.title);
         }
         Ok(())
     }

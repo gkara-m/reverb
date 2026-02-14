@@ -67,13 +67,13 @@ fn command_check_single(command: &str, transmit: &Sender<Command>) -> Result<boo
                     println!("{}:", ui::playlist_get_name(transmit)?);
                     let songs = ui::playlist_get_songs(transmit)?;
                     for (index, song) in songs.iter().enumerate() {
-                        println!("{}: {} - {}", index, song.artist, song.title);
+                        println!("{}: {} - {}", index, song.info.artist, song.info.title);
                     }
                 }
         "skip" => {ui::queue_next(transmit)?;}
         "song" => {
             let song = ui::current_song(transmit)?;
-            println!("Currently playing: {} - {}", song.artist, song.title);
+            println!("Currently playing: {} - {}", song.info.artist, song.info.title);
         }
         _ => {Err(format!("Unknown command: {}", command))?;}
     }
@@ -83,19 +83,25 @@ fn command_check_single(command: &str, transmit: &Sender<Command>) -> Result<boo
 fn command_check_composite(command: &str, args: &str, transmit: &Sender<Command>) -> Result<bool, String> {
     match command {
         "play" => {
-            match args {
-                "new" => {
-                    let (_, args) = args.split_once(' ').ok_or("Missing song argument for play new command")?;
-                    let song = Song::new(args)?;
-                    ui::play_new(transmit, song)?;
+            match args.split_once(" ") {
+                Some((action, args)) => {
+                    match action {
+                        "new" => {
+                            let song = Song::new(args)?;
+                            ui::play_new(transmit, song)?;
+                        }
+                        _ => {return Err(format!("Unknown command: play {} {}", action, args));}
+                    }
                 }
-                "help" => {
-                    println!("avaliliable play commands:
-                    play: play the current song
-                    play new <song>: play a new song from the given path
-                    play help: display this help message for play commands");
+                None => match args {
+                    "help" => {
+                        println!("avaliliable play commands:
+                        play: play the current song
+                        play new <song>: play a new song from the given path
+                        play help: display this help message for play commands");
+                    }
+                    _ => {return Err(format!("Unknown command: play {}", args))}
                 }
-                _ => {return Err(format!("Unknown play command: {}", args))}
             }
         }
         "queue" => {
@@ -189,7 +195,7 @@ fn handle_playlist(transmit: &Sender<Command>, args: &str) -> Result<bool, Strin
                 "get" => {
                     let index: usize = args.parse().map_err(|_| format!("Invalid song index: {}", args))?;
                     let song = ui::playlist_get_song(transmit, index)?;
-                    println!("{} - {}", song.artist, song.title);
+                    println!("{} - {}", song.info.artist, song.info.title);
                 }
                 "name" => {
                     ui::playlist_set_name(transmit, args)?;

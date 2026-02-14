@@ -5,7 +5,7 @@ use std::io::BufReader;
 use std::path::Path;
 use std::time::Duration;
 
-use crate::external::external::{External, ExternalSong::LOCAL};
+use crate::external::external::{External, ExternalSong::LOCAL, ExternalSongTrait};
 use crate::internal::song::Song;
 
 pub struct Local {
@@ -19,8 +19,15 @@ pub(crate) struct LocalSong {
     song_path: String,
 }
 
-impl LocalSong {
-    pub fn new(path_str: &str) -> Result<Self, String> {
+impl ExternalSongTrait for LocalSong {
+    fn info(&self) -> Result<crate::internal::song::SongInfo, String> {
+        Ok(crate::internal::song::SongInfo {
+            title: format!("Local Song at path: {}", self.song_path),
+            artist: String::from("Unknown Artist"),
+        })
+    }
+
+    fn new(path_str: &str) -> Result<Self, String> {
         let path = Path::new(path_str);
 
         if path.exists() {
@@ -34,7 +41,22 @@ impl LocalSong {
 }
 
 impl External for Local {
-    fn play_new(&mut self, song: &Song) -> Result<(), String> {
+    fn new(song:&Song) -> Result<Local, String> {
+        let output_stream = match OutputStreamBuilder::open_default_stream() {
+            Err(e) => return Err(format!("Failed to open output stream: {}", e)),
+            Ok(output_stream) => output_stream,
+        };
+        let sink = Sink::connect_new(&output_stream.mixer());
+        sink.pause();
+        let local = Local {
+            _output_stream: output_stream,
+            sink,
+        };
+        local.load_new(song)?;
+        Ok(local)
+    }
+    
+    fn play_new(&self, song: &Song) -> Result<(), String> {
         self.load_new(song)?;
         self.sink.play();
         Ok(())
