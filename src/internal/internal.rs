@@ -1,42 +1,59 @@
-use crate::{external::external::{self, External, ExternalRun, ExternalType}, internal::{playlist::{Playlist}, queue::Queue, song::Song}};
+use crate::{
+    Command,
+    external::external::{self, External, ExternalRun, ExternalType},
+    internal::{playlist::Playlist, queue::Queue, song::Song},
+};
 
 use std::thread;
+use std::thread::JoinHandle;
+use std::{sync::mpsc, time::Duration};
+use std::{
+    sync::mpsc::{Receiver, Sender},
+    thread::sleep,
+};
 
-pub struct Internal{
+pub struct Internal {
     current_external: ExternalRun,
     current_playlist: Playlist,
     queue: Queue,
     sender: std::sync::mpsc::Sender<crate::Command>,
+    pub song_status: SongStatus,
 }
 
-
-impl  Internal {
-
-    pub fn new(queue: Queue, playlist: Playlist, sender: std::sync::mpsc::Sender<crate::Command>) -> Result<Self, String> {
+impl Internal {
+    pub fn new(
+        queue: Queue,
+        playlist: Playlist,
+        sender: std::sync::mpsc::Sender<crate::Command>,
+    ) -> Result<Self, String> {
         Ok(Internal {
             current_external: external::get_new_external_run_from_song(&queue.current_song()?)?,
             current_playlist: playlist,
             queue,
             sender,
+            song_status: SongStatus {
+                kill_sender: mpsc::channel().0,
+            },
         })
     }
 
-    pub fn play(&self) -> Result<(), String> {
+    pub fn play(&mut self) -> Result<(), String> {
         self.current_external.play()
     }
 
-    pub fn pause(&self) -> Result<(), String> {
+    pub fn pause(&mut self) -> Result<(), String> {
         self.current_external.pause()
     }
 
-    pub fn play_new(&mut self, song :Song) -> Result<(), String> {
+    pub fn play_new(&mut self, song: Song) -> Result<(), String> {
         self.stop()?;
         if !song.song_type.same_type(&self.current_external) {
             self.current_external = external::get_new_external_run_from_song(&song)?;
         }
         self.queue.queued_songs[0] = song;
-        self.current_external.play_new(&self.queue.queued_songs[0])?;
-        self.eepy_thread()
+        self.current_external
+            .play_new(&self.queue.queued_songs[0])?;
+        self.song_status.update_autoskip(self)
     }
 
     fn stop(&self) -> Result<(), String> {
@@ -46,15 +63,23 @@ impl  Internal {
     pub fn current_song(&self) -> Result<Song, String> {
         self.queue.current_song()
     }
-    
+
     pub fn shutdown(&self) -> Result<(), String> {
         self.current_playlist.save()?;
         self.current_external.shutdown()?;
         Ok(())
     }
+
+    pub fn is_song_playing(&self) -> Result<bool, String> {
+        self.current_external.is_song_playing()
+    }
+
+    pub fn song_time_left(&mut self) -> Result<Duration, String> {
+        self.current_external.time_left()
+    }
 }
 
-impl Internal{
+impl Internal {
     pub fn playlist_load(&mut self, playlist_name: &str) -> Result<(), String> {
         self.playlist_save()?;
         let playlist = Playlist::load(playlist_name)?;
@@ -66,28 +91,32 @@ impl Internal{
         self.current_playlist.save()
     }
 
-    pub fn playlist_new(&mut self, name: &str, external_type: Option<ExternalType>) -> Result<(), String>{
+    pub fn playlist_new(
+        &mut self,
+        name: &str,
+        external_type: Option<ExternalType>,
+    ) -> Result<(), String> {
         self.playlist_save()?;
         self.current_playlist = Playlist::new(name, external_type)?;
         self.playlist_save()
     }
 
-    pub fn playlist_add(&mut self, song: Song) -> Result<(), String>{
+    pub fn playlist_add(&mut self, song: Song) -> Result<(), String> {
         self.current_playlist.add(&song)?;
         self.playlist_save()
     }
 
-    pub fn playlist_remove(&mut self, index: usize) -> Result<(), String>{
+    pub fn playlist_remove(&mut self, index: usize) -> Result<(), String> {
         self.current_playlist.remove(index)?;
         self.playlist_save()
     }
 
-    pub fn playlist_move_song(&mut self, from: usize, to: usize) -> Result<(), String>{
+    pub fn playlist_move_song(&mut self, from: usize, to: usize) -> Result<(), String> {
         self.current_playlist.move_song(from, to)?;
         self.playlist_save()
     }
 
-    pub fn playlist_get_songs(&self) -> Result<Vec<Song>, String>{
+    pub fn playlist_get_songs(&self) -> Result<Vec<Song>, String> {
         self.current_playlist.get_songs()
     }
 
@@ -105,8 +134,7 @@ impl Internal{
     }
 }
 
-impl Internal{
-
+impl Internal {
     pub fn queue_add(&mut self, song: Song) -> Result<(), String> {
         self.queue.add(song)?;
         Ok(())
@@ -141,12 +169,40 @@ impl Internal{
     pub fn queue_get(&self) -> Result<&Queue, String> {
         Ok(&self.queue)
     }
+}
 
-    pub fn eepy_thread(& mut self) -> Result<(), String> {
-        // thread::spawn(|| {
-        //     self.current_external.sleep_until_song_end();
-        //     let _ = self.sender.send(crate::Command::QueueNext);
-        // });
+pub struct SongStatus {
+    kill_sender: Sender<()>,
+}
+
+impl SongStatus {
+    pub fn update_autoskip(&mut self, internal: &Internal) -> Result<(), String> {
+        self.kill_autoskip()?;
+        if internal.is_song_playing()? {
+            let time_left = internal.song_time_left()?;
+            if time_left.is_zero() {
+                let sender = internal.sender.clone();
+                sender.send(Command::QueueNext);
+                Ok(())
+            } else {
+                let sender = internal.sender.clone();
+                let (kill_sender, kill_receiver) = mpsc::channel();
+                self.kill_sender = kill_sender;
+                thread::spawn(move || {
+                    if let Ok(_) = kill_receiver.recv_timeout(time_left) {
+                        return;
+                    }
+                    sender.send(Command::UpdateAutoskip);
+                });
+                Ok(())
+            }
+        } else {
+            Ok(())
+        }
+    }
+
+    pub fn kill_autoskip(&mut self) -> Result<(), String> {
+        self.kill_sender.send(());
         Ok(())
     }
 }

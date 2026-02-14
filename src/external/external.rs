@@ -1,25 +1,31 @@
+use std::sync::mpsc::Receiver;
+use std::time::Duration;
+
 use serde::{Deserialize, Serialize};
 
-use crate::internal::song::Song;
 use crate::external::local::{Local, LocalSong};
+use crate::internal::song::Song;
 
 pub trait External {
-    fn play_new(&self, song: &Song) -> Result<(), String>;
+    fn play_new(&mut self, song: &Song) -> Result<(), String>;
 
-    fn pause(&self) -> Result<(), String>;
+    fn pause(&mut self) -> Result<(), String>;
 
-    fn play(&self) -> Result<(), String>;
+    fn play(&mut self) -> Result<(), String>;
 
-    fn stop(&self) -> Result<(), String>;
+    fn stop(&mut self) -> Result<(), String>;
 
-    fn shutdown(&self) -> Result<(), String>;
+    fn shutdown(&mut self) -> Result<(), String>;
 
-    fn sleep_until_song_end(&self) -> Result<(), String>;
+    fn sleep_until_song_end(&mut self) -> Result<(), String>;
+
+    fn is_song_playing(&mut self) -> Result<bool, String>;
+
+    fn time_left(&mut self) -> Result<Duration, String>;
 }
 
-
 impl ExternalRun {
-    pub fn as_external(&self) -> &dyn External {
+    pub fn as_external(&mut self) -> &mut dyn External {
         match self {
             ExternalRun::LOCAL(local) => local,
             ExternalRun::YOUTUBE(_) => todo!(),
@@ -28,28 +34,36 @@ impl ExternalRun {
 }
 
 impl External for ExternalRun {
-    fn play_new(&self, song: &Song) -> Result<(), String> {
+    fn play_new(&mut self, song: &Song) -> Result<(), String> {
         self.as_external().play_new(song)
     }
 
-    fn pause(&self) -> Result<(), String> {
+    fn pause(&mut self) -> Result<(), String> {
         self.as_external().pause()
     }
 
-    fn play(&self) -> Result<(), String> {
+    fn play(&mut self) -> Result<(), String> {
         self.as_external().play()
     }
 
-    fn stop(&self) -> Result<(), String> {
+    fn stop(&mut self) -> Result<(), String> {
         self.as_external().stop()
     }
 
-    fn shutdown(&self) -> Result<(), String> {
+    fn shutdown(&mut self) -> Result<(), String> {
         self.as_external().shutdown()
     }
 
-    fn sleep_until_song_end(&self) -> Result<(), String> {
+    fn sleep_until_song_end(&mut self) -> Result<(), String> {
         self.as_external().sleep_until_song_end()
+    }
+
+    fn is_song_playing(&mut self) -> Result<bool, String> {
+        self.as_external().is_song_playing()
+    }
+
+    fn time_left(&mut self) -> Result<Duration, String> {
+        self.as_external().time_left()
     }
 }
 
@@ -79,7 +93,7 @@ impl External for ExternalRun {
                 _ => Err(format!("Unknown external type: {}", string))
             }
         }
-        
+
         pub fn new_external_song(&self, string: &str) -> Result<ExternalSong, String> {
             match self {
                 ExternalType::LOCAL => LocalSong::new(string).map(ExternalSong::LOCAL),
@@ -88,7 +102,6 @@ impl External for ExternalRun {
         }
     }
 */
-
 
 macro_rules! make_external_types {
     (
@@ -131,7 +144,7 @@ macro_rules! make_external_types {
                 _ => Err(format!("Unknown external type: {}", string))
             }
         }
-        
+
         pub fn new_external_song(&self, string: &str) -> Result<ExternalSong, String> {
             match self {
                 $(
@@ -144,7 +157,7 @@ macro_rules! make_external_types {
     }
 }
 
-make_external_types!{
+make_external_types! {
     LOCAL{
         Run: Local,
         Song: LocalSong,
