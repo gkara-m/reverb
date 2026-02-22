@@ -10,7 +10,7 @@ pub(super) struct Config {
 }
 
 impl Config {
-    pub fn new_default() -> Result<Config, String> {
+    pub(super) fn new_default() -> Result<Config, String> {
         let config = Config {
             data_folder: "data/".to_string(),
             local_song_folder_path: None,
@@ -19,7 +19,7 @@ impl Config {
         Ok(config)
     }
 
-    pub fn save(&self) -> Result<(), String> {
+    pub(super) fn save(&self) -> Result<(), String> {
         match std::fs::create_dir_all(CONFIG_FOLDER) {
             Err(e) => return Err(format!("Failed to create config directory: {}", e)),
             Ok(_) => {},

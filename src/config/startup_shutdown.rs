@@ -1,8 +1,8 @@
-use std::path::Path;
+use std::{path::Path, sync::mpsc::Sender};
 
-use crate::{CONFIG_FOLDER, DATA_FOLDER, LOCAL_SONG_FOLDER_PATH, config::{config::Config, data::StartupData}, internal::{internal::Internal, playlist::Playlist}};
+use crate::{CONFIG_FOLDER, Command, DATA_FOLDER, LOCAL_SONG_FOLDER_PATH, config::{config::Config, data::StartupData}, internal::{internal::Internal, playlist::Playlist}};
 
-pub fn startup() -> Result<Internal, String> {
+pub fn startup(transmit: Sender<Command>) -> Result<Internal, String> {
     println!("Starting up... ");
 
     // Check for config file, create default if not exists
@@ -62,7 +62,7 @@ pub fn startup() -> Result<Internal, String> {
     };
         
 
-    Ok(Internal::new(startup_data.queue, playlist)?)
+    Ok(Internal::new(startup_data.queue, playlist, transmit)?)
 }
 
 pub fn shutdown (internal: &Internal) -> Result<(), String> {

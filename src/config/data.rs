@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{DATA_FOLDER, external::{external::ExternalSong, local::LocalSong}, internal::{queue::Queue, song::Song}};
+use crate::{DATA_FOLDER, external::{external::{ExternalSong, ExternalSongTrait}, local::LocalSong}, internal::{queue::Queue, song::{Song, SongInfo}}};
 
 #[derive(Serialize, Deserialize)]
 pub(super) struct StartupData {
@@ -14,8 +14,10 @@ impl StartupData {
         let song = Song {
             song_type: ExternalSong::LOCAL(
                 LocalSong::new("sample/default_song.mp3")?),
-            title: String::from("Default Song"),
-            artist: String::from("REVERB"),
+                    info: SongInfo {
+                        title: "Default Song".to_string(),
+                        artist: "Unknown Artist".to_string(),
+                    },
         };
         let startup_data = StartupData {
             last_played_playlist: "Default Startup Playlist".to_string(),
