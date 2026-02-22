@@ -45,19 +45,19 @@ impl Playlist {
         }
     }
 
-    pub fn get_songs(&self) -> Result<&Vec<Song>, String> {
-        Ok(&self.songs)
+    pub fn get_songs(&self) -> Result<Vec<Song>, String> {
+        Ok(self.songs.clone())
     }
 
-    pub fn get_song(&self, index: usize) -> Result<&Song, String> {
+    pub fn get_song(&self, index: usize) -> Result<Song, String> {
         match self.songs.get(index) {
-            Some(song) => Ok(song),
+            Some(song) => Ok(song.clone()),
             None => Err(format!("invalid song index: {}", index)),
         }
     }
 
-    pub fn get_name(&self) -> Result<&String, String> {
-        Ok(&self.name)
+    pub fn get_name(&self) -> Result<String, String> {
+        Ok(self.name.clone())
     }
 
     pub fn set_name(&mut self, name: &str) -> Result<(), String> {

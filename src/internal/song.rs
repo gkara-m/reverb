@@ -1,13 +1,12 @@
 use serde::{Deserialize, Serialize};
 
-use crate::external::external::{ExternalSong, ExternalType};
+use crate::external::external::{ExternalSong, ExternalSongTrait, ExternalType};
 
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Song {
     pub song_type: ExternalSong,
-    pub title: String,
-    pub artist: String,
+    pub info: SongInfo,
 }
 
 
@@ -19,12 +18,17 @@ impl Song {
                 let t = ExternalType::get_from_str(external_type)?;
                 let external_song = t.new_external_song(external_info)?;
                 Ok(Song {
+                    info: external_song.info()?,
                     song_type: external_song,
-                    title: String::from("Unknown Title"),
-                    artist: String::from("Unknown Artist"),
                 })
             }
             None => Err(format!("invalid song parameters: {}", params)),
         }
     }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct SongInfo {
+    pub title: String,
+    pub artist: String,
 }
