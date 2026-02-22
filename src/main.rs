@@ -4,7 +4,7 @@ use std::thread;
 
 use external::{external::ExternalSong, local::LocalSong};
 use internal::{
-    internal::{Internal, SongStatus},
+    internal::Internal,
     song::Song,
 };
 use once_cell::sync::OnceCell;
@@ -40,7 +40,7 @@ fn main() {
         }
     };
 
-    let ui_thread = thread::spawn(move || {
+    thread::spawn(move || {
         cli::run_cli(transmit);
     });
 
@@ -96,7 +96,7 @@ fn main() {
                 Err(e) => Err(e),
             },
             Command::Shutdown => break,
-            Command::UpdateAutoskip => internal.song_status.update_autoskip(&mut internal),
+            Command::UpdateAutoskip => internal.update_autoskip(),
         } {
             cli::invalid_input(e);
         }

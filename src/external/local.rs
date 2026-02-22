@@ -1,4 +1,7 @@
-use rodio::{Decoder, OutputStream, OutputStreamBuilder, Sink, Source, decoder};
+use lofty::file::{AudioFile, TaggedFile};
+use lofty::probe::Probe;
+use lofty::properties::FileProperties;
+use rodio::{Decoder, OutputStream, OutputStreamBuilder, Sink};
 use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::BufReader;
@@ -17,6 +20,13 @@ pub struct Local {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub(crate) struct LocalSong {
     song_path: String,
+    duration: Duration,
+}
+
+impl LocalSong {
+    fn get_duration(&self) -> Result<Duration, String> {
+        Ok(self.duration)
+    }
 }
 
 impl ExternalSongTrait for LocalSong {
@@ -29,10 +39,18 @@ impl ExternalSongTrait for LocalSong {
 
     fn new(path_str: &str) -> Result<Self, String> {
         let path = Path::new(path_str);
+        let duration = {
+            let tagged_file = Probe::open(&path)
+                .map_err(|e| format!("Failed to probe file: {}", e))?
+                .read()
+                .map_err(|e| format!("Failed to read tagged file: {}", e))?;
+            tagged_file.properties().duration()
+        };
 
         if path.exists() {
             Ok(LocalSong {
                 song_path: path_str.to_string(),
+                duration,
             })
         } else {
             Err(format!("File path does not exist: {}", path_str))
@@ -48,50 +66,49 @@ impl External for Local {
         };
         let sink = Sink::connect_new(&output_stream.mixer());
         sink.pause();
-        let local = Local {
+        let mut local = Local {
             _output_stream: output_stream,
             sink,
+            song_duration: Duration::new(0, 0), // overwritten in load_new()
         };
         local.load_new(song)?;
         Ok(local)
     }
     
-    fn play_new(&self, song: &Song) -> Result<(), String> {
+    fn play_new(&mut self, song: &Song) -> Result<(), String> {
         self.load_new(song)?;
         self.sink.play();
         Ok(())
     }
 
-    fn pause(&mut self) -> Result<(), String> {
+    fn pause(&self) -> Result<(), String> {
         self.sink.pause();
         Ok(())
     }
 
-    fn play(&mut self) -> Result<(), String> {
+    fn play(&self) -> Result<(), String> {
         self.sink.play();
         Ok(())
     }
 
-    fn stop(&mut self) -> Result<(), String> {
+    fn stop(&self) -> Result<(), String> {
         self.sink.stop();
         Ok(())
     }
 
-    fn shutdown(&mut self) -> Result<(), String> {
+    fn shutdown(&self) -> Result<(), String> {
         // nothing to be done
         Ok(())
     }
 
-    fn sleep_until_song_end(&mut self) -> Result<(), String> {
-        self.sink.sleep_until_end();
-        Ok(())
-    }
-
-    fn is_song_playing(&mut self) -> Result<bool, String> {
+    fn is_song_playing(&self) -> Result<bool, String> {
         Ok(!self.sink.is_paused())
     }
 
-    fn time_left(&mut self) -> Result<Duration, String> {
+    fn time_left(&self) -> Result<Duration, String> {
+        if self.sink.get_pos() >= self.song_duration {
+            return Ok(Duration::new(0, 0));
+        }
         Ok(self.song_duration - self.sink.get_pos())
     }
 }
@@ -101,9 +118,7 @@ impl Local {
         if let LOCAL(ref local_song) = song.song_type {
             self.stop()?;
             let decoder = load_decoder(&local_song.song_path);
-            self.song_duration = decoder
-                .total_duration()
-                .ok_or(format!("placeholder error"))?;
+            self.song_duration = local_song.get_duration()?; 
             self.sink.append(decoder);
             Ok(())
         } else {

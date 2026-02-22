@@ -4,20 +4,18 @@ use crate::{
     internal::{playlist::Playlist, queue::Queue, song::Song},
 };
 
-use std::thread;
-use std::thread::JoinHandle;
-use std::{sync::mpsc, time::Duration};
-use std::{
-    sync::mpsc::{Receiver, Sender},
-    thread::sleep,
-};
+use std::{thread, time::Duration};
+use std::
+    sync::mpsc::Sender
+;
+use std::sync::mpsc;
 
 pub struct Internal {
     current_external: ExternalRun,
     current_playlist: Playlist,
     queue: Queue,
     sender: std::sync::mpsc::Sender<crate::Command>,
-    pub song_status: SongStatus,
+    kill_sender: Sender<()>,
 }
 
 impl Internal {
@@ -31,14 +29,13 @@ impl Internal {
             current_playlist: playlist,
             queue,
             sender,
-            song_status: SongStatus {
-                kill_sender: mpsc::channel().0,
-            },
+            kill_sender: mpsc::channel().0,
         })
     }
 
     pub fn play(&mut self) -> Result<(), String> {
-        self.current_external.play()
+        self.current_external.play()?;
+        self.update_autoskip()
     }
 
     pub fn pause(&mut self) -> Result<(), String> {
@@ -53,7 +50,8 @@ impl Internal {
         self.queue.queued_songs[0] = song;
         self.current_external
             .play_new(&self.queue.queued_songs[0])?;
-        self.song_status.update_autoskip(self)
+        self.update_autoskip()?;
+        Ok(())
     }
 
     fn stop(&self) -> Result<(), String> {
@@ -65,6 +63,7 @@ impl Internal {
     }
 
     pub fn shutdown(&self) -> Result<(), String> {
+        self.kill_autoskip();
         self.current_playlist.save()?;
         self.current_external.shutdown()?;
         Ok(())
@@ -74,7 +73,7 @@ impl Internal {
         self.current_external.is_song_playing()
     }
 
-    pub fn song_time_left(&mut self) -> Result<Duration, String> {
+    pub fn song_time_left(&self) -> Result<Duration, String> {
         self.current_external.time_left()
     }
 }
@@ -169,40 +168,56 @@ impl Internal {
     pub fn queue_get(&self) -> Result<&Queue, String> {
         Ok(&self.queue)
     }
-}
 
-pub struct SongStatus {
-    kill_sender: Sender<()>,
-}
-
-impl SongStatus {
-    pub fn update_autoskip(&mut self, internal: &Internal) -> Result<(), String> {
-        self.kill_autoskip()?;
-        if internal.is_song_playing()? {
-            let time_left = internal.song_time_left()?;
+    pub fn update_autoskip(&mut self) -> Result<(), String> {
+        println!("Updating autoskip... ");
+        match self.kill_autoskip() {
+            Ok(_) => println!("Killed existing autoskip. "),
+            Err(e) => println!("No existing autoskip to kill: {}. ", e), 
+        };
+        if self.is_song_playing()? {
+            println!("Song is playing, setting up autoskip... ");
+            let time_left = self.song_time_left()?;
             if time_left.is_zero() {
-                let sender = internal.sender.clone();
-                sender.send(Command::QueueNext);
+                println!("Time left is zero, skipping to next song... ");
+                let sender = self.sender.clone();
+                sender.send(Command::QueueNext).map_err(|e| format!("Failed to send QueueNext command: {}", e))?;
+                println!("Sent QueueNext command. ");
                 Ok(())
             } else {
-                let sender = internal.sender.clone();
+                println!("Time left is {:?}, setting up autoskip... ", time_left);
+                let sender = self.sender.clone();
                 let (kill_sender, kill_receiver) = mpsc::channel();
                 self.kill_sender = kill_sender;
                 thread::spawn(move || {
+                    println!("Autoskip thread started, sleeping for {:?}... ", time_left);
                     if let Ok(_) = kill_receiver.recv_timeout(time_left) {
+                        println!("Received kill signal, not skipping to next song. ");
                         return;
                     }
-                    sender.send(Command::UpdateAutoskip);
+                    if time_left < Duration::from_secs(1) {
+                        println!("Time left was less than 1 second for {:?}... sending skip command", time_left);
+                        match   sender.send(Command::QueueNext) {
+                            Ok(_) => println!("Autoskip time elapsed, sent QueueNext command. "),
+                            Err(e) => println!("Failed to send QueueNext command: {}", e),
+                        };
+                    } else {
+                        match sender.send(Command::UpdateAutoskip) {
+                            Ok(_) => println!("Autoskip time elapsed, sent UpdateAutoskip command. "),
+                            Err(e) => println!("Failed to send UpdateAutoskip command: {}", e),
+                        }
+                    }
                 });
                 Ok(())
             }
         } else {
+            println!("No song is playing, not setting up autoskip. ");
             Ok(())
         }
     }
 
-    pub fn kill_autoskip(&mut self) -> Result<(), String> {
-        self.kill_sender.send(());
+    pub fn kill_autoskip(&self) -> Result<(), String> {
+        self.kill_sender.send(()).map_err(|e| format!("Failed to kill autoskip: {}", e))?;
         Ok(())
     }
 }

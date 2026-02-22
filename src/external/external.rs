@@ -1,29 +1,26 @@
-use std::sync::mpsc::Receiver;
 use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 
 use crate::external::local::{Local, LocalSong};
 use crate::external::placeholder::{PlaceholderExternalSong, PlaceholderRun};
-
+use crate::Song;
 pub trait External {
     fn play_new(&mut self, song: &Song) -> Result<(), String>;
 
-    fn pause(&mut self) -> Result<(), String>;
+    fn pause(&self) -> Result<(), String>;
 
-    fn play(&mut self) -> Result<(), String>;
+    fn play(&self) -> Result<(), String>;
 
-    fn stop(&mut self) -> Result<(), String>;
+    fn stop(&self) -> Result<(), String>;
 
-    fn shutdown(&mut self) -> Result<(), String>;
+    fn shutdown(&self) -> Result<(), String>;
 
     fn new(song: &Song) -> Result<Self, String> where Self: Sized;
 
-    fn sleep_until_song_end(&mut self) -> Result<(), String>;
+    fn is_song_playing(&self) -> Result<bool, String>;
 
-    fn is_song_playing(&mut self) -> Result<bool, String>;
-
-    fn time_left(&mut self) -> Result<Duration, String>;
+    fn time_left(&self) -> Result<Duration, String>;
 }
 
 pub trait ExternalSongTrait {
@@ -32,49 +29,36 @@ pub trait ExternalSongTrait {
 }
 
 
-impl ExternalRun {
-    pub fn as_external(&mut self) -> &mut dyn External {
-        match self {
-            ExternalRun::LOCAL(local) => local,
-            ExternalRun::YOUTUBE(_) => todo!(),
-        }
-    }
-}
-
 impl External for ExternalRun {
     fn new(song: &Song) -> Result<Self, String> where Self: Sized {
         get_new_external_run_from_song(song)
     }
 
     fn play_new(&mut self, song: &Song) -> Result<(), String> {
-        self.as_external().play_new(song)
+        self.as_external_mut().play_new(song)
     }
 
-    fn pause(&mut self) -> Result<(), String> {
+    fn pause(&self) -> Result<(), String> {
         self.as_external().pause()
     }
 
-    fn play(&mut self) -> Result<(), String> {
+    fn play(&self) -> Result<(), String> {
         self.as_external().play()
     }
 
-    fn stop(&mut self) -> Result<(), String> {
+    fn stop(&self) -> Result<(), String> {
         self.as_external().stop()
     }
 
-    fn shutdown(&mut self) -> Result<(), String> {
+    fn shutdown(&self) -> Result<(), String> {
         self.as_external().shutdown()
     }
 
-    fn sleep_until_song_end(&mut self) -> Result<(), String> {
-        self.as_external().sleep_until_song_end()
-    }
-
-    fn is_song_playing(&mut self) -> Result<bool, String> {
+    fn is_song_playing(&self) -> Result<bool, String> {
         self.as_external().is_song_playing()
     }
 
-    fn time_left(&mut self) -> Result<Duration, String> {
+    fn time_left(&self) -> Result<Duration, String> {
         self.as_external().time_left()
     }
 }
@@ -243,6 +227,14 @@ macro_rules! make_external_types {
 
         impl ExternalRun {
             pub fn as_external(&self) -> &dyn External {
+                match self {
+                    $(
+                        ExternalRun::$backend(instance) => instance,
+                    )*
+                }
+            }
+
+            pub fn as_external_mut(&mut self) -> &mut dyn External {
                 match self {
                     $(
                         ExternalRun::$backend(instance) => instance,
