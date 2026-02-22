@@ -1,6 +1,5 @@
-use lofty::file::{AudioFile, TaggedFile};
+use lofty::file::AudioFile;
 use lofty::probe::Probe;
-use lofty::properties::FileProperties;
 use rodio::{Decoder, OutputStream, OutputStreamBuilder, Sink};
 use serde::{Deserialize, Serialize};
 use std::fs::File;

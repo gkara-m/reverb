@@ -1,19 +1,14 @@
-use std::path::Path;
 use std::sync::mpsc;
 use std::thread;
 
-use external::{external::ExternalSong, local::LocalSong};
-use internal::{
-    internal::Internal,
-    song::Song,
-};
+use internal::
+    song::Song
+;
 use once_cell::sync::OnceCell;
-use serde::{Deserialize, Serialize};
-use toml;
 use ui::cli;
 
 use crate::{
-    config::startup_shutdown::{shutdown, startup}, external::external::{ExternalSongTrait, ExternalType}, internal::{playlist::Playlist, queue::Queue}
+    config::startup_shutdown::{shutdown, startup}, external::external::ExternalType, internal::{playlist::Playlist, queue::Queue}
 };
 
 mod external;
