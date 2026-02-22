@@ -170,48 +170,36 @@ impl Internal {
     }
 
     pub fn update_autoskip(&mut self) -> Result<(), String> {
-        println!("Updating autoskip... ");
-        match self.kill_autoskip() {
-            Ok(_) => println!("Killed existing autoskip. "),
-            Err(e) => println!("No existing autoskip to kill: {}. ", e), 
-        };
+        self.kill_autoskip();
         if self.is_song_playing()? {
-            println!("Song is playing, setting up autoskip... ");
             let time_left = self.song_time_left()?;
             if time_left.is_zero() {
-                println!("Time left is zero, skipping to next song... ");
                 let sender = self.sender.clone();
                 sender.send(Command::QueueNext).map_err(|e| format!("Failed to send QueueNext command: {}", e))?;
-                println!("Sent QueueNext command. ");
                 Ok(())
             } else {
-                println!("Time left is {:?}, setting up autoskip... ", time_left);
                 let sender = self.sender.clone();
                 let (kill_sender, kill_receiver) = mpsc::channel();
                 self.kill_sender = kill_sender;
                 thread::spawn(move || {
-                    println!("Autoskip thread started, sleeping for {:?}... ", time_left);
                     if let Ok(_) = kill_receiver.recv_timeout(time_left) {
-                        println!("Received kill signal, not skipping to next song. ");
                         return;
                     }
                     if time_left < Duration::from_secs(1) {
-                        println!("Time left was less than 1 second for {:?}... sending skip command", time_left);
                         match   sender.send(Command::QueueNext) {
-                            Ok(_) => println!("Autoskip time elapsed, sent QueueNext command. "),
-                            Err(e) => println!("Failed to send QueueNext command: {}", e),
+                            Err(e) => println!("Failed to send QueueNext command queue may not skip automatically: {}", e),
+                            _ => (),
                         };
                     } else {
                         match sender.send(Command::UpdateAutoskip) {
-                            Ok(_) => println!("Autoskip time elapsed, sent UpdateAutoskip command. "),
-                            Err(e) => println!("Failed to send UpdateAutoskip command: {}", e),
+                            Err(e) => println!("Failed to send UpdateAutoskip command queue may not skip automatically: {}", e),
+                            _ => (),
                         }
                     }
                 });
                 Ok(())
             }
         } else {
-            println!("No song is playing, not setting up autoskip. ");
             Ok(())
         }
     }
