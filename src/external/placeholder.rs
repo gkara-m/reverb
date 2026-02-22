@@ -19,7 +19,7 @@ impl ExternalSongTrait for PlaceholderExternalSong {
 }
 
 impl External for PlaceholderRun {
-    fn play_new(&self, _song: &song::Song) -> Result<(), String> {
+    fn play_new(&mut self, _song: &song::Song) -> Result<(), String> {
         todo!()
     }
 
@@ -40,6 +40,14 @@ impl External for PlaceholderRun {
     }
     
     fn new(_song: &song::Song) -> Result<Self, String> where Self: Sized {
+        todo!()
+    }
+    
+    fn is_song_playing(&self) -> Result<bool, String> {
+        todo!()
+    }
+    
+    fn time_left(&self) -> Result<std::time::Duration, String> {
         todo!()
     }
 }

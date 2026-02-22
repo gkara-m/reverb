@@ -1,21 +1,32 @@
+use lofty::file::{AudioFile, TaggedFile};
+use lofty::probe::Probe;
+use lofty::properties::FileProperties;
+use rodio::{Decoder, OutputStream, OutputStreamBuilder, Sink};
+use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::BufReader;
 use std::path::Path;
-use rodio::{Decoder, OutputStream, Sink, OutputStreamBuilder};
-use serde::{Deserialize, Serialize};
+use std::time::Duration;
 
 use crate::external::external::{External, ExternalSong::LOCAL, ExternalSongTrait};
 use crate::internal::song::Song;
 
-
-pub struct Local{
+pub struct Local {
     _output_stream: OutputStream,
     sink: Sink,
+    song_duration: Duration,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub(crate) struct LocalSong {
-    song_path : String,
+    song_path: String,
+    duration: Duration,
+}
+
+impl LocalSong {
+    fn get_duration(&self) -> Result<Duration, String> {
+        Ok(self.duration)
+    }
 }
 
 impl ExternalSongTrait for LocalSong {
@@ -28,9 +39,19 @@ impl ExternalSongTrait for LocalSong {
 
     fn new(path_str: &str) -> Result<Self, String> {
         let path = Path::new(path_str);
-        
+        let duration = {
+            let tagged_file = Probe::open(&path)
+                .map_err(|e| format!("Failed to probe file: {}", e))?
+                .read()
+                .map_err(|e| format!("Failed to read tagged file: {}", e))?;
+            tagged_file.properties().duration()
+        };
+
         if path.exists() {
-            Ok(LocalSong { song_path: path_str.to_string() })
+            Ok(LocalSong {
+                song_path: path_str.to_string(),
+                duration,
+            })
         } else {
             Err(format!("File path does not exist: {}", path_str))
         }
@@ -45,15 +66,16 @@ impl External for Local {
         };
         let sink = Sink::connect_new(&output_stream.mixer());
         sink.pause();
-        let local = Local {
+        let mut local = Local {
             _output_stream: output_stream,
             sink,
+            song_duration: Duration::new(0, 0), // overwritten in load_new()
         };
         local.load_new(song)?;
         Ok(local)
     }
     
-    fn play_new(&self, song: &Song) -> Result<(), String> {
+    fn play_new(&mut self, song: &Song) -> Result<(), String> {
         self.load_new(song)?;
         self.sink.play();
         Ok(())
@@ -78,19 +100,48 @@ impl External for Local {
         // nothing to be done
         Ok(())
     }
-}
 
-impl Local {
-    fn load_new(&self, song: &Song) -> Result<(), String> {
-        if let LOCAL(ref local_song) = song.song_type {
-            self.stop()?;
-            let decoder = load_decoder(&local_song.song_path);
-            self.sink.append(decoder);
-            Ok(())
-        } else {Err(String::from("Invalid song type for Local external"))}
+    fn is_song_playing(&self) -> Result<bool, String> {
+        Ok(!self.sink.is_paused())
+    }
+
+    fn time_left(&self) -> Result<Duration, String> {
+        if self.sink.get_pos() >= self.song_duration {
+            return Ok(Duration::new(0, 0));
+        }
+        Ok(self.song_duration - self.sink.get_pos())
     }
 }
 
+impl Local {
+    fn load_new(&mut self, song: &Song) -> Result<(), String> {
+        if let LOCAL(ref local_song) = song.song_type {
+            self.stop()?;
+            let decoder = load_decoder(&local_song.song_path);
+            self.song_duration = local_song.get_duration()?; 
+            self.sink.append(decoder);
+            Ok(())
+        } else {
+            Err(String::from("Invalid song type for Local external"))
+        }
+    }
+
+    pub fn new(song: &Song) -> Result<Local, String> {
+        let output_stream = match OutputStreamBuilder::open_default_stream() {
+            Err(e) => return Err(format!("Failed to open output stream: {}", e)),
+            Ok(output_stream) => output_stream,
+        };
+        let sink = Sink::connect_new(&output_stream.mixer());
+        sink.pause();
+        let mut local = Local {
+            _output_stream: output_stream,
+            sink,
+            song_duration: Duration::new(0, 0), // overwritten in load_new()
+        };
+        local.load_new(song)?;
+        Ok(local)
+    }
+}
 
 fn load_decoder(file_path: &str) -> Decoder<BufReader<File>> {
     Decoder::new(BufReader::new(File::open(file_path).unwrap())).unwrap()

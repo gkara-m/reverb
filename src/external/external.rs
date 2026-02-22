@@ -1,11 +1,12 @@
+use std::time::Duration;
+
 use serde::{Deserialize, Serialize};
 
-use crate::internal::song::Song;
 use crate::external::local::{Local, LocalSong};
 use crate::external::placeholder::{PlaceholderExternalSong, PlaceholderRun};
-
+use crate::Song;
 pub trait External {
-    fn play_new(&self, song: &Song) -> Result<(), String>;
+    fn play_new(&mut self, song: &Song) -> Result<(), String>;
 
     fn pause(&self) -> Result<(), String>;
 
@@ -16,6 +17,10 @@ pub trait External {
     fn shutdown(&self) -> Result<(), String>;
 
     fn new(song: &Song) -> Result<Self, String> where Self: Sized;
+
+    fn is_song_playing(&self) -> Result<bool, String>;
+
+    fn time_left(&self) -> Result<Duration, String>;
 }
 
 pub trait ExternalSongTrait {
@@ -29,8 +34,8 @@ impl External for ExternalRun {
         get_new_external_run_from_song(song)
     }
 
-    fn play_new(&self, song: &Song) -> Result<(), String> {
-        self.as_external().play_new(song)
+    fn play_new(&mut self, song: &Song) -> Result<(), String> {
+        self.as_external_mut().play_new(song)
     }
 
     fn pause(&self) -> Result<(), String> {
@@ -47,6 +52,14 @@ impl External for ExternalRun {
 
     fn shutdown(&self) -> Result<(), String> {
         self.as_external().shutdown()
+    }
+
+    fn is_song_playing(&self) -> Result<bool, String> {
+        self.as_external().is_song_playing()
+    }
+
+    fn time_left(&self) -> Result<Duration, String> {
+        self.as_external().time_left()
     }
 }
 
@@ -76,7 +89,7 @@ impl External for ExternalRun {
                 _ => Err(format!("Unknown external type: {}", string))
             }
         }
-        
+
         pub fn new_external_song(&self, string: &str) -> Result<ExternalSong, String> {
             match self {
                 ExternalType::LOCAL => LocalSong::new(string).map(ExternalSong::LOCAL),
@@ -124,7 +137,6 @@ impl External for ExternalRun {
         }
     }
 */
-
 
 macro_rules! make_external_types {
     (
@@ -221,13 +233,21 @@ macro_rules! make_external_types {
                     )*
                 }
             }
+
+            pub fn as_external_mut(&mut self) -> &mut dyn External {
+                match self {
+                    $(
+                        ExternalRun::$backend(instance) => instance,
+                    )*
+                }
+            }
         }
     }
 }
 
 // Song must implement ExternalSongInfo and 
 // Run must implement External and NewExternal
-make_external_types!{
+make_external_types! {
     LOCAL{
         Run: Local,
         Song: LocalSong,
