@@ -59,18 +59,12 @@ fn main() {
             Command::PlaylistAdd(song) => internal.playlist_add(song),
             Command::PlaylistRemove(index) => internal.playlist_remove(index),
             Command::PlaylistMoveSong { from, to } => internal.playlist_move_song(from, to),
-            Command::PlaylistGetSongs(sender) => match internal.playlist_get_songs() {
-                Ok(songs) => sender
-                    .send(songs)
+            Command::PlaylistGetSongs(sender) => sender
+                    .send(internal.playlist_get_songs())
                     .map_err(|e| format!("Failed to send playlist songs: {}", e)),
-                Err(e) => Err(e),
-            },
-            Command::PlaylistGetName(sender) => match internal.playlist_get_name() {
-                Ok(name) => sender
-                    .send(name)
+            Command::PlaylistGetName(sender) => sender
+                    .send(internal.playlist_get_name())
                     .map_err(|e| format!("Failed to send playlist name: {}", e)),
-                Err(e) => Err(e),
-            },
             Command::PlaylistSetName(name) => internal.playlist_set_name(name.as_str()),
             Command::PlaylistGetSong { song, index } => match internal.playlist_get_song(index) {
                 Ok(s) => song
@@ -78,18 +72,15 @@ fn main() {
                     .map_err(|e| format!("Failed to send playlist song: {}", e)),
                 Err(e) => Err(e),
             },
-            Command::QueueAdd(song) => internal.queue_add(song),
+            Command::QueueAdd(song) => {internal.queue_add(song); Ok(())},
             Command::QueueRemove(index) => internal.queue_remove(index),
-            Command::QueueList => internal.queue_list(),
+            Command::QueueList => {internal.queue_list(); Ok(())},
             Command::QueueNext => internal.queue_next(),
-            Command::QueuePlaylist(playlist) => internal.queue_playlist(&playlist),
-            Command::QueueCurrentPlaylist => internal.queue_current_playlist(),
-            Command::QueueGet(sender) => match internal.queue_get() {
-                Ok(queue) => sender
-                    .send(queue.clone())
+            Command::QueuePlaylist(playlist) => {internal.queue_playlist(&playlist); Ok(())},
+            Command::QueueCurrentPlaylist => {internal.queue_current_playlist(); Ok(())},
+            Command::QueueGet(sender) => sender
+                    .send(internal.queue_get().clone())
                     .map_err(|e| format!("Failed to send queue: {}", e)),
-                Err(e) => Err(e),
-            },
             Command::Shutdown => break,
             Command::UpdateAutoskip => internal.update_autoskip(),
         } {
@@ -103,8 +94,8 @@ fn main() {
                 println!("Shutdown successfull \n exiting");
                 break;
             }
-            Err(e) => eprintln!(
-                "Shutdown error: {} \n trying again press ^C to force exit",
+            Err(e) => eprint!(
+                "Shutdown error: {} trying again press ^C to force exit \r",
                 e
             ),
         }

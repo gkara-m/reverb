@@ -21,7 +21,7 @@ impl StartupData {
         };
         let startup_data = StartupData {
             last_played_playlist: "Default Startup Playlist".to_string(),
-            queue: Queue::new(song)?,
+            queue: Queue::new(song),
             last_shutdown_clean: true,
         };
         startup_data.save()?;

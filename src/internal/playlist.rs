@@ -31,9 +31,8 @@ impl Playlist {
         Ok(playlist)
     }
 
-    pub fn add(&mut self, song: &Song) -> Result<(), String> {
+    pub fn add(&mut self, song: &Song) {
         self.songs.push(song.clone());
-        Ok(())
     }
 
     pub fn remove(&mut self, index: usize) -> Result<(), String> {
@@ -45,8 +44,8 @@ impl Playlist {
         }
     }
 
-    pub fn get_songs(&self) -> Result<Vec<Song>, String> {
-        Ok(self.songs.clone())
+    pub fn get_songs(&self) -> Vec<Song> {
+        self.songs.clone()
     }
 
     pub fn get_song(&self, index: usize) -> Result<Song, String> {
@@ -56,8 +55,8 @@ impl Playlist {
         }
     }
 
-    pub fn get_name(&self) -> Result<String, String> {
-        Ok(self.name.clone())
+    pub fn get_name(&self) -> String {
+        self.name.clone()
     }
 
     pub fn set_name(&mut self, name: &str) -> Result<(), String> {

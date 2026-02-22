@@ -101,7 +101,7 @@ impl Internal {
     }
 
     pub fn playlist_add(&mut self, song: Song) -> Result<(), String> {
-        self.current_playlist.add(&song)?;
+        self.current_playlist.add(&song);
         self.playlist_save()
     }
 
@@ -115,11 +115,11 @@ impl Internal {
         self.playlist_save()
     }
 
-    pub fn playlist_get_songs(&self) -> Result<Vec<Song>, String> {
+    pub fn playlist_get_songs(&self) -> Vec<Song> {
         self.current_playlist.get_songs()
     }
 
-    pub fn playlist_get_name(&self) -> Result<String, String> {
+    pub fn playlist_get_name(&self) -> String {
         self.current_playlist.get_name()
     }
 
@@ -134,9 +134,8 @@ impl Internal {
 }
 
 impl Internal {
-    pub fn queue_add(&mut self, song: Song) -> Result<(), String> {
-        self.queue.add(song)?;
-        Ok(())
+    pub fn queue_add(&mut self, song: Song) {
+        self.queue.add(song);
     }
 
     pub fn queue_remove(&mut self, song_index: usize) -> Result<(), String> {
@@ -144,9 +143,8 @@ impl Internal {
         Ok(())
     }
 
-    pub fn queue_list(&mut self) -> Result<(), String> {
-        self.queue.list()?;
-        Ok(())
+    pub fn queue_list(&mut self) {
+        self.queue.list();
     }
 
     pub fn queue_next(&mut self) -> Result<(), String> {
@@ -155,18 +153,16 @@ impl Internal {
         Ok(())
     }
 
-    pub fn queue_playlist(&mut self, playlist: &Playlist) -> Result<(), String> {
-        self.queue.load_playlist(playlist)?;
-        Ok(())
+    pub fn queue_playlist(&mut self, playlist: &Playlist) {
+        self.queue.load_playlist(playlist);
     }
 
-    pub fn queue_current_playlist(&mut self) -> Result<(), String> {
-        self.queue.load_playlist(&self.current_playlist)?;
-        Ok(())
+    pub fn queue_current_playlist(&mut self) {
+        self.queue.load_playlist(&self.current_playlist);
     }
 
-    pub fn queue_get(&self) -> Result<&Queue, String> {
-        Ok(&self.queue)
+    pub fn queue_get(&self) -> &Queue {
+        &self.queue
     }
 
     pub fn update_autoskip(&mut self) -> Result<(), String> {
@@ -204,8 +200,7 @@ impl Internal {
         }
     }
 
-    pub fn kill_autoskip(&self) -> Result<(), String> {
-        self.kill_sender.send(()).map_err(|e| format!("Failed to kill autoskip: {}", e))?;
-        Ok(())
+    pub fn kill_autoskip(&self) {
+        let _ = self.kill_sender.send(());
     }
 }

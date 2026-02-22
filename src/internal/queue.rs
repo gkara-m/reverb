@@ -12,20 +12,18 @@ pub struct Queue {
 
 impl Queue {
 
-    pub fn new(song: Song) -> Result<Queue, String> {
-        Ok(Queue {queued_songs: VecDeque::from([song])})
+    pub fn new(song: Song) -> Queue {
+        Queue {queued_songs: VecDeque::from([song])}
     }
 
-    pub fn add(&mut self, song: Song) -> Result<(), String> {
+    pub fn add(&mut self, song: Song) {
         self.queued_songs.push_back(song);
-        Ok(())
     }
 
-    pub fn load_playlist(&mut self, playlist: &Playlist) -> Result<(), String> {
+    pub fn load_playlist(&mut self, playlist: &Playlist) {
         for song in playlist.iter().rev() {
             self.queued_songs.push_front(song.clone());
         }
-        Ok(())
     }
 
     pub fn remove(&mut self, song_index: usize) -> Result<(), String> {
@@ -36,11 +34,10 @@ impl Queue {
         Ok(())
     }
 
-    pub fn list(&mut self) -> Result<(), String> {
+    pub fn list(&mut self) {
         for song in self.queued_songs.iter() {
             println!("{} - {}", song.info.artist, song.info.title);
         }
-        Ok(())
     }
 
     pub fn next(&mut self) -> Result<Song, String> {

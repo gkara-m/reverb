@@ -70,8 +70,8 @@ pub fn shutdown (internal: &Internal) -> Result<(), String> {
 
     println!("Saving startup data... ");
     StartupData {
-        last_played_playlist: internal.playlist_get_name()?.clone(),
-        queue: internal.queue_get()?.clone(),
+        last_played_playlist: internal.playlist_get_name().clone(),
+        queue: internal.queue_get().clone(),
         last_shutdown_clean: true,
     }.save()?;
 

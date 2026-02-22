@@ -23,8 +23,8 @@ pub(crate) struct LocalSong {
 }
 
 impl LocalSong {
-    fn get_duration(&self) -> Result<Duration, String> {
-        Ok(self.duration)
+    fn get_duration(&self) -> Duration {
+        self.duration
     }
 }
 
@@ -117,7 +117,7 @@ impl Local {
         if let LOCAL(ref local_song) = song.song_type {
             self.stop()?;
             let decoder = load_decoder(&local_song.song_path);
-            self.song_duration = local_song.get_duration()?; 
+            self.song_duration = local_song.get_duration(); 
             self.sink.append(decoder);
             Ok(())
         } else {
