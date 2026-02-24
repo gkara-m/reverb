@@ -19,12 +19,10 @@ impl Failure {
         self.std_err().is_some()
     }
 
-    fn from(std_err: Option<std::io::Error>, message: Option<String>, failure_t: FailureType) -> Self {
+    pub fn from(std_err: Option<std::io::Error>, message: Option<String>, failure_t: FailureType) -> Self {
         match failure_t {
-            FailureType::Error => Failure::Error(FailureError::from
-        (std_err, message)),
-            FailureType::Warning => Failure::Warning(FailureError::from
-        (std_err, message)),
+            FailureType::Error => Failure::Error(FailureError::from(std_err, message)),
+            FailureType::Warning => Failure::Warning(FailureError::from(std_err, message)),
         }
     }
 
@@ -36,7 +34,7 @@ impl Failure {
     }
 }
 
-struct FailureError {
+pub struct FailureError {
     message: String,
     std_err: Option<std::io::Error>,
 }
