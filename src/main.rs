@@ -15,6 +15,7 @@ mod external;
 mod internal;
 mod ui;
 mod config;
+mod failure;
 
 pub static CONFIG_FOLDER: &str = "configs/";
 
