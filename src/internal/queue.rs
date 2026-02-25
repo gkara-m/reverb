@@ -35,10 +35,8 @@ impl Queue {
         Ok(())
     }
 
-    pub fn list(&mut self) {
-        for song in self.queued_songs.iter() {
-            println!("{} - {}", song.info.artist, song.info.title);
-        }
+    pub fn get_songs(&self) -> Vec<Song> {
+        self.iter().collect()
     }
 
     pub fn next(&mut self) -> Result<Song, Failure> {
@@ -55,5 +53,9 @@ impl Queue {
         self.queued_songs.get(0)
             .cloned()
             .ok_or_else(|| Failure::from((anyhow!("Queue is empty"), FailureType::Warning)))
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = Song> {
+        self.queued_songs.iter().cloned()
     }
 }

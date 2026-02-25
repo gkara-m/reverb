@@ -141,8 +141,12 @@ impl Internal {
         Ok(())
     }
 
-    pub fn queue_list(&mut self) {
-        self.queue.list();
+    pub fn queue_get(&self) -> Queue {
+        self.queue.clone()
+    }
+
+    pub fn queue_get_songs(&self) -> Vec<Song> {
+        self.queue.get_songs()
     }
 
     pub fn queue_next(&mut self) -> Result<(), Failure> {
@@ -157,10 +161,6 @@ impl Internal {
 
     pub fn queue_current_playlist(&mut self) {
         self.queue.load_playlist(&self.current_playlist);
-    }
-
-    pub fn queue_get(&self) -> &Queue {
-        &self.queue
     }
 
     pub fn update_autoskip(&mut self) -> Result<(), Failure> {

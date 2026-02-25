@@ -9,7 +9,7 @@ use once_cell::sync::OnceCell;
 use ui::cli;
 
 use crate::{
-    config::startup_shutdown::{shutdown, startup}, external::external::ExternalType, failure::failure::{Failure, FailureType}, internal::{playlist::Playlist, queue::Queue}
+    config::startup_shutdown::{shutdown, startup}, external::external::ExternalType, failure::failure::{Failure, FailureType}, internal::playlist::Playlist
 };
 
 mod external;
@@ -76,12 +76,11 @@ fn main() {
             },
             Command::QueueAdd(song) => {internal.queue_add(song); Ok(())},
             Command::QueueRemove(index) => internal.queue_remove(index),
-            Command::QueueList => {internal.queue_list(); Ok(())},
             Command::QueueNext => internal.queue_next(),
             Command::QueuePlaylist(playlist) => {internal.queue_playlist(&playlist); Ok(())},
             Command::QueueCurrentPlaylist => {internal.queue_current_playlist(); Ok(())},
-            Command::QueueGet(sender) => sender
-                    .send(internal.queue_get().clone())
+            Command::QueueGetSongs(sender) => sender
+                    .send(internal.queue_get_songs())
                     .map_err(|e| Failure::from((e.into(), FailureType::Warning))),
             Command::Shutdown => break,
             Command::UpdateAutoskip => internal.update_autoskip(),
@@ -140,11 +139,10 @@ enum Command {
     },
     QueueAdd(Song),
     QueueRemove(usize),
-    QueueList,
     QueueNext,
     QueuePlaylist(Playlist),
     QueueCurrentPlaylist,
-    QueueGet(mpsc::Sender<Queue>),
+    QueueGetSongs(mpsc::Sender<Vec<Song>>),
     Shutdown,
     UpdateAutoskip,
 }

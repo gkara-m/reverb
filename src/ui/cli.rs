@@ -64,7 +64,11 @@ fn command_check_single(command: &str, transmit: &Sender<Command>) -> Result<boo
             ui::shutdown(transmit)?;
             return Ok(true);
         }
-        "queue" => {ui::queue_list(transmit)?;}
+        "queue" => {
+                    let songs = ui::queue_get_songs(transmit)?;
+                    for (index, song) in songs.iter().enumerate() {
+                        println!("{}: {} - {}", index, song.info.artist, song.info.title);
+                    }}
         "playlist" => {
                     println!("{}:", ui::playlist_get_name(transmit)?);
                     let songs = ui::playlist_get_songs(transmit)?;

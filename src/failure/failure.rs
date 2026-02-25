@@ -1,5 +1,4 @@
-use std::fmt::Debug;
-use anyhow::{Error as AnyError, anyhow};
+use anyhow::Error as AnyError;
 
 pub enum Failure {
     Fetal(AnyError),

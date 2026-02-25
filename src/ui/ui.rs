@@ -1,4 +1,5 @@
-use std::{io::ErrorKind, sync::mpsc::{self, Sender}};
+use std::sync::mpsc::{self, Sender};
+
 
 use crate::{Command, external::external::ExternalType, failure::failure::{Failure, FailureType}, internal::{playlist::Playlist, song::Song}};
 
@@ -15,8 +16,11 @@ pub(super) fn pause(transmit: &Sender<Command>) -> Result<(), Failure> {
     .map_err(|e| Failure::from((e.into(), FailureType::Fetal)))
 }
 
-pub(super) fn queue_list(transmit: &Sender<Command>) -> Result<(), Failure> {
-    transmit.clone().send(Command::QueueList)
+pub(super) fn queue_get_songs(transmit: &Sender<Command>) -> Result<Vec<Song>, Failure> {
+    let (tx, rx) = mpsc::channel();
+    transmit.clone().send(Command::QueueGetSongs(tx))
+    .map_err(|e| Failure::from((e.into(), FailureType::Fetal)))?;
+    rx.recv()
     .map_err(|e| Failure::from((e.into(), FailureType::Fetal)))
 }
 
@@ -24,18 +28,16 @@ pub(super) fn playlist_get_name(transmit: &Sender<Command>) -> Result<String, Fa
     let (tx, rx) = mpsc::channel();
     transmit.clone().send(Command::PlaylistGetName(tx))
     .map_err(|e| Failure::from((e.into(), FailureType::Fetal)))?;
-    let name= rx.recv()
-    .map_err(|e| Failure::from((e.into(), FailureType::Fetal)))?;
-    Ok(name)
+    rx.recv()
+    .map_err(|e| Failure::from((e.into(), FailureType::Fetal)))
 }
 
 pub(super) fn playlist_get_songs(transmit: &Sender<Command>) -> Result<Vec<Song>, Failure> {
     let (tx, rx) = mpsc::channel();
     transmit.clone().send(Command::PlaylistGetSongs(tx))
     .map_err(|e| Failure::from((e.into(), FailureType::Fetal)))?;
-    let songs = rx.recv()
-    .map_err(|e| Failure::from((e.into(), FailureType::Fetal)))?;
-    Ok(songs)
+    rx.recv()
+    .map_err(|e| Failure::from((e.into(), FailureType::Fetal)))
 }
 
 pub(super) fn queue_next(transmit: &Sender<Command>) -> Result<(), Failure> {
@@ -47,9 +49,8 @@ pub(super) fn current_song(transmit: &Sender<Command>) -> Result<Song, Failure> 
     let (tx, rx) = mpsc::channel();
     transmit.clone().send(Command::CurrentSong(tx))
     .map_err(|e| Failure::from((e.into(), FailureType::Fetal)))?;
-    let song = rx.recv()
-    .map_err(|e| Failure::from((e.into(), FailureType::Fetal)))?;
-    Ok(song)
+    rx.recv()
+    .map_err(|e| Failure::from((e.into(), FailureType::Fetal)))
 }
 
 pub(super) fn play_new(transmit: &Sender<Command>, song: Song) -> Result<(), Failure> {
@@ -106,9 +107,8 @@ pub(super) fn playlist_get_song(transmit: &Sender<Command>, index: usize) -> Res
     let (tx, rx) = mpsc::channel();
     transmit.clone().send(Command::PlaylistGetSong { song: tx, index })
     .map_err(|e| Failure::from((e.into(), FailureType::Fetal)))?;
-    let song = rx.recv()
-    .map_err(|e| Failure::from((e.into(), FailureType::Fetal)))?;
-    Ok(song)
+    rx.recv()
+    .map_err(|e| Failure::from((e.into(), FailureType::Fetal)))
 }
 
 pub(super) fn playlist_set_name(transmit: &Sender<Command>, name: &str) -> Result<(), Failure> {
