@@ -1,6 +1,7 @@
 use std::sync::mpsc;
 use std::thread;
 
+use anyhow::anyhow;
 use internal::
     song::Song
 ;
@@ -8,7 +9,7 @@ use once_cell::sync::OnceCell;
 use ui::cli;
 
 use crate::{
-    config::startup_shutdown::{shutdown, startup}, external::external::ExternalType, internal::{playlist::Playlist, queue::Queue}
+    config::startup_shutdown::{shutdown, startup}, external::external::ExternalType, failure::failure::{Failure, FailureType}, internal::{playlist::Playlist, queue::Queue}
 };
 
 mod external;
@@ -45,11 +46,11 @@ fn main() {
             Command::Play => internal.play(),
             Command::Pause => internal.pause(),
             Command::PlayNew(song) => internal.play_new(song),
-            Command::Stop => Err("Stop command not implemented".to_string()),
+            Command::Stop => Err(Failure::from((anyhow!("Stop command not implemented"), FailureType::Warning))),
             Command::CurrentSong(sender) => match internal.current_song() {
                 Ok(song) => sender
                     .send(song)
-                    .map_err(|e| format!("Failed to send current song: {}", e)),
+                    .map_err(|e| Failure::from((e.into(), FailureType::Warning))),
                 Err(e) => Err(e),
             },
             Command::PlaylistLoad(name) => internal.playlist_load(&name),
@@ -62,15 +63,15 @@ fn main() {
             Command::PlaylistMoveSong { from, to } => internal.playlist_move_song(from, to),
             Command::PlaylistGetSongs(sender) => sender
                     .send(internal.playlist_get_songs())
-                    .map_err(|e| format!("Failed to send playlist songs: {}", e)),
+                    .map_err(|e| Failure::from((e.into(), FailureType::Warning))),
             Command::PlaylistGetName(sender) => sender
                     .send(internal.playlist_get_name())
-                    .map_err(|e| format!("Failed to send playlist name: {}", e)),
+                    .map_err(|e| Failure::from((e.into(), FailureType::Warning))),
             Command::PlaylistSetName(name) => internal.playlist_set_name(name.as_str()),
             Command::PlaylistGetSong { song, index } => match internal.playlist_get_song(index) {
                 Ok(s) => song
                     .send(s)
-                    .map_err(|e| format!("Failed to send playlist song: {}", e)),
+                    .map_err(|e| Failure::from((e.into(), FailureType::Warning))),
                 Err(e) => Err(e),
             },
             Command::QueueAdd(song) => {internal.queue_add(song); Ok(())},
@@ -81,7 +82,7 @@ fn main() {
             Command::QueueCurrentPlaylist => {internal.queue_current_playlist(); Ok(())},
             Command::QueueGet(sender) => sender
                     .send(internal.queue_get().clone())
-                    .map_err(|e| format!("Failed to send queue: {}", e)),
+                    .map_err(|e| Failure::from((e.into(), FailureType::Warning))),
             Command::Shutdown => break,
             Command::UpdateAutoskip => internal.update_autoskip(),
         } {
@@ -95,14 +96,24 @@ fn main() {
                 println!("Shutdown successfull \n exiting");
                 break;
             }
-            Err(e) => eprint!(
-                "Shutdown error: {} trying again press ^C to force exit \r",
-                e
-            ),
+            Err(e) => match e {
+                Failure::Fetal(e) => {
+                    eprintln!("Fetal Shutdown error: {} \n exiting immediately see logs for details",
+                        e
+                    );
+                    break;
+                }
+                Failure::Warning(e) => {
+                    eprintln!("Shutdown warning: {} trying again press ^C to force exit \r",
+                        e
+                    );
+                }
+            }
         }
     }
 }
 
+#[derive(Debug)]
 enum Command {
     Play,
     Pause,

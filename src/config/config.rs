@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::CONFIG_FOLDER;
+use crate::{CONFIG_FOLDER, failure::failure::{Failure, FailureType}};
 
 // Config struct represents the config file
 #[derive(Serialize, Deserialize)]
@@ -10,7 +10,7 @@ pub(super) struct Config {
 }
 
 impl Config {
-    pub(super) fn new_default() -> Result<Config, String> {
+    pub(super) fn new_default() -> Result<Config, Failure> {
         let config = Config {
             data_folder: "data/".to_string(),
             local_song_folder_path: None,
@@ -19,16 +19,16 @@ impl Config {
         Ok(config)
     }
 
-    pub(super) fn save(&self) -> Result<(), String> {
+    pub(super) fn save(&self) -> Result<(), Failure> {
         match std::fs::create_dir_all(CONFIG_FOLDER) {
-            Err(e) => return Err(format!("Failed to create config directory: {}", e)),
+            Err(e) => return Err(Failure::from((e.into(), FailureType::Fetal))),
             Ok(_) => {},
         }
         match std::fs::write(
             format!("{}config.toml", CONFIG_FOLDER),
-            toml::to_string(self).map_err(|e| format!("Failed to serialize config: {}", e))?,
+            toml::to_string(self).map_err(|e| Failure::from((e.into(), FailureType::Fetal)))?,
         ) {
-            Err(e) => Err(format!("Failed to write config file: {}", e)),
+            Err(e) => Err(Failure::from((e.into(), FailureType::Fetal))),
             Ok(_) => Ok(()),
         }
     }

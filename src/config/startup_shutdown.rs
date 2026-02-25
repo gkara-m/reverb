@@ -1,8 +1,9 @@
 use std::{path::Path, sync::mpsc::Sender};
+use anyhow::anyhow;
 
-use crate::{CONFIG_FOLDER, Command, DATA_FOLDER, LOCAL_SONG_FOLDER_PATH, config::{config::Config, data::StartupData}, internal::{internal::Internal, playlist::Playlist}};
+use crate::{CONFIG_FOLDER, Command, DATA_FOLDER, LOCAL_SONG_FOLDER_PATH, config::{config::Config, data::StartupData}, failure::failure::{Failure, FailureType}, internal::{internal::Internal, playlist::Playlist}};
 
-pub fn startup(transmit: Sender<Command>) -> Result<Internal, String> {
+pub fn startup(transmit: Sender<Command>) -> Result<Internal, Failure> {
     println!("Starting up... ");
 
     // Check for config file, create default if not exists
@@ -12,21 +13,21 @@ pub fn startup(transmit: Sender<Command>) -> Result<Internal, String> {
         Err(_) => {
             println!("Config file not found, creating default... ");
             let default = Config::new_default()?;
-            toml::to_string(&default).map_err(|e| format!("Failed to make default config: {}", e))?;
-            Err(format!("First run?: \n Default config created in {} \n check config and restart \n exiting automatically", CONFIG_FOLDER))
+            toml::to_string(&default).map_err(|e| Failure::from((e.into(), FailureType::Fetal)))?;
+            Err(Failure::from((anyhow!("First run?: \n Default config created in {} \n check config and restart \n exiting automatically", CONFIG_FOLDER), FailureType::Warning)))
         }
     }?;
 
     println!("Setting global variables... ");
     //read config
-    let config: Config = toml::from_str(&content).map_err(|e| format!("Failed to read config file: {}", e))?;
+    let config: Config = toml::from_str(&content).map_err(|e| Failure::from((e.into(), FailureType::Fetal)))?;
 
     // Set DATA_FOLDER
-    DATA_FOLDER.set(config.data_folder.clone()).map_err(|_| "DATA_FOLDER already set".to_string())?;
+    DATA_FOLDER.set(config.data_folder.clone()).map_err(|e| Failure::from((anyhow!(e), FailureType::Fetal)))?;
 
     // Set LOCAL_SONG_FOLDER_PATH if provided in config
     if let Some(local_path) = config.local_song_folder_path {
-        LOCAL_SONG_FOLDER_PATH.set(local_path).map_err(|_| "LOCAL_SONG_FOLDER_PATH already set".to_string())?;
+        LOCAL_SONG_FOLDER_PATH.set(local_path).map_err(|e| Failure::from((anyhow!(e), FailureType::Fetal)))?;
     }
 
     let data_folder = Path::new(DATA_FOLDER.get().unwrap());
@@ -37,10 +38,10 @@ pub fn startup(transmit: Sender<Command>) -> Result<Internal, String> {
     if data_folder.join("startup.toml").exists() {
         startup_data = toml::from_str(
             &std::fs::read_to_string(data_folder.join("startup.toml"))
-            .map_err(|e| format!("Failed to read startup data: {}", e))?
-        ).map_err(|e| format!("Failed to parse startup data: {}", e))?;
+            .map_err(|e| Failure::from((e.into(), FailureType::Fetal)))?
+        ).map_err(|e| Failure::from((e.into(), FailureType::Fetal)))?;
     } else {
-        std::fs::create_dir_all(data_folder).map_err(|e| format!("Failed to create data folder: {}", e))?;
+        std::fs::create_dir_all(data_folder).map_err(|e| Failure::from((e.into(), FailureType::Fetal)))?;
         startup_data = StartupData::new_default()?;
         println!("First run?: \n Default startup data created in {} \n no need to restart, continuing automatically\n enjoy REVERB!", data_folder.display());
     }
@@ -65,7 +66,7 @@ pub fn startup(transmit: Sender<Command>) -> Result<Internal, String> {
     Ok(Internal::new(startup_data.queue, playlist, transmit)?)
 }
 
-pub fn shutdown (internal: &Internal) -> Result<(), String> {
+pub fn shutdown (internal: &Internal) -> Result<(), Failure> {
     println!("Shutting down... ");
 
     println!("Saving startup data... ");

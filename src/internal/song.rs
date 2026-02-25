@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
+use anyhow::anyhow;
 
-use crate::external::external::{ExternalSong, ExternalSongTrait, ExternalType};
+use crate::{external::external::{ExternalSong, ExternalSongTrait, ExternalType}, failure::failure::{Failure, FailureType}};
 
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -12,7 +13,7 @@ pub struct Song {
 
 impl Song {
     // params format-> ExternalType external-info
-    pub fn new(params: &str) -> Result<Song, String> {
+    pub fn new(params: &str) -> Result<Song, Failure> {
         match params.split_once(' ') {
             Some((external_type, external_info)) => {
                 let t = ExternalType::get_from_str(external_type)?;
@@ -22,7 +23,7 @@ impl Song {
                     song_type: external_song,
                 })
             }
-            None => Err(format!("invalid song parameters: {}", params)),
+            None => Err(Failure::from((anyhow!("invalid song parameters: {}", params), FailureType::Warning))),
         }
     }
 }

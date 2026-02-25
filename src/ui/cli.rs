@@ -1,6 +1,8 @@
 use std::io::{self, BufRead};
 use std::sync::mpsc::Sender;
+use anyhow::anyhow;
 
+use crate::failure::failure::{Failure, FailureType};
 use crate::{Command, ui::ui};
 use crate::{external::external::ExternalType, internal::{playlist::Playlist, song::Song}};
 
@@ -21,7 +23,7 @@ pub fn get_input() -> String {
     }
 }
     
-fn run_command(input: String, transmit: &Sender<Command>) -> Result<bool, String> {
+fn run_command(input: String, transmit: &Sender<Command>) -> Result<bool, Failure> {
     match input.trim().split_once(" ") {
         Some((command, args)) => {command_check_composite(command, args, transmit)}
         None => {command_check_single(input.trim(), transmit)}
@@ -41,7 +43,7 @@ pub fn run_cli(transmit: Sender<Command>) {
     }
 }
 
-fn command_check_single(command: &str, transmit: &Sender<Command>) -> Result<bool, String> {
+fn command_check_single(command: &str, transmit: &Sender<Command>) -> Result<bool, Failure> {
     match command {
         "play" => {ui::play(transmit)?;}
         "pause" => {ui::pause(transmit)?;}
@@ -75,12 +77,12 @@ fn command_check_single(command: &str, transmit: &Sender<Command>) -> Result<boo
             let song = ui::current_song(transmit)?;
             println!("Currently playing: {} - {}", song.info.artist, song.info.title);
         }
-        _ => {Err(format!("Unknown command: {}", command))?;}
+        _ => {Err(Failure::from((anyhow!("Unknown command: {}", command), FailureType::Warning)))?;}
     }
     Ok(false)
 }
 
-fn command_check_composite(command: &str, args: &str, transmit: &Sender<Command>) -> Result<bool, String> {
+fn command_check_composite(command: &str, args: &str, transmit: &Sender<Command>) -> Result<bool, Failure> {
     match command {
         "play" => {
             match args.split_once(" ") {
@@ -90,7 +92,7 @@ fn command_check_composite(command: &str, args: &str, transmit: &Sender<Command>
                             let song = Song::new(args)?;
                             ui::play_new(transmit, song)?;
                         }
-                        _ => {return Err(format!("Unknown command: play {} {}", action, args));}
+                        _ => {return Err(Failure::from((anyhow!("Unknown command: play {} {}", action, args), FailureType::Warning)))?;}
                     }
                 }
                 None => match args {
@@ -100,7 +102,7 @@ fn command_check_composite(command: &str, args: &str, transmit: &Sender<Command>
                         play new <song>: play a new song from the given path
                         play help: display this help message for play commands");
                     }
-                    _ => {return Err(format!("Unknown command: play {}", args))}
+                    _ => {return Err(Failure::from((anyhow!("Unknown command: play {}", args), FailureType::Warning)))?;}
                 }
             }
         }
@@ -110,12 +112,12 @@ fn command_check_composite(command: &str, args: &str, transmit: &Sender<Command>
         "playlist" => {
             handle_playlist(transmit, args)?;
         }
-        _ => {return Err(format!("Unknown command: {}", command));}
+        _ => {return Err(Failure::from((anyhow!("Unknown command: {}", command), FailureType::Warning)))?;}
     }
     Ok(false)
 }
 
-fn handle_queue(transmit: &Sender<Command>, args: &str) -> Result<bool, String> {
+fn handle_queue(transmit: &Sender<Command>, args: &str) -> Result<bool, Failure> {
     match args.split_once(" ") {
         Some((action, args)) => {
             match action {
@@ -126,14 +128,14 @@ fn handle_queue(transmit: &Sender<Command>, args: &str) -> Result<bool, String> 
                 "remove" => {
                     ui::queue_remove(transmit, match args.parse() {
                         Ok(index) => index,
-                        Err(e) => {return Err(format!("Invalid song index: {}", e));}
+                        Err(e) => {return Err(Failure::from((e.into(), FailureType::Warning)))?;}
                     })?;
                 }
                 "playlist" => {
                     let playlist = Playlist::load(args)?;
                     ui::queue_playlist(transmit, playlist)?;
                 }
-                _ => {return Err(format!("Unknown command: queue {} {}", action, args));}
+                _ => {return Err(Failure::from((anyhow!("Unknown command: queue {} {}", action, args), FailureType::Warning)))?;}
             }
         }
         None => match args {
@@ -149,13 +151,13 @@ fn handle_queue(transmit: &Sender<Command>, args: &str) -> Result<bool, String> 
             "playlist" => {
                 ui::queue_current_playlist(transmit)?;
             }
-            _ => {return Err(format!("Unknown command: queue {}", args));}
+            _ => {return Err(Failure::from((anyhow!("Unknown command: queue {}", args), FailureType::Warning)))?;}
         }
     }
     Ok(false)
 }
 
-fn handle_playlist(transmit: &Sender<Command>, args: &str) -> Result<bool, String> {
+fn handle_playlist(transmit: &Sender<Command>, args: &str) -> Result<bool, Failure> {
     match args.split_once(" ") {
         Some((action, args)) => {
             match action {
@@ -166,7 +168,7 @@ fn handle_playlist(transmit: &Sender<Command>, args: &str) -> Result<bool, Strin
                 "remove" => {
                     match args.parse() {
                         Ok(index) => {ui::playlist_remove(transmit, index)?;}
-                        Err(e) => {return Err(format!("Invalid song index: {}", e));}
+                        Err(e) => {return Err(Failure::from((anyhow!("Invalid song index: {}", e), FailureType::Warning)));}
                     }
                 }
                 "load" => {
@@ -177,10 +179,10 @@ fn handle_playlist(transmit: &Sender<Command>, args: &str) -> Result<bool, Strin
                         Some((from_str, to_str)) => {
                             match (from_str.parse(), to_str.parse()) {
                                 (Ok(from), Ok(to)) => {ui::playlist_move_song(transmit, from, to)?;}
-                                _ => {return Err(format!("Invalid song indices: from: {}, to: {}", from_str, to_str));} 
+                                _ => {return Err(Failure::from((anyhow!("Invalid song indices: from: {}, to: {}", from_str, to_str), FailureType::Warning)));} 
                             }
                         }
-                        None => {return Err(format!("Invalid input for move command: {}", args));}
+                        None => {return Err(Failure::from((anyhow!("Invalid input for move command: {}", args), FailureType::Warning)))?;}
                     }
                 }
                 "new" => {
@@ -193,14 +195,14 @@ fn handle_playlist(transmit: &Sender<Command>, args: &str) -> Result<bool, Strin
                     }
                 }
                 "get" => {
-                    let index: usize = args.parse().map_err(|_| format!("Invalid song index: {}", args))?;
+                    let index: usize = args.parse().map_err(|e: std::num::ParseIntError| Failure::from((e.into(), FailureType::Warning)))?;
                     let song = ui::playlist_get_song(transmit, index)?;
                     println!("{} - {}", song.info.artist, song.info.title);
                 }
                 "name" => {
                     ui::playlist_set_name(transmit, args)?;
                 }
-                _ => {return Err(format!("Unknown command: playlist {} {}", action, args));}
+                _ => {return Err(Failure::from((anyhow!("Unknown command: playlist {} {}", action, args), FailureType::Warning)));}
             }
         }
         None => {
@@ -221,13 +223,13 @@ fn handle_playlist(transmit: &Sender<Command>, args: &str) -> Result<bool, Strin
                     playlist name <new_name>: set the name of the current playlist
                     playlist help: display this help message for playlist commands");
                 }
-                _ => return Err(format!("Unknown command: playlist {}", args)),
+                _ => return Err(Failure::from((anyhow!(format!("Unknown command: playlist {}", args)), FailureType::Warning))),
             }
         }
     }
     Ok(false)
 }
                 
-pub fn invalid_input(err_msg: String) {
-    println!("{}\n use help for help", err_msg);
+pub fn invalid_input(err: Failure) {
+    println!("{}\n use help for help", err);
 }

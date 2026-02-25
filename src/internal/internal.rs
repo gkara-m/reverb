@@ -1,7 +1,5 @@
 use crate::{
-    Command,
-    external::external::{self, External, ExternalRun, ExternalType},
-    internal::{playlist::Playlist, queue::Queue, song::Song},
+    Command, external::external::{self, External, ExternalRun, ExternalType}, failure::failure::{Failure, FailureType}, internal::{playlist::Playlist, queue::Queue, song::Song}
 };
 
 use std::{thread, time::Duration};
@@ -23,7 +21,7 @@ impl Internal {
         queue: Queue,
         playlist: Playlist,
         sender: std::sync::mpsc::Sender<crate::Command>,
-    ) -> Result<Self, String> {
+    ) -> Result<Self, Failure> {
         Ok(Internal {
             current_external: external::get_new_external_run_from_song(&queue.current_song()?)?,
             current_playlist: playlist,
@@ -33,16 +31,16 @@ impl Internal {
         })
     }
 
-    pub fn play(&mut self) -> Result<(), String> {
+    pub fn play(&mut self) -> Result<(), Failure> {
         self.current_external.play()?;
         self.update_autoskip()
     }
 
-    pub fn pause(&mut self) -> Result<(), String> {
+    pub fn pause(&mut self) -> Result<(), Failure> {
         self.current_external.pause()
     }
 
-    pub fn play_new(&mut self, song: Song) -> Result<(), String> {
+    pub fn play_new(&mut self, song: Song) -> Result<(), Failure> {
         self.stop()?;
         if !song.song_type.same_type(&self.current_external) {
             self.current_external = external::get_new_external_run_from_song(&song)?;
@@ -54,39 +52,39 @@ impl Internal {
         Ok(())
     }
 
-    fn stop(&self) -> Result<(), String> {
+    fn stop(&self) -> Result<(), Failure> {
         self.current_external.stop()
     }
 
-    pub fn current_song(&self) -> Result<Song, String> {
+    pub fn current_song(&self) -> Result<Song, Failure> {
         self.queue.current_song()
     }
 
-    pub fn shutdown(&self) -> Result<(), String> {
+    pub fn shutdown(&self) -> Result<(), Failure> {
         self.kill_autoskip();
         self.current_playlist.save()?;
         self.current_external.shutdown()?;
         Ok(())
     }
 
-    pub fn is_song_playing(&self) -> Result<bool, String> {
+    pub fn is_song_playing(&self) -> Result<bool, Failure> {
         self.current_external.is_song_playing()
     }
 
-    pub fn song_time_left(&self) -> Result<Duration, String> {
+    pub fn song_time_left(&self) -> Result<Duration, Failure> {
         self.current_external.time_left()
     }
 }
 
 impl Internal {
-    pub fn playlist_load(&mut self, playlist_name: &str) -> Result<(), String> {
+    pub fn playlist_load(&mut self, playlist_name: &str) -> Result<(), Failure> {
         self.playlist_save()?;
         let playlist = Playlist::load(playlist_name)?;
         self.current_playlist = playlist;
         Ok(())
     }
 
-    fn playlist_save(&self) -> Result<(), String> {
+    fn playlist_save(&self) -> Result<(), Failure> {
         self.current_playlist.save()
     }
 
@@ -94,23 +92,23 @@ impl Internal {
         &mut self,
         name: &str,
         external_type: Option<ExternalType>,
-    ) -> Result<(), String> {
+    ) -> Result<(), Failure> {
         self.playlist_save()?;
         self.current_playlist = Playlist::new(name, external_type)?;
         self.playlist_save()
     }
 
-    pub fn playlist_add(&mut self, song: Song) -> Result<(), String> {
+    pub fn playlist_add(&mut self, song: Song) -> Result<(), Failure> {
         self.current_playlist.add(&song);
         self.playlist_save()
     }
 
-    pub fn playlist_remove(&mut self, index: usize) -> Result<(), String> {
+    pub fn playlist_remove(&mut self, index: usize) -> Result<(), Failure> {
         self.current_playlist.remove(index)?;
         self.playlist_save()
     }
 
-    pub fn playlist_move_song(&mut self, from: usize, to: usize) -> Result<(), String> {
+    pub fn playlist_move_song(&mut self, from: usize, to: usize) -> Result<(), Failure> {
         self.current_playlist.move_song(from, to)?;
         self.playlist_save()
     }
@@ -123,12 +121,12 @@ impl Internal {
         self.current_playlist.get_name()
     }
 
-    pub fn playlist_set_name(&mut self, name: &str) -> Result<(), String> {
+    pub fn playlist_set_name(&mut self, name: &str) -> Result<(), Failure> {
         self.current_playlist.set_name(name)?;
         self.playlist_save()
     }
 
-    pub fn playlist_get_song(&self, index: usize) -> Result<Song, String> {
+    pub fn playlist_get_song(&self, index: usize) -> Result<Song, Failure> {
         self.current_playlist.get_song(index)
     }
 }
@@ -138,7 +136,7 @@ impl Internal {
         self.queue.add(song);
     }
 
-    pub fn queue_remove(&mut self, song_index: usize) -> Result<(), String> {
+    pub fn queue_remove(&mut self, song_index: usize) -> Result<(), Failure> {
         self.queue.remove(song_index)?;
         Ok(())
     }
@@ -147,7 +145,7 @@ impl Internal {
         self.queue.list();
     }
 
-    pub fn queue_next(&mut self) -> Result<(), String> {
+    pub fn queue_next(&mut self) -> Result<(), Failure> {
         let next_song = self.queue.next()?;
         self.play_new(next_song)?;
         Ok(())
@@ -165,13 +163,13 @@ impl Internal {
         &self.queue
     }
 
-    pub fn update_autoskip(&mut self) -> Result<(), String> {
+    pub fn update_autoskip(&mut self) -> Result<(), Failure> {
         self.kill_autoskip();
         if self.is_song_playing()? {
             let time_left = self.song_time_left()?;
             if time_left.is_zero() {
                 let sender = self.sender.clone();
-                sender.send(Command::QueueNext).map_err(|e| format!("Failed to send QueueNext command: {}", e))?;
+                sender.send(Command::QueueNext).map_err(|e| Failure::from((e.into(), FailureType::Fetal)))?;
                 Ok(())
             } else {
                 let sender = self.sender.clone();

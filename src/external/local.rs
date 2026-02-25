@@ -6,8 +6,10 @@ use std::fs::File;
 use std::io::BufReader;
 use std::path::Path;
 use std::time::Duration;
+use anyhow::anyhow;
 
 use crate::external::external::{External, ExternalSong::LOCAL, ExternalSongTrait};
+use crate::failure::failure::{Failure, FailureType};
 use crate::internal::song::Song;
 
 pub struct Local {
@@ -29,20 +31,20 @@ impl LocalSong {
 }
 
 impl ExternalSongTrait for LocalSong {
-    fn info(&self) -> Result<crate::internal::song::SongInfo, String> {
+    fn info(&self) -> Result<crate::internal::song::SongInfo, Failure> {
         Ok(crate::internal::song::SongInfo {
             title: format!("Local Song at path: {}", self.song_path),
             artist: String::from("Unknown Artist"),
         })
     }
 
-    fn new(path_str: &str) -> Result<Self, String> {
+    fn new(path_str: &str) -> Result<Self, Failure> {
         let path = Path::new(path_str);
         let duration = {
             let tagged_file = Probe::open(&path)
-                .map_err(|e| format!("Failed to probe file: {}", e))?
+                .map_err(|e| Failure::from((e.into(), FailureType::Warning)))?
                 .read()
-                .map_err(|e| format!("Failed to read tagged file: {}", e))?;
+                .map_err(|e| Failure::from((e.into(), FailureType::Warning)))?;
             tagged_file.properties().duration()
         };
 
@@ -52,15 +54,15 @@ impl ExternalSongTrait for LocalSong {
                 duration,
             })
         } else {
-            Err(format!("File path does not exist: {}", path_str))
+            Err(Failure::from((std::io::Error::new(std::io::ErrorKind::NotFound, "File does not exist").into(), FailureType::Warning)))
         }
     }
 }
 
 impl External for Local {
-    fn new(song:&Song) -> Result<Local, String> {
+    fn new(song:&Song) -> Result<Local, Failure> {
         let output_stream = match OutputStreamBuilder::open_default_stream() {
-            Err(e) => return Err(format!("Failed to open output stream: {}", e)),
+            Err(e) => return Err(Failure::from((e.into(), FailureType::Warning))),
             Ok(output_stream) => output_stream,
         };
         let sink = Sink::connect_new(&output_stream.mixer());
@@ -74,37 +76,37 @@ impl External for Local {
         Ok(local)
     }
     
-    fn play_new(&mut self, song: &Song) -> Result<(), String> {
+    fn play_new(&mut self, song: &Song) -> Result<(), Failure> {
         self.load_new(song)?;
         self.sink.play();
         Ok(())
     }
 
-    fn pause(&self) -> Result<(), String> {
+    fn pause(&self) -> Result<(), Failure> {
         self.sink.pause();
         Ok(())
     }
 
-    fn play(&self) -> Result<(), String> {
+    fn play(&self) -> Result<(), Failure> {
         self.sink.play();
         Ok(())
     }
 
-    fn stop(&self) -> Result<(), String> {
+    fn stop(&self) -> Result<(), Failure> {
         self.sink.stop();
         Ok(())
     }
 
-    fn shutdown(&self) -> Result<(), String> {
+    fn shutdown(&self) -> Result<(), Failure> {
         // nothing to be done
         Ok(())
     }
 
-    fn is_song_playing(&self) -> Result<bool, String> {
+    fn is_song_playing(&self) -> Result<bool, Failure> {
         Ok(!self.sink.is_paused())
     }
 
-    fn time_left(&self) -> Result<Duration, String> {
+    fn time_left(&self) -> Result<Duration, Failure> {
         if self.sink.get_pos() >= self.song_duration {
             return Ok(Duration::new(0, 0));
         }
@@ -113,7 +115,7 @@ impl External for Local {
 }
 
 impl Local {
-    fn load_new(&mut self, song: &Song) -> Result<(), String> {
+    fn load_new(&mut self, song: &Song) -> Result<(), Failure> {
         if let LOCAL(ref local_song) = song.song_type {
             self.stop()?;
             let decoder = load_decoder(&local_song.song_path);
@@ -121,13 +123,13 @@ impl Local {
             self.sink.append(decoder);
             Ok(())
         } else {
-            Err(String::from("Invalid song type for Local external"))
+            Err(Failure::from((anyhow!("Invalid song type for Local external"), FailureType::Warning)))
         }
     }
 
-    pub fn new(song: &Song) -> Result<Local, String> {
+    pub fn new(song: &Song) -> Result<Local, Failure> {
         let output_stream = match OutputStreamBuilder::open_default_stream() {
-            Err(e) => return Err(format!("Failed to open output stream: {}", e)),
+            Err(e) => return Err(Failure::from((e.into(), FailureType::Warning))),
             Ok(output_stream) => output_stream,
         };
         let sink = Sink::connect_new(&output_stream.mixer());

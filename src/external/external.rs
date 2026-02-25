@@ -1,64 +1,66 @@
 use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
+use anyhow::anyhow;
 
 use crate::external::local::{Local, LocalSong};
 use crate::external::placeholder::{PlaceholderExternalSong, PlaceholderRun};
 use crate::Song;
+use crate::failure::failure::{Failure, FailureType};
 pub trait External {
-    fn play_new(&mut self, song: &Song) -> Result<(), String>;
+    fn play_new(&mut self, song: &Song) -> Result<(), Failure>;
 
-    fn pause(&self) -> Result<(), String>;
+    fn pause(&self) -> Result<(), Failure>;
 
-    fn play(&self) -> Result<(), String>;
+    fn play(&self) -> Result<(), Failure>;
 
-    fn stop(&self) -> Result<(), String>;
+    fn stop(&self) -> Result<(), Failure>;
 
-    fn shutdown(&self) -> Result<(), String>;
+    fn shutdown(&self) -> Result<(), Failure>;
 
-    fn new(song: &Song) -> Result<Self, String> where Self: Sized;
+    fn new(song: &Song) -> Result<Self, Failure> where Self: Sized;
 
-    fn is_song_playing(&self) -> Result<bool, String>;
+    fn is_song_playing(&self) -> Result<bool, Failure>;
 
-    fn time_left(&self) -> Result<Duration, String>;
+    fn time_left(&self) -> Result<Duration, Failure>;
 }
 
 pub trait ExternalSongTrait {
-    fn new(info: &str) -> Result<Self, String> where Self: Sized;
-    fn info(&self) -> Result<crate::internal::song::SongInfo, String>;
+    fn new(info: &str) -> Result<Self, Failure> where Self: Sized;
+    fn info(&self) -> Result<crate::internal::song::SongInfo, Failure>;
 }
 
 
 impl External for ExternalRun {
-    fn new(song: &Song) -> Result<Self, String> where Self: Sized {
+    fn new(song: &Song) -> Result<Self, Failure> where Self: Sized {
         get_new_external_run_from_song(song)
     }
 
-    fn play_new(&mut self, song: &Song) -> Result<(), String> {
+    fn play_new(&mut self, song: &Song) -> Result<(), Failure> {
         self.as_external_mut().play_new(song)
     }
 
-    fn pause(&self) -> Result<(), String> {
+    fn pause(&self) -> Result<(), Failure> {
         self.as_external().pause()
     }
 
-    fn play(&self) -> Result<(), String> {
+    fn play(&self) -> Result<(), Failure> {
         self.as_external().play()
     }
 
-    fn stop(&self) -> Result<(), String> {
+    fn stop(&self) -> Result<(), Failure> {
         self.as_external().stop()
     }
 
-    fn shutdown(&self) -> Result<(), String> {
+    fn shutdown(&self) -> Result<(), Failure> {
         self.as_external().shutdown()
     }
 
-    fn is_song_playing(&self) -> Result<bool, String> {
+    fn is_song_playing(&self) -> Result<bool, Failure> {
         self.as_external().is_song_playing()
     }
 
-    fn time_left(&self) -> Result<Duration, String> {
+    fn time_left(&self) -> Result<Duration, Failure> {
         self.as_external().time_left()
     }
 }
@@ -82,7 +84,7 @@ impl External for ExternalRun {
     }
 
     impl ExternalType {
-        pub fn get_from_str(string: &str) -> Result<ExternalType, String> {
+        pub fn get_from_str(string: &str) -> Result<ExternalType, Failure> {
             match string {
                 "local" => Ok(ExternalType::LOCAL),
                 "youtube" => Ok(ExternalType::YOUTUBE),
@@ -90,7 +92,7 @@ impl External for ExternalRun {
             }
         }
 
-        pub fn new_external_song(&self, string: &str) -> Result<ExternalSong, String> {
+        pub fn new_external_song(&self, string: &str) -> Result<ExternalSong, Failure> {
             match self {
                 ExternalType::LOCAL => LocalSong::new(string).map(ExternalSong::LOCAL),
                 ExternalType::YOUTUBE => Ok(ExternalSong::YOUTUBE(())),
@@ -100,10 +102,10 @@ impl External for ExternalRun {
     }
 
     impl ExternalSongTrait for ExternalSong {
-        fn new(_info: &str) -> Result<Self, String> where Self: Sized {
+        fn new(_info: &str) -> Result<Self, Failure> where Self: Sized {
             Err("Use ExternalType::new_external_song instead".to_string())
         }
-        fn info(&self) -> Result<crate::internal::song::SongInfo, String> {
+        fn info(&self) -> Result<crate::internal::song::SongInfo, Failure> {
             match self {
                 ExternalSong::LOCAL(song) => song.info(),
                 ExternalSong::YOUTUBE(_) => Err("No info available for YouTube placeholder".to_string()),
@@ -121,7 +123,7 @@ impl External for ExternalRun {
         }
     }
 
-    pub fn get_new_external_run_from_song(song: &Song) -> Result<ExternalRun, String> {
+    pub fn get_new_external_run_from_song(song: &Song) -> Result<ExternalRun, Failure> {
         match &song.song_type {
             ExternalSong::LOCAL(_) => Ok(ExternalRun::LOCAL(Local::new(song)?)),
             ExternalSong::YOUTUBE(_) => todo!(),
@@ -171,16 +173,16 @@ macro_rules! make_external_types {
         }
 
         impl ExternalType {
-            pub fn get_from_str(string: &str) -> Result<ExternalType, String> {
+            pub fn get_from_str(string: &str) -> Result<ExternalType, Failure> {
                 match string {
                     $(
                         stringify!($name) => Ok(ExternalType::$backend),
                     )*
-                    _ => Err(format!("Unknown external type: {}", string))
+                    _ => Err(Failure::from((anyhow!("Unknown external type: {}", string), FailureType::Warning)))
                 }
             }
             
-            pub fn new_external_song(&self, string: &str) -> Result<ExternalSong, String> {
+            pub fn new_external_song(&self, string: &str) -> Result<ExternalSong, Failure> {
                 match self {
                     $(
                         ExternalType::$backend => <$song>::new(string).map(ExternalSong::$backend),
@@ -193,10 +195,10 @@ macro_rules! make_external_types {
             // Note: This function is not intended to be used; it's here to satisfy the trait requirement.
             // Use ExternalType::new_external_song instead.
             // TODO: this will be chnaged later to remove confusion
-            fn new(_info: &str) -> Result<Self, String> where Self: Sized {
-                Err("Use ExternalType::new_external_song instead".to_string())
+            fn new(_info: &str) -> Result<Self, Failure> where Self: Sized {
+                Err(Failure::from((anyhow!("Use ExternalType::new_external_song instead"), FailureType::Warning)))
             }
-            fn info(&self) -> Result<crate::internal::song::SongInfo, String> {
+            fn info(&self) -> Result<crate::internal::song::SongInfo, Failure> {
                 match self {
                     $(
                         ExternalSong::$backend(song) => song.info(),
@@ -217,7 +219,7 @@ macro_rules! make_external_types {
             }
         }
 
-        pub fn get_new_external_run_from_song(song: &Song) -> Result<ExternalRun, String> {
+        pub fn get_new_external_run_from_song(song: &Song) -> Result<ExternalRun, Failure> {
             match &song.song_type {
                 $(
                     ExternalSong::$backend(_) => Ok(ExternalRun::$backend(<$run>::new(song)?)),

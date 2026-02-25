@@ -1,8 +1,9 @@
 use std::collections::VecDeque;
+use anyhow::anyhow;
 
 use serde::{Deserialize, Serialize};
 
-use crate::internal::{playlist::Playlist, song::Song};
+use crate::{failure::failure::{Failure, FailureType}, internal::{playlist::Playlist, song::Song}};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Queue {
@@ -26,10 +27,10 @@ impl Queue {
         }
     }
 
-    pub fn remove(&mut self, song_index: usize) -> Result<(), String> {
-        if self.queued_songs.len() <= 1 { return Err(String::from("Cannot remove song from queue: only one song in queue")); }
-        if song_index <= 0 { return Err(String::from("Cannot remove currently playing song from queue")); }
-        if song_index >= self.queued_songs.len() { return Err(format!("Invalid song index (too large): {}", song_index)); }
+    pub fn remove(&mut self, song_index: usize) -> Result<(), Failure> {
+        if self.queued_songs.len() <= 1 { return Err(Failure::from((anyhow!("Cannot remove song from queue: only one song in queue"), FailureType::Warning))); }
+        if song_index == 0 { return Err(Failure::from((anyhow!("Cannot remove currently playing song from queue at index 0"), FailureType::Warning))); }
+        if song_index >= self.queued_songs.len() { return Err(Failure::from((anyhow!("Invalid song index (too large): {}", song_index), FailureType::Warning))); }
         self.queued_songs.remove(song_index);
         Ok(())
     }
@@ -40,20 +41,19 @@ impl Queue {
         }
     }
 
-    pub fn next(&mut self) -> Result<Song, String> {
+    pub fn next(&mut self) -> Result<Song, Failure> {
         if self.queued_songs.len() > 1 {
             self.queued_songs.pop_front();
-            if let Some(next_song) = self.queued_songs.front().cloned() {
-                return Ok(next_song);
-            }
-            return Err(String::from("Queue is empty"))
+            match self.queued_songs.front().cloned() {
+                Some(next_song) => return Ok(next_song),
+                None => return Err(Failure::from((anyhow!("Queue is empty after popping current song"), FailureType::Warning))),}
         }
-        Err(String::from("Queue has only one song or is empty"))
+        Err(Failure::from((anyhow!("Queue has only one song or is empty"), FailureType::Warning)))
     }
 
-    pub fn current_song(&self) -> Result<Song, String> {
+    pub fn current_song(&self) -> Result<Song, Failure> {
         self.queued_songs.get(0)
             .cloned()
-            .ok_or_else(|| String::from("Queue is empty"))
+            .ok_or_else(|| Failure::from((anyhow!("Queue is empty"), FailureType::Warning)))
     }
 }
