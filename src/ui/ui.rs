@@ -120,3 +120,13 @@ pub(super) fn shutdown(transmit: &Sender<Command>) -> Result<(), Failure> {
     transmit.clone().send(Command::Shutdown)
     .map_err(|e| Failure::from((e.into(), FailureType::Fetal)))
 }
+
+pub(super) fn song_progress(transmit: &Sender<Command>) -> Result<f32, Failure> {
+    let (tx, rx) = mpsc::channel();
+    transmit.clone().send(Command::SongProgress(tx))
+    .map_err(|e| Failure::from((e.into(), FailureType::Fetal)))?;
+    match rx.recv() {
+        Ok(progress) => progress,
+        Err(e) => Err(Failure::from((e.into(), FailureType::Fetal))),
+    }
+}

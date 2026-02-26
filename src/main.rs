@@ -9,7 +9,7 @@ use once_cell::sync::OnceCell;
 use ui::cli;
 
 use crate::{
-    config::startup_shutdown::{shutdown, startup}, external::external::ExternalType, failure::failure::{Failure, FailureType}, internal::playlist::Playlist
+    config::startup_shutdown::{shutdown, startup}, external::external::ExternalType, failure::failure::{Failure, FailureType}, internal::playlist::Playlist, ui::cli::print_failure
 };
 
 mod external;
@@ -38,11 +38,11 @@ fn main() {
     };
 
     thread::spawn(move || {
-        cli::run_cli(transmit);
+        cli::run_cli(transmit, 100);
     });
 
     for command in receive {
-        if let Err(e) = match command {
+        match match command {
             Command::Play => internal.play(),
             Command::Pause => internal.pause(),
             Command::PlayNew(song) => internal.play_new(song),
@@ -84,8 +84,15 @@ fn main() {
                     .map_err(|e| Failure::from((e.into(), FailureType::Warning))),
             Command::Shutdown => break,
             Command::UpdateAutoskip => internal.update_autoskip(),
+            Command::SongProgress(sender) => sender
+                    .send(internal.song_progress())
+                    .map_err(|e| Failure::from((e.into(), FailureType::Warning))),
         } {
-            cli::invalid_input(e);
+            Ok(_) => {},
+            Err(failure) => match failure {
+                Failure::Fetal(_) => {print_failure(failure); break;},
+                Failure::Warning(_) => print_failure(failure),
+            },
         }
     }
 
@@ -145,4 +152,5 @@ enum Command {
     QueueGetSongs(mpsc::Sender<Vec<Song>>),
     Shutdown,
     UpdateAutoskip,
+    SongProgress(mpsc::Sender<Result<f32, Failure>>),
 }

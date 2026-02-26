@@ -1,6 +1,8 @@
-use std::io::{self, BufRead};
+use std::io::{self, BufRead, Write};
 use std::sync::mpsc::Sender;
+use std::u64;
 use anyhow::anyhow;
+use crossterm::{execute, cursor, terminal::{self, ClearType}, style::Print};
 
 use crate::failure::failure::{Failure, FailureType};
 use crate::{Command, ui::ui};
@@ -30,17 +32,99 @@ fn run_command(input: String, transmit: &Sender<Command>) -> Result<bool, Failur
     }
 }
 
-pub fn run_cli(transmit: Sender<Command>) {
+pub fn run_cli(transmit: Sender<Command>, update_interval: u64) {
+
+    // input thread
+    let (input_tx, input_rx) = std::sync::mpsc::channel::<String>();
+    let main_transmit = transmit.clone();
+    std::thread::spawn(move || {
+        let stdin = io::stdin();
+        for line in stdin.lock().lines() {
+            match line {
+                Ok(line) => {
+                    if let Err(e) = input_tx.send(line) {
+                        print_failure(Failure::from((e.into(), FailureType::Fetal)));
+                        if let Err(e) = main_transmit.send(Command::Shutdown) {
+                            print_failure(Failure::from((e.into(), FailureType::Fetal)));
+                            println!("Automatic shutdown failed, please manually shutdown the application");
+                        };
+                        break;
+                    }
+                }
+                Err(e) => {
+                    print_failure(Failure::from((e.into(), FailureType::Fetal)));
+                    if let Err(e) = main_transmit.send(Command::Shutdown) {
+                        print_failure(Failure::from((e.into(), FailureType::Fetal)));
+                        println!("Automatic shutdown failed, please manually shutdown the application");
+                    };
+                    break;
+                }
+            }
+        }
+    });
+
+
+    //renderer thread
+    let main_transmit = transmit.clone();
+    let renderer = std::thread::spawn(move || {
+        let mut stdout = io::stdout();
+        loop {
+            std::thread::sleep(std::time::Duration::from_millis(update_interval));
+
+            // check line length
+            let line_length = match terminal::size() {
+                Ok((width, _)) => width as usize,
+                Err(e) => {
+                    print_failure(Failure::from((e.into(), FailureType::Warning)));
+                    80
+                }
+            };
+
+            // get song progress
+            let progress = match ui::song_progress(&main_transmit) {
+                Ok(progress) => progress,
+                Err(e) => {
+                    print_failure(e);
+                    0.0
+                }
+            };
+
+            // create progress bar
+            let progress_bar_length = line_length - 2;
+            let progress_length = (progress * progress_bar_length as f32).round() as usize;
+            let progress_bar = 
+                "[".to_string() + 
+                &"=".repeat(progress_length) + 
+                &" ".repeat(progress_bar_length - progress_length) + 
+                "]";
+
+            // render progress bar
+            let _ = execute!(
+                stdout,
+                cursor::SavePosition,
+                cursor::MoveTo(0, 0),
+                terminal::Clear(ClearType::CurrentLine),
+                Print(progress_bar),
+                cursor::RestorePosition
+            );
+            let _ = stdout.flush();
+        }
+    });
+
+
+
+
     println!("Please enter command or type 'help' for help.");
 
-    loop {
-        let input = get_input();
+    for input in input_rx {
         if input.is_empty() {continue;}
         match run_command(input, &transmit) {
             Ok(quit) => if quit { break; },
-            Err(err) => invalid_input(err),
+            Err(err) => print_failure(err),
         }
     }
+
+    let _ = renderer.join();
 }
 
 fn command_check_single(command: &str, transmit: &Sender<Command>) -> Result<bool, Failure> {
@@ -234,6 +318,6 @@ fn handle_playlist(transmit: &Sender<Command>, args: &str) -> Result<bool, Failu
     Ok(false)
 }
                 
-pub fn invalid_input(err: Failure) {
+pub fn print_failure(err: Failure) {
     println!("{}\n use help for help", err);
 }

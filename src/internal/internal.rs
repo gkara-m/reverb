@@ -74,6 +74,10 @@ impl Internal {
     pub fn song_time_left(&self) -> Result<Duration, Failure> {
         self.current_external.time_left()
     }
+
+    pub fn song_progress(&self) -> Result<f32, Failure> {
+        self.current_external.song_progress()
+    }
 }
 
 impl Internal {
@@ -150,7 +154,13 @@ impl Internal {
     }
 
     pub fn queue_next(&mut self) -> Result<(), Failure> {
-        let next_song = self.queue.next()?;
+        let next_song = match self.queue.next() {
+            Ok(song) => song,
+            Err(e) => match e.failure_type() {
+                FailureType::Warning => return Ok(()),
+                FailureType::Fetal => return Err(e),
+            },
+        };
         self.play_new(next_song)?;
         Ok(())
     }

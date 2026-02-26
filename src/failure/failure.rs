@@ -10,6 +10,15 @@ pub enum FailureType {
     Warning,
 }
 
+impl Failure {
+    pub fn failure_type(&self) -> FailureType {
+        match self {
+            Failure::Fetal(_) => FailureType::Fetal,
+            Failure::Warning(_) => FailureType::Warning,
+        }
+    }
+}
+
 impl std::fmt::Display for Failure {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", match self {

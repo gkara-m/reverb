@@ -112,6 +112,14 @@ impl External for Local {
         }
         Ok(self.song_duration - self.sink.get_pos())
     }
+
+    fn song_progress(&self) -> Result<f32, Failure> {
+        if self.song_duration.as_secs() == 0 {
+            return Ok(0.0);
+        }
+        let progress = self.sink.get_pos().as_secs_f32() / self.song_duration.as_secs_f32();
+        Ok(progress.min(1.0))
+    }
 }
 
 impl Local {

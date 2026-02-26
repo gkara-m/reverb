@@ -23,6 +23,8 @@ pub trait External {
     fn is_song_playing(&self) -> Result<bool, Failure>;
 
     fn time_left(&self) -> Result<Duration, Failure>;
+
+    fn song_progress(&self) -> Result<f32, Failure>;
 }
 
 pub trait ExternalSongTrait {
@@ -62,6 +64,10 @@ impl External for ExternalRun {
 
     fn time_left(&self) -> Result<Duration, Failure> {
         self.as_external().time_left()
+    }
+
+    fn song_progress(&self) -> Result<f32, Failure> {
+        self.as_external().song_progress()
     }
 }
 

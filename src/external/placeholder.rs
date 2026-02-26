@@ -50,4 +50,8 @@ impl External for PlaceholderRun {
     fn time_left(&self) -> Result<std::time::Duration, Failure> {
         todo!()
     }
+
+    fn song_progress(&self) -> Result<f32, Failure> {
+        todo!()
+    }
 }
