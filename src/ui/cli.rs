@@ -7,23 +7,6 @@ use crossterm::{execute, cursor, terminal::{self, ClearType}, style::Print};
 use crate::failure::failure::{Failure, FailureType};
 use crate::{Command, ui::ui};
 use crate::{external::external::ExternalType, internal::{playlist::Playlist, song::Song}};
-
-
-pub fn get_input() -> String {
-    let stdin = io::stdin();
-    let mut buffer = String::new();
-    let mut handle = stdin.lock();
-
-    match handle.read_line(&mut buffer) {
-        Ok(_) => {
-            buffer.trim().to_string()
-        }
-        Err(e) => {
-            eprintln!("Invalid Input: {}", e);
-            String::new()
-        }
-    }
-}
     
 fn run_command(input: String, transmit: &Sender<Command>) -> Result<bool, Failure> {
     match input.trim().split_once(" ") {
