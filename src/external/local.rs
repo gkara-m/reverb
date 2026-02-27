@@ -106,19 +106,15 @@ impl External for Local {
         Ok(!self.sink.is_paused())
     }
 
-    fn time_left(&self) -> Result<Duration, Failure> {
+    fn song_duration_gone(&self) -> Result<Duration, Failure> {
         if self.sink.get_pos() >= self.song_duration {
-            return Ok(Duration::new(0, 0));
+            return Ok(self.song_duration);
         }
-        Ok(self.song_duration - self.sink.get_pos())
+        Ok(self.sink.get_pos())
     }
 
-    fn song_progress(&self) -> Result<f32, Failure> {
-        if self.song_duration.as_secs() == 0 {
-            return Ok(0.0);
-        }
-        let progress = self.sink.get_pos().as_secs_f32() / self.song_duration.as_secs_f32();
-        Ok(progress.min(1.0))
+    fn song_duration(&self) -> Result<Duration, Failure> {
+        Ok(self.song_duration)
     }
 }
 

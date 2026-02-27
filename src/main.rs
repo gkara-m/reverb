@@ -1,4 +1,4 @@
-use std::sync::mpsc;
+use std::{sync::mpsc, time::Duration};
 use std::thread;
 
 use anyhow::anyhow;
@@ -84,8 +84,11 @@ fn main() {
                     .map_err(|e| Failure::from((e.into(), FailureType::Warning))),
             Command::Shutdown => break,
             Command::UpdateAutoskip => internal.update_autoskip(),
-            Command::SongProgress(sender) => sender
-                    .send(internal.song_progress())
+            Command::SongDuration(sender) => sender
+                    .send(internal.song_duration())
+                    .map_err(|e| Failure::from((e.into(), FailureType::Warning))),
+            Command::SongDurationGone(sender) => sender
+                    .send(internal.song_duration_gone())
                     .map_err(|e| Failure::from((e.into(), FailureType::Warning))),
         } {
             Ok(_) => {},
@@ -152,5 +155,6 @@ enum Command {
     QueueGetSongs(mpsc::Sender<Vec<Song>>),
     Shutdown,
     UpdateAutoskip,
-    SongProgress(mpsc::Sender<Result<f32, Failure>>),
+    SongDuration(mpsc::Sender<Result<Duration, Failure>>),
+    SongDurationGone(mpsc::Sender<Result<Duration, Failure>>),
 }

@@ -1,4 +1,4 @@
-use std::sync::mpsc::{self, Sender};
+use std::{sync::mpsc::{self, Sender}, time::Duration};
 
 
 use crate::{Command, external::external::ExternalType, failure::failure::{Failure, FailureType}, internal::{playlist::Playlist, song::Song}};
@@ -121,9 +121,19 @@ pub(super) fn shutdown(transmit: &Sender<Command>) -> Result<(), Failure> {
     .map_err(|e| Failure::from((e.into(), FailureType::Fetal)))
 }
 
-pub(super) fn song_progress(transmit: &Sender<Command>) -> Result<f32, Failure> {
+pub(super) fn song_duration(transmit: &Sender<Command>) -> Result<Duration, Failure> {
     let (tx, rx) = mpsc::channel();
-    transmit.clone().send(Command::SongProgress(tx))
+    transmit.clone().send(Command::SongDuration(tx))
+    .map_err(|e| Failure::from((e.into(), FailureType::Fetal)))?;
+    match rx.recv() {
+        Ok(progress) => progress,
+        Err(e) => Err(Failure::from((e.into(), FailureType::Fetal))),
+    }
+}
+
+pub(super) fn song_duration_gone(transmit: &Sender<Command>) -> Result<Duration, Failure> {
+    let (tx, rx) = mpsc::channel();
+    transmit.clone().send(Command::SongDurationGone(tx))
     .map_err(|e| Failure::from((e.into(), FailureType::Fetal)))?;
     match rx.recv() {
         Ok(progress) => progress,

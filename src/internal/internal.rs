@@ -71,12 +71,12 @@ impl Internal {
         self.current_external.is_song_playing()
     }
 
-    pub fn song_time_left(&self) -> Result<Duration, Failure> {
-        self.current_external.time_left()
+    pub fn song_duration_gone(&self) -> Result<Duration, Failure> {
+        self.current_external.song_duration_gone()
     }
 
-    pub fn song_progress(&self) -> Result<f32, Failure> {
-        self.current_external.song_progress()
+    pub fn song_duration(&self) -> Result<Duration, Failure> {
+        self.current_external.song_duration()
     }
 }
 
@@ -176,7 +176,7 @@ impl Internal {
     pub fn update_autoskip(&mut self) -> Result<(), Failure> {
         self.kill_autoskip();
         if self.is_song_playing()? {
-            let time_left = self.song_time_left()?;
+            let time_left = self.song_duration()? - self.song_duration_gone()?;
             if time_left.is_zero() {
                 let sender = self.sender.clone();
                 sender.send(Command::QueueNext).map_err(|e| Failure::from((e.into(), FailureType::Fetal)))?;

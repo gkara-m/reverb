@@ -22,9 +22,9 @@ pub trait External {
 
     fn is_song_playing(&self) -> Result<bool, Failure>;
 
-    fn time_left(&self) -> Result<Duration, Failure>;
+    fn song_duration_gone(&self) -> Result<Duration, Failure>;
 
-    fn song_progress(&self) -> Result<f32, Failure>;
+    fn song_duration(&self) -> Result<Duration, Failure>;
 }
 
 pub trait ExternalSongTrait {
@@ -62,12 +62,12 @@ impl External for ExternalRun {
         self.as_external().is_song_playing()
     }
 
-    fn time_left(&self) -> Result<Duration, Failure> {
-        self.as_external().time_left()
+    fn song_duration_gone(&self) -> Result<Duration, Failure> {
+        self.as_external().song_duration_gone()
     }
 
-    fn song_progress(&self) -> Result<f32, Failure> {
-        self.as_external().song_progress()
+    fn song_duration(&self) -> Result<Duration, Failure> {
+        self.as_external().song_duration()
     }
 }
 
@@ -109,7 +109,7 @@ impl External for ExternalRun {
 
     impl ExternalSongTrait for ExternalSong {
         fn new(_info: &str) -> Result<Self, Failure> where Self: Sized {
-            Err("Use ExternalType::new_external_song instead".to_string())
+            Err(Failure::from(("Use ExternalType::new_external_song instead", FailureType::Warning)))
         }
         fn info(&self) -> Result<crate::internal::song::SongInfo, Failure> {
             match self {

@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use serde::{Deserialize, Serialize};
 
 use crate::{external::external::{External, ExternalSongTrait}, failure::failure::Failure, internal::song};
@@ -47,11 +49,11 @@ impl External for PlaceholderRun {
         todo!()
     }
     
-    fn time_left(&self) -> Result<std::time::Duration, Failure> {
+    fn song_duration_gone(&self) -> Result<std::time::Duration, Failure> {
         todo!()
     }
 
-    fn song_progress(&self) -> Result<f32, Failure> {
+    fn song_duration(&self) -> Result<Duration, Failure> {
         todo!()
     }
 }

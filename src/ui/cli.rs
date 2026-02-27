@@ -2,7 +2,8 @@ use std::io::{self, BufRead, Write};
 use std::sync::mpsc::Sender;
 use std::u64;
 use anyhow::anyhow;
-use crossterm::{execute, cursor, terminal::{self, ClearType}, style::Print};
+use crossterm::queue;
+use crossterm::{cursor, terminal::{self, ClearType}, style::Print};
 
 use crate::failure::failure::{Failure, FailureType};
 use crate::{Command, ui::ui};
@@ -55,41 +56,22 @@ pub fn run_cli(transmit: Sender<Command>, update_interval: u64) {
             std::thread::sleep(std::time::Duration::from_millis(update_interval));
 
             // check line length
-            let line_length = match terminal::size() {
-                Ok((width, _)) => width as usize,
+            let (width, height) = match terminal::size() {
+                Ok((width, height)) => (width, height),
                 Err(e) => {
                     print_failure(Failure::from((e.into(), FailureType::Warning)));
-                    80
+                    (80, 24)
                 }
             };
 
-            // get song progress
-            let progress = match ui::song_progress(&main_transmit) {
-                Ok(progress) => progress,
-                Err(e) => {
-                    print_failure(e);
-                    0.0
-                }
-            };
+            //render
+            let _ = queue!(stdout, cursor::SavePosition);
 
-            // create progress bar
-            let progress_bar_length = line_length - 2;
-            let progress_length = (progress * progress_bar_length as f32).round() as usize;
-            let progress_bar = 
-                "[".to_string() + 
-                &"=".repeat(progress_length) + 
-                &" ".repeat(progress_bar_length - progress_length) + 
-                "]";
+            if let Err(e) = queue_progress_bar(width, (0, height - 5), &mut stdout, &main_transmit) {
+                print_failure(e);
+            }
 
-            // render progress bar
-            let _ = execute!(
-                stdout,
-                cursor::SavePosition,
-                cursor::MoveTo(0, 0),
-                terminal::Clear(ClearType::CurrentLine),
-                Print(progress_bar),
-                cursor::RestorePosition
-            );
+            let _ = queue!(stdout, cursor::RestorePosition,);            
             let _ = stdout.flush();
         }
     });
@@ -303,4 +285,36 @@ fn handle_playlist(transmit: &Sender<Command>, args: &str) -> Result<bool, Failu
                 
 pub fn print_failure(err: Failure) {
     println!("{}\n use help for help", err);
+}
+
+
+fn queue_progress_bar(width: u16, position: (u16, u16), stdout: &mut std::io::Stdout, transmit: &Sender<Command>) -> Result<(), Failure> {
+    // get song progress
+    let song_duration_gone = ui::song_duration_gone(transmit)?;
+    let song_duration = ui::song_duration(transmit)?;
+
+
+    // create progress bar
+    let song_duration_text = format!("{}:{:02}", (song_duration.as_secs() / 60) % 60, song_duration.as_secs() % 60);
+    let song_progress_text = format!("{}:{:02}", (song_duration_gone.as_secs() / 60) % 60, song_duration_gone.as_secs() % 60);
+    let progress_space = width as usize - song_duration_text.chars().count() - song_progress_text.chars().count() - 2; // 2 for the brackets
+    let progress_length = (song_duration_gone.as_secs_f32() / song_duration.as_secs_f32() * (progress_space as f32)).round() as usize;
+    let progress_bar = 
+        song_progress_text +
+        "[" + 
+        &"=".repeat(progress_length) + 
+        &" ".repeat(progress_space as usize - progress_length) + 
+        "]" +
+        song_duration_text.as_str()
+        ;
+
+    // render progress bar
+    let _ = queue!(
+        stdout,
+        cursor::MoveTo(position.0, position.1),
+        terminal::Clear(ClearType::CurrentLine),
+        Print(progress_bar),
+    );
+
+    Ok(())
 }
