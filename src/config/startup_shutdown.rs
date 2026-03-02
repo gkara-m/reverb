@@ -55,7 +55,7 @@ pub fn startup(transmit: Sender<Command>) -> Result<Internal, Failure> {
 
     // check if last played playlist exists, if not create default
     let playlist =
-    if data_folder.join("playlists").join(format!("{}.json", startup_data.last_played_playlist)).exists() {
+    if data_folder.join("playlists").join(format!("{}.toml", startup_data.last_played_playlist)).exists() {
         Playlist::load(&startup_data.last_played_playlist)?
     } else {
         println!("Last played playlist not found, creating default playlist... ");
