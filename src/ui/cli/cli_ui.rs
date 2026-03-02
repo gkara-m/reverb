@@ -128,34 +128,39 @@ fn queue_song_name(width: u16, position: (u16, u16), stdout: &mut std::io::Stdou
 // create and queue the queue text, truncating as necessary to fit the width and height
 // this looks 
 fn queue_queue(size: (u16, u16), position: (u16, u16), stdout: &mut std::io::Stdout, transmit: &Sender<Command>) -> Result<(), Failure> {
-    if size.1 == 0 || size.0 == 0 {
+    if size.1 == 0 || size.0 <= 3 {
         return Ok(());
     }
-    
+
     let queue = ui::queue_get_songs(transmit)?;
     let mut queue_iter = queue.iter();
     let mut queue_text = Vec::new();
+    let mut i = 1;
     while queue_text.len() < size.1 as usize {
         match queue_iter.next() {
             Some(song) => {
                 let mut song_text = String::new();
+                // add index
+                let index = format!("{}. ", i);
+                push_width_aware(&mut song_text, &index, "", "", &mut queue_text, size.0);
 
                 // add name
                 let name = &song.info.title;
-                push_helper(&mut song_text, name, "", "", &mut queue_text, size.0);
+                push_width_aware(&mut song_text, name, "", "", &mut queue_text, size.0);
 
                 // add artist
                 let artist = &song.info.artist;
-                push_helper(&mut song_text, artist, "  ", " - ", &mut queue_text, size.0);
+                push_width_aware(&mut song_text, artist, "  ", " - ", &mut queue_text, size.0);
 
 
                 // add type
                 let external_type = format!("({})", song.song_type.as_type());
-                push_helper(&mut song_text, &external_type.to_string(), "  ", "  ", &mut queue_text, size.0);
+                push_width_aware(&mut song_text, &external_type.to_string(), "  ", "  ", &mut queue_text, size.0);
 
                 if song_text.chars().count() > 0 {
                     queue_text.push(song_text);
                 }
+                i += 1;
             },
             None => {
                 queue_text.push(" ".to_string());
@@ -178,7 +183,7 @@ fn queue_queue(size: (u16, u16), position: (u16, u16), stdout: &mut std::io::Std
     Ok(())
 }
 
-fn push_helper(string: &mut String, to_push: &str, new_line_start: &str, same_line_separator: &str, list: &mut Vec<String>, max_length: u16) {
+fn push_width_aware(string: &mut String, to_push: &str, new_line_start: &str, same_line_separator: &str, list: &mut Vec<String>, max_length: u16) {
     if string.chars().count() as u16 + to_push.chars().count() as u16 + 3 > max_length {
         list.push(string.clone());
         string.clear();
