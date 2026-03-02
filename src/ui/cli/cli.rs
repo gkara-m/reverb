@@ -1,12 +1,11 @@
-use std::io::{self, BufRead, Write};
 use std::sync::mpsc::Sender;
 use std::u64;
 use anyhow::anyhow;
-use crossterm::queue;
-use crossterm::{cursor, terminal::{self, ClearType}, style::Print};
 
 use crate::failure::failure::{Failure, FailureType};
-use crate::{Command, ui::ui};
+use crate::ui::cli::cli_ui::run_ui;
+use crate::ui::ui;
+use crate::Command;
 use crate::{external::external::ExternalType, internal::{playlist::Playlist, song::Song}};
     
 fn run_command(input: String, transmit: &Sender<Command>) -> Result<bool, Failure> {
@@ -20,63 +19,9 @@ pub fn run_cli(transmit: Sender<Command>, update_interval: u64) {
 
     // input thread
     let (input_tx, input_rx) = std::sync::mpsc::channel::<String>();
-    let main_transmit = transmit.clone();
-    std::thread::spawn(move || {
-        let stdin = io::stdin();
-        for line in stdin.lock().lines() {
-            match line {
-                Ok(line) => {
-                    if let Err(e) = input_tx.send(line) {
-                        print_failure(Failure::from((e.into(), FailureType::Fetal)));
-                        if let Err(e) = main_transmit.send(Command::Shutdown) {
-                            print_failure(Failure::from((e.into(), FailureType::Fetal)));
-                            println!("Automatic shutdown failed, please manually shutdown the application");
-                        };
-                        break;
-                    }
-                }
-                Err(e) => {
-                    print_failure(Failure::from((e.into(), FailureType::Fetal)));
-                    if let Err(e) = main_transmit.send(Command::Shutdown) {
-                        print_failure(Failure::from((e.into(), FailureType::Fetal)));
-                        println!("Automatic shutdown failed, please manually shutdown the application");
-                    };
-                    break;
-                }
-            }
-        }
-    });
+    
 
-
-    //renderer thread
-    let main_transmit = transmit.clone();
-    let renderer = std::thread::spawn(move || {
-        let mut stdout = io::stdout();
-        loop {
-            std::thread::sleep(std::time::Duration::from_millis(update_interval));
-
-            // check line length
-            let (width, height) = match terminal::size() {
-                Ok((width, height)) => (width, height),
-                Err(e) => {
-                    print_failure(Failure::from((e.into(), FailureType::Warning)));
-                    (80, 24)
-                }
-            };
-
-            //render
-            let _ = queue!(stdout, cursor::SavePosition);
-
-            if let Err(e) = queue_progress_bar(width, (0, height - 5), &mut stdout, &main_transmit) {
-                print_failure(e);
-            }
-
-            let _ = queue!(stdout, cursor::RestorePosition,);            
-            let _ = stdout.flush();
-        }
-    });
-
-
+    let renderer = run_ui(&transmit, input_tx, update_interval);
 
 
     println!("Please enter command or type 'help' for help.");
@@ -285,36 +230,4 @@ fn handle_playlist(transmit: &Sender<Command>, args: &str) -> Result<bool, Failu
                 
 pub fn print_failure(err: Failure) {
     println!("{}\n use help for help", err);
-}
-
-
-fn queue_progress_bar(width: u16, position: (u16, u16), stdout: &mut std::io::Stdout, transmit: &Sender<Command>) -> Result<(), Failure> {
-    // get song progress
-    let song_duration_gone = ui::song_duration_gone(transmit)?;
-    let song_duration = ui::song_duration(transmit)?;
-
-
-    // create progress bar
-    let song_duration_text = format!("{}:{:02}", (song_duration.as_secs() / 60) % 60, song_duration.as_secs() % 60);
-    let song_progress_text = format!("{}:{:02}", (song_duration_gone.as_secs() / 60) % 60, song_duration_gone.as_secs() % 60);
-    let progress_space = width as usize - song_duration_text.chars().count() - song_progress_text.chars().count() - 2; // 2 for the brackets
-    let progress_length = (song_duration_gone.as_secs_f32() / song_duration.as_secs_f32() * (progress_space as f32)).round() as usize;
-    let progress_bar = 
-        song_progress_text +
-        "[" + 
-        &"=".repeat(progress_length) + 
-        &" ".repeat(progress_space as usize - progress_length) + 
-        "]" +
-        song_duration_text.as_str()
-        ;
-
-    // render progress bar
-    let _ = queue!(
-        stdout,
-        cursor::MoveTo(position.0, position.1),
-        terminal::Clear(ClearType::CurrentLine),
-        Print(progress_bar),
-    );
-
-    Ok(())
 }

@@ -6,10 +6,14 @@ use internal::
     song::Song
 ;
 use once_cell::sync::OnceCell;
-use ui::cli;
+use ui::cli::cli;
 
 use crate::{
-    config::startup_shutdown::{shutdown, startup}, external::external::ExternalType, failure::failure::{Failure, FailureType}, internal::playlist::Playlist, ui::cli::print_failure
+    config::startup_shutdown::{shutdown, startup}, 
+    external::external::ExternalType, 
+    failure::failure::{Failure, FailureType}, 
+    internal::playlist::Playlist, 
+    ui::cli::cli::print_failure
 };
 
 mod external;
@@ -24,6 +28,20 @@ pub static DATA_FOLDER: OnceCell<String> = OnceCell::new();
 pub static LOCAL_SONG_FOLDER_PATH: OnceCell<String> = OnceCell::new();
 
 fn main() {
+    //clear terminal first without clearing scrollback buffer
+    let (_, height) = match crossterm::terminal::size() {
+        Ok((width, height)) => (width, height),
+        Err(e) => {
+            print_failure(Failure::from((e.into(), FailureType::Warning)));
+            (80, 24)
+        }
+    };
+    for _ in 0..height {
+        println!()
+    }
+
+
+
     let (transmit, receive) = mpsc::channel::<Command>();
 
     let mut internal = match startup(transmit.clone()) {

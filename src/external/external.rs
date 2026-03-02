@@ -197,6 +197,16 @@ macro_rules! make_external_types {
             }
         }
 
+        impl std::fmt::Display for ExternalType {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                match self {
+                    $(
+                        ExternalType::$backend => write!(f, stringify!($name)),
+                    )*
+                }
+            }
+        }
+
         impl ExternalSongTrait for ExternalSong {
             // Note: This function is not intended to be used; it's here to satisfy the trait requirement.
             // Use ExternalType::new_external_song instead.
@@ -221,6 +231,14 @@ macro_rules! make_external_types {
                         (ExternalSong::$backend(_), ExternalRun::$backend(_)) => true,
                     )*
                     _ => false,
+                }
+            }
+
+            pub fn as_type(&self) -> ExternalType {
+                match self {
+                    $(
+                        ExternalSong::$backend(_) => ExternalType::$backend,
+                    )*
                 }
             }
         }
