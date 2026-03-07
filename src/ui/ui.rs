@@ -1,6 +1,8 @@
 use std::{sync::mpsc::{self, Sender}, time::Duration};
 
 
+use lofty::flac::FlacFile;
+
 use crate::{Command, external::external::ExternalType, failure::failure::{Failure, FailureType}, internal::{playlist::Playlist, song::Song}};
 
 
@@ -116,6 +118,21 @@ pub(super) fn playlist_set_name(transmit: &Sender<Command>, name: &str) -> Resul
     .map_err(|e| Failure::from((e.into(), FailureType::Fetal)))
 }
 
+pub(super) fn playlist_copy_to(transmit: &Sender<Command>, name: &str) -> Result<(), Failure> {
+    transmit.clone().send(Command::PlaylistCopyTo(name.to_string()))
+    .map_err(|e| Failure::from((e.into(), FailureType::Fetal)))
+}
+
+pub(super) fn playlist_add_playlist(transmit: &Sender<Command>, playlist_name: &str) -> Result<(), Failure> {
+    transmit.clone().send(Command::PlaylistAddPlaylist(playlist_name.to_string()))
+    .map_err(|e| Failure::from((e.into(), FailureType::Fetal)))
+}
+
+pub(super) fn playlist_clear(transmit: &Sender<Command>) -> Result<(), Failure> {
+    transmit.clone().send(Command::PlaylistClear)
+    .map_err(|e| Failure::from((e.into(), FailureType::Fetal)))
+}
+
 pub(super) fn shutdown(transmit: &Sender<Command>) -> Result<(), Failure> {
     transmit.clone().send(Command::Shutdown)
     .map_err(|e| Failure::from((e.into(), FailureType::Fetal)))
@@ -139,4 +156,9 @@ pub(super) fn song_duration_gone(transmit: &Sender<Command>) -> Result<Duration,
         Ok(progress) => progress,
         Err(e) => Err(Failure::from((e.into(), FailureType::Fetal))),
     }
+}
+
+pub(super) fn queue_clear(transmit: &Sender<Command>) -> Result<(), Failure> {
+    transmit.clone().send(Command::QueueClear)
+    .map_err(|e| Failure::from((e.into(), FailureType::Fetal)))
 }

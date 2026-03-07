@@ -154,7 +154,8 @@ fn queue_queue(size: (u16, u16), position: (u16, u16), stdout: &mut std::io::Std
         return Ok(());
     }
 
-    let queue = ui::queue_get_songs(transmit)?;
+    let mut queue = ui::queue_get_songs(transmit)?;
+    queue.remove(0);
     let mut queue_text = vec![format!("Queue:{}", " ".repeat((size.0 - 6) as usize))];
     create_song_list(size, queue, &mut queue_text);
 

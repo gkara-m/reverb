@@ -1,9 +1,14 @@
+use std::collections::HashMap;
 use std::sync::mpsc::Sender;
 use std::u64;
 use anyhow::anyhow;
+use serde::de::value::UsizeDeserializer;
 
 use crate::failure::failure::{Failure, FailureType};
+use crate::internal::playlist;
 use crate::ui::cli::cli_ui::run_ui;
+use crate::ui::cli::command_spec::CommandSpec;
+use crate::ui::cli::command_spec::CommandCallType::{Args, NoArgs, NotCallable};
 use crate::ui::ui;
 use crate::Command;
 use crate::{external::external::ExternalType, internal::{playlist::Playlist, song::Song}};
@@ -16,6 +21,13 @@ fn run_command(input: String, transmit: &Sender<Command>) -> Result<bool, Failur
 }
 
 pub fn run_cli(transmit: Sender<Command>, update_interval: u64) {
+    let command_spec = CommandSpec::new(transmit.clone())
+    .add("play", vec!["play"], " : Play a song".to_string(), Some(|_, tx| ui::play(tx)), NoArgs, None)
+    .add("pause", vec!["pause"], " : Pause the current song".to_string(), Some(|_, tx| ui::pause(tx)), NoArgs, None)
+    .add("quit", vec!["quit", "q", ":q"], " : Quit the application".to_string(), Some(|_, tx| ui::shutdown(tx)), NoArgs, None)
+    .add("help", vec!["help", "h"], " : Display this help message".to_string(), Some(|_, _| {Ok(())}), NoArgs, None)
+    .add("play new", vec!["new"], " <song-type> <song-info> : Play new song form the given info".to_string(), Some(|args, tx| {let song = Song::new(args)?; ui::play_new(tx, song)}), Args, Some("play".to_string()));
+
 
     // input thread
     let (input_tx, input_rx) = std::sync::mpsc::channel::<String>();
@@ -27,11 +39,16 @@ pub fn run_cli(transmit: Sender<Command>, update_interval: u64) {
     println!("Please enter command or type 'help' for help.");
 
     for input in input_rx {
-        if input.is_empty() {continue;}
-        match run_command(input, &transmit) {
+        match command_spec.call(input.as_str()) {
             Ok(quit) => if quit { break; },
             Err(err) => print_failure(err),
         }
+        
+        // if input.is_empty() {continue;}
+        // match run_command(input, &transmit) {
+        //     Ok(quit) => if quit { break; },
+        //     Err(err) => print_failure(err),
+        // }
     }
 
     let _ = renderer.join();
@@ -144,10 +161,14 @@ fn handle_queue(transmit: &Sender<Command>, args: &str) -> Result<bool, Failure>
                 queue remove <index>: remove a song from the queue at the given index
                 queue playlist <playlist_name>: add all songs from the given playlist to the queue
                 queue playlist: add all songs from the current playlist to the queue
+                queue clear: clear the queue
                 queue help: display this help message for queue commands");
             }
             "playlist" => {
                 ui::queue_current_playlist(transmit)?;
+            }
+            "clear" => {
+                ui::queue_clear(transmit)?;
             }
             _ => {return Err(Failure::from((anyhow!("Unknown command: queue {}", args), FailureType::Warning)))?;}
         }
@@ -160,12 +181,17 @@ fn handle_playlist(transmit: &Sender<Command>, args: &str) -> Result<bool, Failu
         Some((action, args)) => {
             match action {
                 "add" => {
-                    let song = Song::new(args)?;
-                    ui::playlist_add(transmit, song)?;
+                    if args.starts_with("playlist ") {
+                        let args = args.strip_prefix("playlist ").unwrap();
+                        ui::playlist_add_playlist(transmit, args)?;
+                    } else {
+                        let song = Song::new(args)?;
+                        ui::playlist_add(transmit, song)?;
+                    }
                 }
                 "remove" => {
-                    match args.parse() {
-                        Ok(index) => {ui::playlist_remove(transmit, index)?;}
+                    match args.parse::<usize>() {
+                        Ok(index) => {ui::playlist_remove(transmit, index -1)?;}
                         Err(e) => {return Err(Failure::from((anyhow!("Invalid song index: {}", e), FailureType::Warning)));}
                     }
                 }
@@ -175,8 +201,8 @@ fn handle_playlist(transmit: &Sender<Command>, args: &str) -> Result<bool, Failu
                 "move" => {
                     match args.split_once(" ") {
                         Some((from_str, to_str)) => {
-                            match (from_str.parse(), to_str.parse()) {
-                                (Ok(from), Ok(to)) => {ui::playlist_move_song(transmit, from, to)?;}
+                            match (from_str.parse::<usize>(), to_str.parse::<usize>()) {
+                                (Ok(from), Ok(to)) => {ui::playlist_move_song(transmit, from - 1, to - 1)?;}
                                 _ => {return Err(Failure::from((anyhow!("Invalid song indices: from: {}, to: {}", from_str, to_str), FailureType::Warning)));} 
                             }
                         }
@@ -200,6 +226,9 @@ fn handle_playlist(transmit: &Sender<Command>, args: &str) -> Result<bool, Failu
                 "name" => {
                     ui::playlist_set_name(transmit, args)?;
                 }
+                "copy" => {
+                    ui::playlist_copy_to(transmit, args)?;
+                }
                 _ => {return Err(Failure::from((anyhow!("Unknown command: playlist {} {}", action, args), FailureType::Warning)));}
             }
         }
@@ -207,6 +236,9 @@ fn handle_playlist(transmit: &Sender<Command>, args: &str) -> Result<bool, Failu
             match args {
                 "name" => {
                     println!("{}", ui::playlist_get_name(transmit)?);
+                }
+                "clear" => {
+                    ui::playlist_clear(transmit)?;
                 }
                 "help" => {
                     println!("avaliliable playlist commands:
@@ -219,6 +251,7 @@ fn handle_playlist(transmit: &Sender<Command>, args: &str) -> Result<bool, Failu
                     playlist get <index>: list the song at the given index in the current playlist
                     playlist name: prints the current playlist name
                     playlist name <new_name>: set the name of the current playlist
+                    playlist copy <new_name>: copy the current playlist to a new playlist with the given name
                     playlist help: display this help message for playlist commands");
                 }
                 _ => return Err(Failure::from((anyhow!(format!("Unknown command: playlist {}", args)), FailureType::Warning))),

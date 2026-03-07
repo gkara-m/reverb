@@ -11,7 +11,6 @@ pub struct Playlist {
     name: String,
     songs: Vec<Song>,
     external_type: Option<ExternalType>,
-    playlist_folder: PathBuf,
 }
 
 
@@ -20,22 +19,24 @@ impl Playlist {
         let dir_str = DATA_FOLDER.get().ok_or(Failure::from((anyhow!("DATA_FOLDER not set"), FailureType::Fetal)))?;
         let mut dir = PathBuf::from(dir_str);
         dir.push("playlists");
+        if dir.join(format!("{}.toml", name)).exists() {
+            return Err(Failure::from((anyhow!("A playlist with the name '{}' already exists", name), FailureType::Warning)));
+        }
         std::fs::create_dir_all(&dir).map_err(|e| Failure::from((e.into(), FailureType::Warning)))?;
         let playlist = Playlist {
             name: name.to_string(),
             songs: Vec::new(),
             external_type,
-            playlist_folder: dir,
         };
         playlist.save()?;
         Ok(playlist)
     }
 
-    pub fn add(&mut self, song: &Song) {
+    pub(super) fn add(&mut self, song: &Song) {
         self.songs.push(song.clone());
     }
 
-    pub fn remove(&mut self, index: usize) -> Result<(), Failure> {
+    pub(super) fn remove(&mut self, index: usize) -> Result<(), Failure> {
         if index >= self.songs.len() {
             Err(Failure::from((anyhow!("invalid song index: {}", index), FailureType::Warning)))
         } else {
@@ -44,7 +45,11 @@ impl Playlist {
         }
     }
 
-    pub fn get_songs(&self) -> Vec<Song> {
+    pub(super) fn clear(&mut self) {
+        self.songs.clear();
+    }
+
+    pub(super) fn get_songs(&self) -> Vec<Song> {
         self.songs.clone()
     }
 
@@ -55,16 +60,19 @@ impl Playlist {
         }
     }
 
-    pub fn get_name(&self) -> String {
+    pub(super) fn get_name(&self) -> String {
         self.name.clone()
     }
 
-    pub fn set_name(&mut self, name: &str) -> Result<(), Failure> {
-        let new_path = self.playlist_folder.join(format!("{}.toml", name));
+    pub(super) fn set_name(&mut self, name: &str) -> Result<(), Failure> {
+        let dir_str = DATA_FOLDER.get().ok_or(Failure::from((anyhow!("DATA_FOLDER not set"), FailureType::Fetal)))?;
+        let mut dir = PathBuf::from(dir_str);
+        dir.push("playlists");
+        let new_path = dir.join(format!("{}.toml", name));
         if new_path.exists() {
             return Err(Failure::from((anyhow!("A playlist with the name '{}' already exists", name), FailureType::Warning)));
         }
-        let old_path = self.playlist_folder.join(format!("{}.toml", &self.name));
+        let old_path = dir.join(format!("{}.toml", &self.name));
         if old_path.exists() {
             std::fs::rename(&old_path, &new_path).map_err(|e| Failure::from((e.into(), FailureType::Warning)))?;
         }
@@ -72,7 +80,7 @@ impl Playlist {
         Ok(())
     }
 
-    pub fn move_song(&mut self, from: usize, to: usize) -> Result<(), Failure> {
+    pub(super) fn move_song(&mut self, from: usize, to: usize) -> Result<(), Failure> {
         if from >= self.songs.len() || to >= self.songs.len() {
             Err(Failure::from((anyhow!("invalid song indices: from {}, to {}", from, to), FailureType::Warning)))
         } else {
@@ -82,9 +90,12 @@ impl Playlist {
         }
     }
 
-    pub fn save(&self) -> Result<(), Failure> {
+    pub(super) fn save(&self) -> Result<(), Failure> {
+        let dir_str = DATA_FOLDER.get().ok_or(Failure::from((anyhow!("DATA_FOLDER not set"), FailureType::Fetal)))?;
+        let mut dir = PathBuf::from(dir_str);
+        dir.push("playlists");
         match std::fs::write(
-            self.playlist_folder.join(format!("{}.toml", &self.name)),
+            dir.join(format!("{}.toml", &self.name)),
             toml::to_string(self).map_err(|e| Failure::from((e.into(), FailureType::Warning)))?,
         ) {
             Err(e) => Err(Failure::from((e.into(), FailureType::Warning))),
@@ -103,7 +114,11 @@ impl Playlist {
         ).map_err(|e| Failure::from((e.into(), FailureType::Warning)))?)
     }
 
-    pub fn iter(&self) -> std::slice::Iter<'_, Song> {
+    pub(super) fn iter(&self) -> std::slice::Iter<'_, Song> {
         self.songs.iter()
-    } 
+    }
+
+    pub(super) fn get_type(&self) -> Option<ExternalType> {
+        self.external_type.clone()
+    }
 }

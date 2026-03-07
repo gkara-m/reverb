@@ -26,6 +26,17 @@ impl Song {
             None => Err(Failure::from((anyhow!("invalid song parameters: {}", params), FailureType::Warning))),
         }
     }
+
+    pub fn default() -> Result<Song, Failure> {
+        Ok(Song {
+            song_type: ExternalSong::LOCAL(
+                crate::external::local::LocalSong::new("sample/default_song.mp3")?),
+                    info: SongInfo {
+                        title: "Default Song".to_string(),
+                        artist: "REVERB".to_string(),
+                    },
+        })
+    }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

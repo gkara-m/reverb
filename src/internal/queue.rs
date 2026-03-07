@@ -22,7 +22,7 @@ impl Queue {
     }
 
     pub fn load_playlist(&mut self, playlist: &Playlist) {
-        for song in playlist.iter().rev() {
+        for song in playlist.iter() {
             self.queued_songs.push_front(song.clone());
         }
     }
@@ -53,6 +53,15 @@ impl Queue {
         self.queued_songs.get(0)
             .cloned()
             .ok_or_else(|| Failure::from((anyhow!("Queue is empty"), FailureType::Warning)))
+    }
+
+    pub fn clear(&mut self) {
+        let current_song = self.queued_songs.pop_front();
+        self.queued_songs.clear();
+        match current_song {
+            Some(song) => self.queued_songs.push_back(song),
+            None => {unreachable!("Queue should always have at least one song when clear is called please report this bug")},
+        }
     }
 
     pub fn iter(&self) -> impl Iterator<Item = Song> {

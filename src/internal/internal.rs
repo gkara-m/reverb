@@ -133,6 +133,30 @@ impl Internal {
     pub fn playlist_get_song(&self, index: usize) -> Result<Song, Failure> {
         self.current_playlist.get_song(index)
     }
+
+    pub fn playlist_copy_to(&mut self, name: &str) -> Result<(), Failure> {
+        let mut new_playlist = Playlist::new(name, self.current_playlist.get_type())?;
+        for song in self.current_playlist.iter() {
+            new_playlist.add(&song);
+        }
+        new_playlist.save()?;
+        self.playlist_load(name)?;
+        Ok(())
+    }
+
+    pub fn playlist_add_playlist(&mut self, playlist_name_from: &str) -> Result<(), Failure> {
+        let playlist_from = Playlist::load(playlist_name_from)?;
+        for song in playlist_from.iter() {
+            self.current_playlist.add(&song);
+        };
+        self.playlist_save()?;
+        Ok(())
+    }
+
+    pub fn playlist_clear(&mut self) -> Result<(), Failure> {
+        self.current_playlist.clear();
+        self.playlist_save()
+    }
 }
 
 impl Internal {
@@ -171,6 +195,10 @@ impl Internal {
 
     pub fn queue_current_playlist(&mut self) {
         self.queue.load_playlist(&self.current_playlist);
+    }
+
+    pub fn queue_clear(&mut self) {
+        self.queue.clear();
     }
 
     pub fn update_autoskip(&mut self) -> Result<(), Failure> {
