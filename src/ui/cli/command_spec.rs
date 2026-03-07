@@ -33,17 +33,11 @@ impl CommandSpecNode {
         }
     }
 
-    fn call(&self, input: Vec<&str>, position: usize, transmit: &Sender<Command>, command_spec: &CommandSpec) -> Result<bool, Failure> {
+    fn call(&self, input: Vec<&str>, position: usize, transmit: &Sender<Command>, command_spec: &CommandSpec) -> Result<(), Failure> {
         // global help handling, if the current node is help, handle it here since it is a special case.
         if self.valid_aliases.contains(&"help".to_string()) {
             command_spec.print_help(1);
-            return Ok(false);
-        }
-
-        // global quit handling, if the current node is quit, handle it here since it is a special case.
-        if self.valid_aliases.contains(&"quit".to_string()) {
-            self.handle(input, position, transmit, command_spec)?;
-            return Ok(true);
+            return Ok(());
         }
 
         // normal command handling
@@ -56,7 +50,7 @@ impl CommandSpecNode {
             }
         }
         self.handle(input, position, transmit, command_spec)?;
-        Ok(false)
+        Ok(())
     }
 
     fn handle(&self, input: Vec<&str>, position: usize, transmit: &Sender<Command>, command_spec: &CommandSpec) -> Result<(), Failure> {
@@ -143,7 +137,7 @@ impl CommandSpec {
         self
     }
 
-    pub fn call(&self, input: &str) -> Result<bool, Failure> {
+    pub fn call(&self, input: &str) -> Result<(), Failure> {
         let parts: Vec<&str> = input.split(' ').collect();
         self.root().call(parts, 0, &self.transmit, &self)
     }

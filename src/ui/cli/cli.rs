@@ -125,8 +125,8 @@ pub fn run_cli(transmit: Sender<Command>, update_interval: u64) {
 
     for input in input_rx {
         match command_spec.call(input.as_str()) {
-            Ok(quit) => if quit { break; },
             Err(err) => print_failure(err),
+            Ok(_) => {},
         }
     }
 
