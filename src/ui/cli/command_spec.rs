@@ -1,6 +1,6 @@
 use std::{collections::HashMap, sync::mpsc::Sender};
 
-use crate::{Command, failure::failure::{Failure, FailureType}};
+use crate::{Command, failure::failure::Failure};
 
 pub(super) struct CommandSpec {
     nodes: HashMap<String, CommandSpecNode>,

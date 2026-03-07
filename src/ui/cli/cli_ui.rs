@@ -2,9 +2,8 @@ use std::{io::{self, BufRead, Write}, sync::mpsc::Sender};
 use anyhow::anyhow;
 
 use crossterm::{cursor, queue, style::Print, terminal::{self}};
-use rodio::queue;
 
-use crate::{Command, failure::failure::{Failure, FailureType}, internal::{playlist, song}, ui::{cli::cli::print_failure, ui}};
+use crate::{Command, failure::failure::{Failure, FailureType}, internal::song, ui::{cli::cli::print_failure, ui}};
 
 pub(super) fn run_ui(transmit: &Sender<Command>, input_tx: Sender<String>, update_interval: u64) -> std::thread::JoinHandle<()> {
     let main_transmit = transmit.clone();

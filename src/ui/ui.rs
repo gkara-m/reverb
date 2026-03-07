@@ -1,11 +1,6 @@
 use std::{sync::mpsc::{self, Sender}, time::Duration};
 
-
-use lofty::flac::FlacFile;
-
 use crate::{Command, external::external::ExternalType, failure::failure::{Failure, FailureType}, internal::{playlist::Playlist, song::Song}};
-
-
 
 
 pub(super) fn play(transmit: &Sender<Command>) -> Result<(), Failure> {
