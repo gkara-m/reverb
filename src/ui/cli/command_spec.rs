@@ -124,8 +124,17 @@ impl CommandSpec {
         self.nodes.insert(name.clone(), node);
         match parent {
             Some(parent) => {
-                match self.nodes.get_mut(&parent.to_string()) {
-                    Some(parent_node) => parent_node.children.push(name),
+                match self.nodes.get(&parent.to_string()) {
+                    Some(parent_node) => {
+                        for child in &parent_node.children {
+                            for alias in self.get(&name).unwrap().valid_aliases.iter() {
+                                if self.nodes.get(child).unwrap().valid_aliases.contains(alias) {
+                                    unreachable!("Parent node {} already has a child with alias {}, this should not be possible please report this bug", parent, alias);
+                                }
+                            }
+                        }
+                        self.nodes.get_mut(&parent.to_string()).unwrap().children.push(name);
+                    },
                     None => {unreachable!("Parent node {} not found when adding command spec node, this should not be possible please report this bug", parent)},
                 }
             }

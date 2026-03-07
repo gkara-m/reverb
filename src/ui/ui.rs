@@ -13,6 +13,14 @@ pub(super) fn pause(transmit: &Sender<Command>) -> Result<(), Failure> {
     .map_err(|e| Failure::from((e.into(), FailureType::Fetal)))
 }
 
+pub(super) fn is_song_playing(transmit: &Sender<Command>) -> Result<bool, Failure> {
+    let (tx, rx) = mpsc::channel();
+    transmit.clone().send(Command::IsSongPlaying(tx))
+    .map_err(|e| Failure::from((e.into(), FailureType::Fetal)))?;
+    rx.recv()
+    .map_err(|e| Failure::from((e.into(), FailureType::Fetal)))
+}
+
 pub(super) fn queue_get_songs(transmit: &Sender<Command>) -> Result<Vec<Song>, Failure> {
     let (tx, rx) = mpsc::channel();
     transmit.clone().send(Command::QueueGetSongs(tx))

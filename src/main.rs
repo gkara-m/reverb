@@ -63,6 +63,12 @@ fn main() {
         match match command {
             Command::Play => internal.play(),
             Command::Pause => internal.pause(),
+            Command::IsSongPlaying(sender) => match internal.is_song_playing() {
+                Ok(is_playing) => sender
+                    .send(is_playing)
+                    .map_err(|e| Failure::from((e.into(), FailureType::Warning))),
+                Err(e) => Err(e),
+            },
             Command::PlayNew(song) => internal.play_new(song),
             Command::Stop => Err(Failure::from((anyhow!("Stop command not implemented"), FailureType::Warning))),
             Command::CurrentSong(sender) => match internal.current_song() {
@@ -148,6 +154,7 @@ fn main() {
 enum Command {
     Play,
     Pause,
+    IsSongPlaying(mpsc::Sender<bool>),
     PlayNew(Song),
     Stop,
     CurrentSong(mpsc::Sender<Song>),

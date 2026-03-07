@@ -14,43 +14,50 @@ pub fn run_cli(transmit: Sender<Command>, update_interval: u64) {
     // top-level commands
     .add("play", vec!["play"], " : Play the current song", Some(|_, tx| ui::play(tx)), NoArgs, None)
     .add("pause", vec!["pause"], " : Pause the current song", Some(|_, tx| ui::pause(tx)), NoArgs, None)
-    .add("quit", vec!["quit", "q", ":q"], " : Quit the application", Some(|_, tx| ui::shutdown(tx)), NoArgs, None)
+    .add("play and pause", vec!["playpause", "p"], " : Play or pause the current song", Some(|_, tx| {
+        if ui::is_song_playing(tx)? {
+            ui::pause(tx)
+        } else {
+            ui::play(tx)
+        }
+    }), NoArgs, None)
+    .add("quit", vec!["quit", "exit", ":q", "x"], " : Quit the application", Some(|_, tx| ui::shutdown(tx)), NoArgs, None)
     .add("help", vec!["help", "h"], " : Display this help message", Some(|_, _| Ok(())), NoArgs, None)
-    .add("skip", vec!["skip"], " : Skip the current song", Some(|_, tx| ui::queue_next(tx)), NoArgs, None)
+    .add("skip", vec!["skip", "s"], " : Skip the current song", Some(|_, tx| ui::queue_next(tx)), NoArgs, None)
     .add("song", vec!["song"], " : Display the currently playing song", Some(|_, tx| {
         let song = ui::current_song(tx)?;
         println!("Currently playing: {} - {}", song.info.artist, song.info.title);
         Ok(())
     }), NoArgs, None)
     // queue commands
-    .add("queue", vec!["queue"], " : List the current song queue", Some(|_, tx| {
+    .add("queue", vec!["queue", "q"], " : List the current song queue", Some(|_, tx| {
         let songs = ui::queue_get_songs(tx)?;
         for (index, song) in songs.iter().enumerate() {
             println!("{}: {} - {}", index, song.info.artist, song.info.title);
         }
         Ok(())
     }), NoArgs, None)
-    .add("queue add", vec!["add"], " <song_type> <song_info> : Add a song to the queue", Some(|args, tx| {
+    .add("queue add", vec!["add", "a"], " <song_type> <song_info> : Add a song to the queue", Some(|args, tx| {
         let song = Song::new(args)?;
         ui::queue_add(tx, song)
     }), Args, Some("queue"))
-    .add("queue remove", vec!["remove"], " <index> : Remove a song from the queue", Some(|args, tx| {
+    .add("queue remove", vec!["remove", "r"], " <index> : Remove a song from the queue", Some(|args, tx| {
         let index: usize = args.parse().map_err(|e: std::num::ParseIntError| Failure::from((e.into(), FailureType::Warning)))?;
         ui::queue_remove(tx, index)
     }), Args, Some("queue"))
-    .add("queue clear", vec!["clear"], " : Clear the queue", Some(|_, tx| ui::queue_clear(tx)), NoArgs, Some("queue"))
-    .add("queue playlist", vec!["playlist", "load"], " <playlist_name> : Load a playlist into the queue", Some(|args, tx| {
+    .add("queue clear", vec!["clear", "c", "cl"], " : Clear the queue", Some(|_, tx| ui::queue_clear(tx)), NoArgs, Some("queue"))
+    .add("queue load playlist", vec!["load"], " <playlist_name> : Load a playlist into the queue", Some(|args, tx| {
         let playlist = Playlist::load(args)?;
         ui::queue_playlist(tx, playlist)
     }), Args, Some("queue"))
-    .add("queue fill", vec!["fill"], " : Add current playlist songs to the queue", Some(|_, tx| ui::queue_current_playlist(tx)), NoArgs, Some("queue"))
+    .add("queue current playlist", vec!["playlist", "p"], " : Add current playlist songs to the queue", Some(|_, tx| ui::queue_current_playlist(tx)), NoArgs, Some("queue"))
     // play sub-commands
-    .add("play new", vec!["new"], " <song-type> <song-info> : Play a new song from the given info", Some(|args, tx| {
+    .add("play new", vec!["new", "n"], " <song-type> <song-info> : Play a new song from the given info", Some(|args, tx| {
         let song = Song::new(args)?;
         ui::play_new(tx, song)
     }), Args, Some("play"))
     // playlist commands
-    .add("playlist", vec!["playlist"], " : List the current playlist", Some(|_, tx| {
+    .add("playlist", vec!["playlist", "p", "pl"], " : List the current playlist", Some(|_, tx| {
         println!("{}:", ui::playlist_get_name(tx)?);
         let songs = ui::playlist_get_songs(tx)?;
         for (index, song) in songs.iter().enumerate() {
@@ -58,7 +65,7 @@ pub fn run_cli(transmit: Sender<Command>, update_interval: u64) {
         }
         Ok(())
     }), NoArgs, None)
-    .add("playlist add", vec!["add"], " <song_type> <song_info> : Add a song to the playlist (or 'playlist add playlist <name>')", Some(|args, tx| {
+    .add("playlist add", vec!["add", "a"], " <song_type> <song_info> : Add a song to the playlist (or 'playlist add playlist <name>')", Some(|args, tx| {
         if args.starts_with("playlist ") {
             let name = args.strip_prefix("playlist ").unwrap();
             ui::playlist_add_playlist(tx, name)
@@ -67,12 +74,12 @@ pub fn run_cli(transmit: Sender<Command>, update_interval: u64) {
             ui::playlist_add(tx, song)
         }
     }), Args, Some("playlist"))
-    .add("playlist remove", vec!["remove"], " <index> : Remove a song from the playlist", Some(|args, tx| {
+    .add("playlist remove", vec!["remove", "r"], " <index> : Remove a song from the playlist", Some(|args, tx| {
         let index: usize = args.parse().map_err(|e: std::num::ParseIntError| Failure::from((e.into(), FailureType::Warning)))?;
         ui::playlist_remove(tx, index - 1)
     }), Args, Some("playlist"))
-    .add("playlist load", vec!["load"], " <name> : Load a playlist by name", Some(|args, tx| ui::playlist_load(tx, args)), Args, Some("playlist"))
-    .add("playlist move", vec!["move"], " <from> <to> : Move a song in the playlist", Some(|args, tx| {
+    .add("playlist load", vec!["load", "l"], " <name> : Load a playlist by name", Some(|args, tx| ui::playlist_load(tx, args)), Args, Some("playlist"))
+    .add("playlist move", vec!["move", "m"], " <from> <to> : Move a song in the playlist", Some(|args, tx| {
         match args.split_once(' ') {
             Some((from_str, to_str)) => {
                 match (from_str.parse::<usize>(), to_str.parse::<usize>()) {
@@ -83,7 +90,7 @@ pub fn run_cli(transmit: Sender<Command>, update_interval: u64) {
             None => Err(Failure::from((anyhow!("Invalid input for move command: {}", args), FailureType::Warning))),
         }
     }), Args, Some("playlist"))
-    .add("playlist new", vec!["new"], " <name> [external_type] : Create a new playlist", Some(|args, tx| {
+    .add("playlist new", vec!["new", "n"], " <name> [external_type] : Create a new playlist", Some(|args, tx| {
         match args.split_once(' ') {
             Some((name, external_type)) => {
                 let external_type = ExternalType::get_from_str(external_type)?;
@@ -92,7 +99,7 @@ pub fn run_cli(transmit: Sender<Command>, update_interval: u64) {
             None => ui::playlist_new(tx, args, None),
         }
     }), Args, Some("playlist"))
-    .add("playlist get", vec!["get"], " <index> : Get a song by index", Some(|args, tx| {
+    .add("playlist get", vec!["get", "g"], " <index> : Get a song by index", Some(|args, tx| {
         let index: usize = args.parse().map_err(|e: std::num::ParseIntError| Failure::from((e.into(), FailureType::Warning)))?;
         let song = ui::playlist_get_song(tx, index)?;
         println!("{} - {}", song.info.artist, song.info.title);
@@ -102,9 +109,9 @@ pub fn run_cli(transmit: Sender<Command>, update_interval: u64) {
         println!("{}", ui::playlist_get_name(tx)?);
         Ok(())
     }), NoArgs, Some("playlist"))
-    .add("playlist rename", vec!["rename", "set-name"], " <new_name> : Set the playlist name", Some(|args, tx| ui::playlist_set_name(tx, args)), Args, Some("playlist"))
-    .add("playlist copy", vec!["copy"], " <new_name> : Copy the playlist", Some(|args, tx| ui::playlist_copy_to(tx, args)), Args, Some("playlist"))
-    .add("playlist clear", vec!["clear"], " : Clear the playlist", Some(|_, tx| ui::playlist_clear(tx)), NoArgs, Some("playlist"));
+    .add("playlist rename", vec!["rename", "set-name", "rn"], " <new_name> : Set the playlist name", Some(|args, tx| ui::playlist_set_name(tx, args)), Args, Some("playlist"))
+    .add("playlist copy", vec!["copy", "c"], " <new_name> : Copy the playlist", Some(|args, tx| ui::playlist_copy_to(tx, args)), Args, Some("playlist"))
+    .add("playlist clear", vec!["clear", "cl"], " : Clear the playlist", Some(|_, tx| ui::playlist_clear(tx)), NoArgs, Some("playlist"));
 
 
     // input thread
