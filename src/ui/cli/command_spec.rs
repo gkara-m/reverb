@@ -1,8 +1,6 @@
-use core::num;
-use std::{collections::HashMap, iter::Peekable, sync::mpsc::Sender};
-use anyhow::anyhow;
+use std::{collections::HashMap, sync::mpsc::Sender};
 
-use crate::{Command, failure::failure::{Failure, FailureType}, ui::cli::command_spec};
+use crate::{Command, failure::failure::{Failure, FailureType}};
 
 pub(super) struct CommandSpec {
     nodes: HashMap<String, CommandSpecNode>,
@@ -66,18 +64,17 @@ impl CommandSpecNode {
         let mut valid= true;
         let args;
         match self.call_type {
-            CommandCallType::NoArgs => {if input.len() > position+1 {
+            CommandCallType::NoArgs => {if input.len() > position {
                     println!("Command does not take arguments");
                     valid = false;
                 }
                 args = String::new();
             },
-            CommandCallType::Args => {if input.len() <= position+1 {
+            CommandCallType::Args => {if input.len() <= position {
                     println!("Command requires arguments");
                     valid = false;
                 }
                 args = input[position..input.len()].join(" ");
-                println!("args: {}", args);
             },
             CommandCallType::NotCallable => {
                 valid = false;
@@ -87,7 +84,7 @@ impl CommandSpecNode {
         if valid && let Some(handler) = self.handler {
             handler(args.as_str(), transmit)?;
         } else {
-            self.print_help(command_spec, format!("{}", input[0..position-1].join(" ")), 3);
+            self.print_help(command_spec, format!("{}", input[0..position.saturating_sub(1)].join(" ")), 3);
         }
         Ok(())
     }
@@ -118,16 +115,16 @@ impl CommandSpec {
         command_spec
     }
 
-    pub fn add (mut self, name: &str, valid_aliases: Vec<&str>, help: String, handler: Option<fn(&str, &Sender<Command>) -> Result<(), Failure>>, call_type: CommandCallType, parent: Option<String>) -> CommandSpec {
+    pub fn add (mut self, name: &str, valid_aliases: Vec<&str>, help: &str, handler: Option<fn(&str, &Sender<Command>) -> Result<(), Failure>>, call_type: CommandCallType, parent: Option<&str>) -> CommandSpec {
         let name = name.to_string();
         if self.nodes.contains_key(&name) {
             unreachable!("Command spec node with name {} already exists, this should not be possible please report this bug", name);
         }
-        let node = CommandSpecNode::new(valid_aliases, help, handler, call_type);
+        let node = CommandSpecNode::new(valid_aliases, help.to_string(), handler, call_type);
         self.nodes.insert(name.clone(), node);
         match parent {
             Some(parent) => {
-                match self.nodes.get_mut(&parent) {
+                match self.nodes.get_mut(&parent.to_string()) {
                     Some(parent_node) => parent_node.children.push(name),
                     None => {unreachable!("Parent node {} not found when adding command spec node, this should not be possible please report this bug", parent)},
                 }
