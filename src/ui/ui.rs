@@ -78,6 +78,11 @@ pub(super) fn queue_playlist(transmit: &Sender<Command>, playlist: Playlist) -> 
     .map_err(|e| Failure::from((e.into(), FailureType::Fetal)))
 }
 
+pub(super) fn queue_shuffle(transmit: &Sender<Command>) -> Result<(), Failure> {
+    transmit.clone().send(Command::QueueShuffle)
+    .map_err(|e| Failure::from((e.into(), FailureType::Fetal)))
+}
+
 pub(super) fn queue_current_playlist(transmit: &Sender<Command>) -> Result<(), Failure> {
     transmit.clone().send(Command::QueueCurrentPlaylist)
     .map_err(|e| Failure::from((e.into(), FailureType::Fetal)))

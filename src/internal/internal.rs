@@ -201,6 +201,10 @@ impl Internal {
         self.queue.clear();
     }
 
+    pub fn queue_shuffle(&mut self) {
+        self.queue.shuffle();
+    }
+
     pub fn update_autoskip(&mut self) -> Result<(), Failure> {
         self.kill_autoskip();
         if self.is_song_playing()? {

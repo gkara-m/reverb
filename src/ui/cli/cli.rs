@@ -51,6 +51,7 @@ pub fn run_cli(transmit: Sender<Command>, update_interval: u64) {
         ui::queue_playlist(tx, playlist)
     }), Args, Some("queue"))
     .add("queue current playlist", vec!["playlist", "p"], " : Add current playlist songs to the queue", Some(|_, tx| ui::queue_current_playlist(tx)), NoArgs, Some("queue"))
+    .add("queue shuffle", vec!["shuffle", "sh", "s"], " : Shuffle the queue", Some(|_, tx| ui::queue_shuffle(tx)), NoArgs, Some("queue"))
     // play sub-commands
     .add("play new", vec!["new", "n"], " <song-type> <song-info> : Play a new song from the given info", Some(|args, tx| {
         let song = Song::new(args)?;
