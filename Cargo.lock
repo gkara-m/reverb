@@ -801,7 +801,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "reverb"
+name = "reverb-client"
 version = "0.1.0"
 dependencies = [
  "anyhow",
@@ -812,6 +812,18 @@ dependencies = [
  "rodio",
  "serde",
  "toml",
+]
+
+[[package]]
+name = "reverb-core"
+version = "0.1.0"
+
+[[package]]
+name = "reverb-server"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "reverb-core",
 ]
 
 [[package]]
