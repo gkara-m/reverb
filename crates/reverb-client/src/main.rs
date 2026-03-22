@@ -119,6 +119,7 @@ fn main() {
             Command::SongDurationGone(sender) => sender
                     .send(internal.song_duration_gone())
                     .map_err(|e| Failure::from((e.into(), FailureType::Warning))),
+            Command::ServerConnect => {internal.connect_to_server(); Ok(())},
         } {
             Ok(_) => {},
             Err(failure) => match failure {
@@ -191,4 +192,5 @@ enum Command {
     UpdateAutoskip,
     SongDuration(mpsc::Sender<Result<Duration, Failure>>),
     SongDurationGone(mpsc::Sender<Result<Duration, Failure>>),
+    ServerConnect,
 }

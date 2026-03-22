@@ -5,7 +5,7 @@ use crate::{CONFIG_FOLDER, failure::failure::{Failure, FailureType}};
 // Config struct represents the config file
 #[derive(Serialize, Deserialize)]
 pub struct Config {
-    pub device_name: String,
+    // pub device_name: String,
     pub(super) data_folder: String,
     pub(super) local_song_folder_path: Option<String>,
 }
@@ -13,7 +13,7 @@ pub struct Config {
 impl Config {
     pub(super) fn new_default() -> Result<Config, Failure> {
         let config = Config {
-            device_name: "REVERB_user".to_string(),
+            // device_name: "REVERB_user".to_string(),
             data_folder: "data/".to_string(),
             local_song_folder_path: None,
         };

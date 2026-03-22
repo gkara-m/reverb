@@ -240,3 +240,9 @@ impl Internal {
         let _ = self.kill_sender.send(());
     }
 }
+
+impl Internal {
+    pub fn connect_to_server(&mut self) {
+        super::internet::connect();
+    }
+}

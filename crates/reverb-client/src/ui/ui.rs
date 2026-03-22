@@ -165,3 +165,8 @@ pub(super) fn queue_clear(transmit: &Sender<Command>) -> Result<(), Failure> {
     transmit.clone().send(Command::QueueClear)
     .map_err(|e| Failure::from((e.into(), FailureType::Fetal)))
 }
+
+pub(super) fn connect_to_server(transmit: &Sender<Command>) -> Result<(), Failure> {
+    transmit.clone().send(Command::ServerConnect)
+    .map_err(|e| Failure::from((e.into(), FailureType::Fetal)))
+}

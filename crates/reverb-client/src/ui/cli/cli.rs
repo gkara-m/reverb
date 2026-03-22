@@ -111,7 +111,9 @@ pub fn run_cli(transmit: Sender<Command>, update_interval: u64) {
     }), NoArgs, Some("playlist"))
     .add("playlist rename", vec!["rename", "set-name", "rn"], " <new_name> : Set the playlist name", Some(|args, tx| ui::playlist_set_name(tx, args)), Args, Some("playlist"))
     .add("playlist copy", vec!["copy", "c"], " <new_name> : Copy the playlist", Some(|args, tx| ui::playlist_copy_to(tx, args)), Args, Some("playlist"))
-    .add("playlist clear", vec!["clear", "cl"], " : Clear the playlist", Some(|_, tx| ui::playlist_clear(tx)), NoArgs, Some("playlist"));
+    .add("playlist clear", vec!["clear", "cl"], " : Clear the playlist", Some(|_, tx| ui::playlist_clear(tx)), NoArgs, Some("playlist"))
+    // server commands
+    .add("connect", vec!["connect"], " : Connect to the server", Some(|_, tx| ui::connect_to_server(tx)), NoArgs, None);
 
 
     // input thread
