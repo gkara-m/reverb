@@ -1,15 +1,19 @@
-use crate::{external::external::{self, External, ExternalRun, ExternalType}, internal::{playlist::{Playlist}, queue::Queue, song::Song}};
+use crate::{
+    external::external::{self, External, ExternalRun, ExternalType},
+    internal::{
+        playlist::Playlist,
+        queue::Queue,
+        song::{Song, SongInfo},
+    },
+};
 
-
-pub struct Internal{
+pub struct Internal {
     current_external: ExternalRun,
     current_playlist: Playlist,
     queue: Queue,
 }
 
-
-impl  Internal {
-
+impl Internal {
     pub fn new(queue: Queue, playlist: Playlist) -> Result<Self, String> {
         Ok(Internal {
             current_external: external::get_new_external_run_from_song(&queue.current_song()?)?,
@@ -26,7 +30,7 @@ impl  Internal {
         self.current_external.pause()
     }
 
-    pub fn play_new(&mut self, song :Song) -> Result<(), String> {
+    pub fn play_new(&mut self, song: Song) -> Result<(), String> {
         self.stop()?;
         if !song.song_type.same_type(&self.current_external) {
             self.current_external = external::get_new_external_run_from_song(&song)?;
@@ -42,15 +46,19 @@ impl  Internal {
     pub fn current_song(&self) -> Result<Song, String> {
         self.queue.current_song()
     }
-    
+
     pub fn shutdown(&self) -> Result<(), String> {
         self.current_playlist.save()?;
         self.current_external.shutdown()?;
         Ok(())
     }
+
+    pub fn get_song_info(&self, song: &Song) -> Result<SongInfo, String> {
+        self.current_external.get_song_info(song)
+    }
 }
 
-impl Internal{
+impl Internal {
     pub fn load_playlist(&mut self, playlist_name: &str) -> Result<(), String> {
         self.save_playlist()?;
         let playlist = Playlist::load(playlist_name)?;
@@ -62,28 +70,32 @@ impl Internal{
         self.current_playlist.save()
     }
 
-    pub fn new_playlist(&mut self, name: &str, external_type: Option<ExternalType>) -> Result<(), String>{
+    pub fn new_playlist(
+        &mut self,
+        name: &str,
+        external_type: Option<ExternalType>,
+    ) -> Result<(), String> {
         self.save_playlist()?;
         self.current_playlist = Playlist::new(name, external_type)?;
         self.save_playlist()
     }
 
-    pub fn playlist_add(&mut self, song: Song) -> Result<(), String>{
+    pub fn playlist_add(&mut self, song: Song) -> Result<(), String> {
         self.current_playlist.add(&song)?;
         self.save_playlist()
     }
 
-    pub fn playlist_remove(&mut self, index: usize) -> Result<(), String>{
+    pub fn playlist_remove(&mut self, index: usize) -> Result<(), String> {
         self.current_playlist.remove(index)?;
         self.save_playlist()
     }
 
-    pub fn playlist_move_song(&mut self, from: usize, to: usize) -> Result<(), String>{
+    pub fn playlist_move_song(&mut self, from: usize, to: usize) -> Result<(), String> {
         self.current_playlist.move_song(from, to)?;
         self.save_playlist()
     }
 
-    pub fn playlist_get_songs(&self) -> Result<&Vec<Song>, String>{
+    pub fn playlist_get_songs(&self) -> Result<&Vec<Song>, String> {
         self.current_playlist.get_songs()
     }
 
@@ -101,8 +113,7 @@ impl Internal{
     }
 }
 
-impl Internal{
-
+impl Internal {
     pub fn queue_add(&mut self, song: Song) -> Result<(), String> {
         self.queue.add(song)?;
         Ok(())

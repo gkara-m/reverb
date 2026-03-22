@@ -1,30 +1,31 @@
+use audiotags::Tag;
+use rodio::{Decoder, OutputStream, OutputStreamBuilder, Sink};
+use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::BufReader;
 use std::path::Path;
-use rodio::{Decoder, OutputStream, Sink, OutputStreamBuilder};
-use serde::{Deserialize, Serialize};
 
-use crate::external::{external::{External, ExternalSong::LOCAL}};
-use crate::internal::song::Song;
+use crate::external::external::{External, ExternalSong::LOCAL};
+use crate::internal::song::{Song, SongInfo};
 
-
-pub struct Local{
+pub struct Local {
     _output_stream: OutputStream,
     sink: Sink,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub(crate) struct LocalSong {
-    song_path : String,
+    song_path: String,
 }
-
 
 impl LocalSong {
     pub fn new(path_str: &str) -> Result<Self, String> {
         let path = Path::new(path_str);
-        
+
         if path.exists() {
-            Ok(LocalSong { song_path: path_str.to_string() })
+            Ok(LocalSong {
+                song_path: path_str.to_string(),
+            })
         } else {
             Err(format!("File path does not exist: {}", path_str))
         }
@@ -58,6 +59,31 @@ impl External for Local {
         Ok(())
     }
 
+    fn get_song_info(&self, song: &Song) -> Result<SongInfo, String> {
+        if let LOCAL(local_song) = &song.song_type {
+            let local_song_path = &local_song.song_path;
+            let tag = Tag::new().read_from_path(local_song_path);
+            match tag {
+                Ok(song_tag) => {
+                    let title = match song_tag.title() {
+                        Some(title) => title.to_string(),
+                        None => return Err("Error: local get_song_info()".to_string()),
+                    };
+                    let artist = match song_tag.artist() {
+                        Some(artist) => artist.to_string(),
+                        None => return Err("Error: local get_song_info()".to_string()),
+                    };
+                    Ok(SongInfo {
+                        title: title,
+                        artist: artist,
+                    })
+                }
+                Err(error) => Err(error.to_string()),
+            }
+        } else {
+            Err(String::from("Error: local get_song_info()"))
+        }
+    }
 }
 
 impl Local {
@@ -67,10 +93,12 @@ impl Local {
             let decoder = load_decoder(&local_song.song_path);
             self.sink.append(decoder);
             Ok(())
-        } else {Err(String::from("Invalid song type for Local external"))}
+        } else {
+            Err(String::from("Invalid song type for Local external"))
+        }
     }
 
-    pub fn new(song:&Song) -> Result<Local, String> {
+    pub fn new(song: &Song) -> Result<Local, String> {
         let output_stream = match OutputStreamBuilder::open_default_stream() {
             Err(e) => return Err(format!("Failed to open output stream: {}", e)),
             Ok(output_stream) => output_stream,
@@ -85,7 +113,6 @@ impl Local {
         Ok(local)
     }
 }
-
 
 fn load_decoder(file_path: &str) -> Decoder<BufReader<File>> {
     Decoder::new(BufReader::new(File::open(file_path).unwrap())).unwrap()

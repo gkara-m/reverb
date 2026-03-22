@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
-use crate::internal::song::Song;
 use crate::external::local::{Local, LocalSong};
+use crate::internal::song::{Song, SongInfo};
 
 pub trait External {
     fn play_new(&self, song: &Song) -> Result<(), String>;
@@ -13,8 +13,9 @@ pub trait External {
     fn stop(&self) -> Result<(), String>;
 
     fn shutdown(&self) -> Result<(), String>;
-}
 
+    fn get_song_info(&self, song: &Song) -> Result<SongInfo, String>;
+}
 
 /*
 Macro to generate ExternalRun, ExternalSong, and ExternalType enums,
@@ -42,7 +43,7 @@ Macro to generate ExternalRun, ExternalSong, and ExternalType enums,
                 _ => Err(format!("Unknown external type: {}", string))
                 }
             }
-        
+
             pub fn new_external_song(&self, string: &str) -> Result<ExternalSong, String> {
             match self {
                 ExternalType::LOCAL => LocalSong::new(string).map(ExternalSong::LOCAL),
@@ -51,9 +52,8 @@ Macro to generate ExternalRun, ExternalSong, and ExternalType enums,
             }
     }
     */
-    
-    
-    macro_rules! make_external_types {
+
+macro_rules! make_external_types {
         (
         $(
             $backend:ident {
@@ -64,7 +64,7 @@ Macro to generate ExternalRun, ExternalSong, and ExternalType enums,
             }
         ),* $(,)?
     ) => {
-        
+
         pub enum ExternalRun {
             $(
                 $backend($run)
@@ -77,14 +77,14 @@ Macro to generate ExternalRun, ExternalSong, and ExternalType enums,
                 $backend($song)
             ),*
         }
-        
+
         #[derive(Clone, Debug, Serialize, Deserialize)]
         pub enum ExternalType {
             $(
                 $backend
             ),*
         }
-        
+
         impl ExternalType {
             pub fn get_from_str(string: &str) -> Result<ExternalType, String> {
                 match string {
@@ -94,7 +94,7 @@ Macro to generate ExternalRun, ExternalSong, and ExternalType enums,
                     _ => Err(format!("Unknown external type: {}", string))
                 }
             }
-            
+
             pub fn new_external_song(&self, string: &str) -> Result<ExternalSong, String> {
                 match self {
                     $(
@@ -103,8 +103,8 @@ Macro to generate ExternalRun, ExternalSong, and ExternalType enums,
                 }
             }
         }
-        
-        
+
+
 
         impl ExternalRun {
             pub fn as_external(&self) -> &dyn External {
@@ -118,7 +118,7 @@ Macro to generate ExternalRun, ExternalSong, and ExternalType enums,
     }
 }
 
-make_external_types!{
+make_external_types! {
     LOCAL{
         Run: Local,
         Song: LocalSong,
@@ -132,7 +132,6 @@ make_external_types!{
         string_name: youtube,
     },
 }
-
 
 impl External for ExternalRun {
     fn play_new(&self, song: &Song) -> Result<(), String> {
@@ -153,6 +152,10 @@ impl External for ExternalRun {
 
     fn shutdown(&self) -> Result<(), String> {
         self.as_external().shutdown()
+    }
+
+    fn get_song_info(&self, song: &Song) -> Result<SongInfo, String> {
+        self.as_external().get_song_info(song)
     }
 }
 
