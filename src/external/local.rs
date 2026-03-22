@@ -1,13 +1,13 @@
+use anyhow::anyhow;
+use audiotags::Tag;
 use lofty::file::AudioFile;
 use lofty::probe::Probe;
-use audiotags::Tag;
 use rodio::{Decoder, OutputStream, OutputStreamBuilder, Sink};
 use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::BufReader;
 use std::path::Path;
 use std::time::Duration;
-use anyhow::anyhow;
 
 use crate::external::external::{External, ExternalSong::LOCAL, ExternalSongTrait};
 use crate::failure::failure::{Failure, FailureType};
@@ -55,13 +55,16 @@ impl ExternalSongTrait for LocalSong {
                 duration,
             })
         } else {
-            Err(Failure::from((std::io::Error::new(std::io::ErrorKind::NotFound, "File does not exist").into(), FailureType::Warning)))
+            Err(Failure::from((
+                std::io::Error::new(std::io::ErrorKind::NotFound, "File does not exist").into(),
+                FailureType::Warning,
+            )))
         }
     }
 }
 
 impl External for Local {
-    fn new(song:&Song) -> Result<Local, Failure> {
+    fn new(song: &Song) -> Result<Local, Failure> {
         let output_stream = match OutputStreamBuilder::open_default_stream() {
             Err(e) => return Err(Failure::from((e.into(), FailureType::Warning))),
             Ok(output_stream) => output_stream,
@@ -76,7 +79,7 @@ impl External for Local {
         local.load_new(song)?;
         Ok(local)
     }
-    
+
     fn play_new(&mut self, song: &Song) -> Result<(), Failure> {
         self.load_new(song)?;
         self.sink.play();
@@ -117,7 +120,7 @@ impl External for Local {
     fn song_duration(&self) -> Result<Duration, Failure> {
         Ok(self.song_duration)
     }
-    fn get_song_info(&self, song: &Song) -> Result<SongInfo, String> {
+    fn get_song_info(&self, song: &Song) -> Result<SongInfo, Failure> {
         if let LOCAL(local_song) = &song.song_type {
             let local_song_path = &local_song.song_path;
             let tag = Tag::new().read_from_path(local_song_path);
@@ -125,21 +128,31 @@ impl External for Local {
                 Ok(song_tag) => {
                     let title = match song_tag.title() {
                         Some(title) => title.to_string(),
-                        None => return Err("Error: local get_song_info()".to_string()),
+                        None => {
+                            return Err(Failure::from((
+                                anyhow!("Error: local get_song_info()"),
+                                FailureType::Warning,
+                            )));
+                        }
                     };
                     let artist = match song_tag.artist() {
                         Some(artist) => artist.to_string(),
-                        None => return Err("Error: local get_song_info()".to_string()),
+                        None => {
+                            return Err(Failure::from((
+                                anyhow!("Error: local get_song_info()"),
+                                FailureType::Warning,
+                            )));
+                        }
                     };
-                    Ok(SongInfo {
-                        title: title,
-                        artist: artist,
-                    })
+                    Ok(SongInfo { title, artist })
                 }
-                Err(error) => Err(error.to_string()),
+                Err(error) => Err(Failure::from((error.into(), FailureType::Warning))),
             }
         } else {
-            Err(String::from("Error: local get_song_info()"))
+            Err(Failure::from((
+                anyhow!("Error: local get_song_info()"),
+                FailureType::Warning,
+            )))
         }
     }
 }
@@ -149,11 +162,14 @@ impl Local {
         if let LOCAL(ref local_song) = song.song_type {
             self.stop()?;
             let decoder = load_decoder(&local_song.song_path);
-            self.song_duration = local_song.get_duration(); 
+            self.song_duration = local_song.get_duration();
             self.sink.append(decoder);
             Ok(())
         } else {
-            Err(Failure::from((anyhow!("Invalid song type for Local external"), FailureType::Warning)))
+            Err(Failure::from((
+                anyhow!("Invalid song type for Local external"),
+                FailureType::Warning,
+            )))
         }
     }
 
@@ -177,4 +193,3 @@ impl Local {
 fn load_decoder(file_path: &str) -> Decoder<BufReader<File>> {
     Decoder::new(BufReader::new(File::open(file_path).unwrap())).unwrap()
 }
-

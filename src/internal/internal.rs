@@ -1,12 +1,17 @@
 use crate::{
-    Command, external::external::{self, External, ExternalRun, ExternalType}, failure::failure::{Failure, FailureType}, internal::{playlist::Playlist, queue::Queue, song::Song}
+    Command,
+    external::external::{self, External, ExternalRun, ExternalType},
+    failure::failure::{Failure, FailureType},
+    internal::{
+        playlist::Playlist,
+        queue::Queue,
+        song::{Song, SongInfo},
+    },
 };
 
-use std::{thread, time::Duration};
-use std::
-    sync::mpsc::Sender
-;
 use std::sync::mpsc;
+use std::sync::mpsc::Sender;
+use std::{thread, time::Duration};
 
 pub struct Internal {
     current_external: ExternalRun,
@@ -156,7 +161,7 @@ impl Internal {
         let playlist_from = Playlist::load(playlist_name_from)?;
         for song in playlist_from.iter() {
             self.current_playlist.add(&song);
-        };
+        }
         self.playlist_save()?;
         Ok(())
     }
@@ -219,7 +224,9 @@ impl Internal {
             let time_left = self.song_duration()? - self.song_duration_gone()?;
             if time_left.is_zero() {
                 let sender = self.sender.clone();
-                sender.send(Command::QueueNext).map_err(|e| Failure::from((e.into(), FailureType::Fetal)))?;
+                sender
+                    .send(Command::QueueNext)
+                    .map_err(|e| Failure::from((e.into(), FailureType::Fetal)))?;
                 Ok(())
             } else {
                 let sender = self.sender.clone();
@@ -230,13 +237,19 @@ impl Internal {
                         return;
                     }
                     if time_left < Duration::from_secs(1) {
-                        match   sender.send(Command::QueueNext) {
-                            Err(e) => println!("Failed to send QueueNext command queue may not skip automatically: {}", e),
+                        match sender.send(Command::QueueNext) {
+                            Err(e) => println!(
+                                "Failed to send QueueNext command queue may not skip automatically: {}",
+                                e
+                            ),
                             _ => (),
                         };
                     } else {
                         match sender.send(Command::UpdateAutoskip) {
-                            Err(e) => println!("Failed to send UpdateAutoskip command queue may not skip automatically: {}", e),
+                            Err(e) => println!(
+                                "Failed to send UpdateAutoskip command queue may not skip automatically: {}",
+                                e
+                            ),
                             _ => (),
                         }
                     }
