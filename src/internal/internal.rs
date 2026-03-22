@@ -80,16 +80,17 @@ impl Internal {
     }
 
     pub fn playlist_load(&mut self, playlist_name: &str) -> Result<(), Failure> {
-        self.playlist_save()?;
+        self.playlist_save()
+    }
 
-    pub fn get_song_info(&self, song: &Song) -> Result<SongInfo, String> {
+    pub fn get_song_info(&self, song: &Song) -> Result<SongInfo, Failure> {
         self.current_external.get_song_info(song)
     }
 }
 
 impl Internal {
-    pub fn load_playlist(&mut self, playlist_name: &str) -> Result<(), String> {
-        self.save_playlist()?;
+    pub fn load_playlist(&mut self, playlist_name: &str) -> Result<(), Failure> {
+        self.playlist_save()?;
         let playlist = Playlist::load(playlist_name)?;
         self.current_playlist = playlist;
         Ok(())

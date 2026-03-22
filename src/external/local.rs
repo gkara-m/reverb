@@ -11,7 +11,7 @@ use anyhow::anyhow;
 
 use crate::external::external::{External, ExternalSong::LOCAL, ExternalSongTrait};
 use crate::failure::failure::{Failure, FailureType};
-use crate::internal::song::Song;
+use crate::internal::song::{Song, SongInfo};
 
 pub struct Local {
     _output_stream: OutputStream,

@@ -7,6 +7,7 @@ use crate::external::local::{Local, LocalSong};
 use crate::external::placeholder::{PlaceholderExternalSong, PlaceholderRun};
 use crate::Song;
 use crate::failure::failure::{Failure, FailureType};
+use crate::internal::song::SongInfo;
 pub trait External {
     fn play_new(&mut self, song: &Song) -> Result<(), Failure>;
 
@@ -25,6 +26,8 @@ pub trait External {
     fn song_duration_gone(&self) -> Result<Duration, Failure>;
 
     fn song_duration(&self) -> Result<Duration, Failure>;
+
+    fn get_song_info(&self, song: &Song) -> Result<SongInfo, Failure>;
 }
 
 pub trait ExternalSongTrait {
@@ -70,26 +73,8 @@ impl External for ExternalRun {
         self.as_external().song_duration()
     }
 
-    fn shutdown(&self) -> Result<(), String>;
-
-    fn get_song_info(&self, song: &Song) -> Result<SongInfo, String>{
+    fn get_song_info(&self, song: &Song) -> Result<SongInfo, Failure>{
         self.as_external().get_song_info(song)
-    }
-
-    fn shutdown(&self) -> Result<(), Failure> {
-        self.as_external().shutdown()
-    }
-
-    fn is_song_playing(&self) -> Result<bool, Failure> {
-        self.as_external().is_song_playing()
-    }
-
-    fn song_duration_gone(&self) -> Result<Duration, Failure> {
-        self.as_external().song_duration_gone()
-    }
-
-    fn song_duration(&self) -> Result<Duration, Failure> {
-        self.as_external().song_duration()
     }
 }
 
