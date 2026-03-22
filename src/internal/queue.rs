@@ -1,8 +1,10 @@
 use std::collections::VecDeque;
-
+use anyhow::anyhow;
+use rand::seq::SliceRandom;
+use rand::rng;
 use serde::{Deserialize, Serialize};
 
-use crate::internal::{playlist::Playlist, song::Song};
+use crate::{failure::failure::{Failure, FailureType}, internal::{playlist::Playlist, song::Song}};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Queue {
@@ -12,51 +14,65 @@ pub struct Queue {
 
 impl Queue {
 
-    pub fn new(song: Song) -> Result<Queue, String> {
-        Ok(Queue {queued_songs: VecDeque::from([song])})
+    pub fn new(song: Song) -> Queue {
+        Queue {queued_songs: VecDeque::from([song])}
     }
 
-    pub fn add(&mut self, song: Song) -> Result<(), String> {
+    pub(super) fn add(&mut self, song: Song) {
         self.queued_songs.push_back(song);
-        Ok(())
     }
 
-    pub fn load_playlist(&mut self, playlist: &Playlist) -> Result<(), String> {
-        for song in playlist.iter().rev() {
+    pub(super) fn load_playlist(&mut self, playlist: &Playlist) {
+        for song in playlist.iter() {
             self.queued_songs.push_front(song.clone());
         }
-        Ok(())
     }
 
-    pub fn remove(&mut self, song_index: usize) -> Result<(), String> {
-        if self.queued_songs.len() <= 1 { return Err(String::from("Cannot remove song from queue: only one song in queue")); }
-        if song_index <= 0 { return Err(String::from("Cannot remove currently playing song from queue")); }
-        if song_index >= self.queued_songs.len() { return Err(format!("Invalid song index (too large): {}", song_index)); }
+    pub(super) fn remove(&mut self, song_index: usize) -> Result<(), Failure> {
+        if self.queued_songs.len() <= 1 { return Err(Failure::from((anyhow!("Cannot remove song from queue: only one song in queue"), FailureType::Warning))); }
+        if song_index == 0 { return Err(Failure::from((anyhow!("Cannot remove currently playing song from queue at index 0"), FailureType::Warning))); }
+        if song_index >= self.queued_songs.len() { return Err(Failure::from((anyhow!("Invalid song index (too large): {}", song_index), FailureType::Warning))); }
         self.queued_songs.remove(song_index);
         Ok(())
     }
 
-    pub fn list(&mut self) -> Result<(), String> {
-        for song in self.queued_songs.iter() {
-            println!("{} - {}", song.artist, song.title);
-        }
-        Ok(())
+    pub(super) fn get_songs(&self) -> Vec<Song> {
+        self.iter().collect()
     }
 
-    pub fn next(&mut self) -> Result<Song, String> {
+    pub(super) fn next(&mut self) -> Result<Song, Failure> {
         if self.queued_songs.len() > 1 {
             self.queued_songs.pop_front();
-            if let Some(next_song) = self.queued_songs.front().cloned() {
-                return Ok(next_song);
-            }
-            return Err(String::from("Queue is empty"))
+            match self.queued_songs.front().cloned() {
+                Some(next_song) => return Ok(next_song),
+                None => return Err(Failure::from((anyhow!("Queue is empty after popping current song, queue should not be able to pop only song"), FailureType::Fetal))),}
         }
-        Err(String::from("Queue has only one song or is empty"))
+        Err(Failure::from((anyhow!("Queue has only one song or is empty"), FailureType::Warning)))
     }
 
-    pub fn current_song(&self) -> Result<Song, String> {
+    pub(super) fn current_song(&self) -> Result<Song, Failure> {
         self.queued_songs.get(0)
             .cloned()
-            .ok_or_else(|| String::from("Queue is empty"))
+            .ok_or_else(|| Failure::from((anyhow!("Queue is empty"), FailureType::Warning)))
+    }
+
+    pub(super) fn clear(&mut self) {
+        let current_song = self.queued_songs.pop_front();
+        self.queued_songs.clear();
+        match current_song {
+            Some(song) => self.queued_songs.push_back(song),
+            None => {unreachable!("Queue should always have at least one song when clear is called please report this bug")},
+        }
+    }
+
+    pub(super) fn shuffle(&mut self) {
+        let mut rng = rng();
+        let mut vec: Vec<_> = self.queued_songs.drain(..).collect();
+        vec.shuffle(&mut rng);
+        self.queued_songs.extend(vec);
+    }
+
+    pub(super) fn iter(&self) -> impl Iterator<Item = Song> {
+        self.queued_songs.iter().cloned()
     }
 }

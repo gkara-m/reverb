@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
+use anyhow::anyhow;
 
-use crate::{DATA_FOLDER, external::{external::ExternalSong, local::LocalSong}, internal::{queue::Queue, song::Song}};
+use crate::{DATA_FOLDER, external::{external::{ExternalSong, ExternalSongTrait}, local::LocalSong}, failure::failure::{Failure, FailureType}, internal::{queue::Queue, song::{Song, SongInfo}}};
 
 #[derive(Serialize, Deserialize)]
 pub(super) struct StartupData {
@@ -10,32 +11,34 @@ pub(super) struct StartupData {
 }
 
 impl StartupData {
-    pub(super) fn new_default() -> Result<StartupData, String> {
+    pub(super) fn new_default() -> Result<StartupData, Failure> {
         let song = Song {
             song_type: ExternalSong::LOCAL(
                 LocalSong::new("sample/default_song.mp3")?),
-            title: String::from("Default Song"),
-            artist: String::from("REVERB"),
+                    info: SongInfo {
+                        title: "Default Song".to_string(),
+                        artist: "Unknown Artist".to_string(),
+                    },
         };
         let startup_data = StartupData {
             last_played_playlist: "Default Startup Playlist".to_string(),
-            queue: Queue::new(song)?,
+            queue: Queue::new(song),
             last_shutdown_clean: true,
         };
         startup_data.save()?;
         Ok(startup_data)
     }
 
-    pub(super) fn save(&self) -> Result<(), String> {
-        match std::fs::create_dir_all(DATA_FOLDER.get().ok_or("DATA_FOLDER not set".to_string())?) {
-            Err(e) => return Err(format!("Failed to create data directory: {}", e)),
+    pub(super) fn save(&self) -> Result<(), Failure> {
+        match std::fs::create_dir_all(DATA_FOLDER.get().ok_or(Failure::from((anyhow!("DATA_FOLDER not set"), FailureType::Fetal)))?) {
+            Err(e) => return Err(Failure::from((e.into(), FailureType::Fetal))),
             Ok(_) => {},
         }
         match std::fs::write(
-            format!("{}startup.toml", DATA_FOLDER.get().ok_or("DATA_FOLDER not set".to_string())?),
-            toml::to_string(self).map_err(|e| format!("Failed to serialize startup data: {}", e))?,
+            format!("{}startup.toml", DATA_FOLDER.get().ok_or(Failure::from((anyhow!("DATA_FOLDER not set"), FailureType::Fetal)))?),
+            toml::to_string(self).map_err(|e| Failure::from((e.into(), FailureType::Fetal)))?,
         ) {
-            Err(e) => Err(format!("Failed to write startup file: {}", e)),
+            Err(e) => Err(Failure::from((e.into(), FailureType::Fetal))),
             Ok(_) => Ok(()),
         }
     }

@@ -25,7 +25,7 @@ REVERB is a project currently under development to better suit your music playin
 ### Authors
 
 Amber Orton https://github.com/Amber-Orton
-Gwen Cieslik-Kara https://github.com/SixOneFiveZero
+Gwen Cieslik-Kara https://github.com/gkara-m
 
 
 ## Usage
