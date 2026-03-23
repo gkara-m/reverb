@@ -6,7 +6,7 @@ use crate::{CONFIG_FOLDER, failure::failure::{Failure, FailureType}};
 #[derive(Serialize, Deserialize)]
 pub struct Config {
     // pub device_name: String,
-    pub(super) data_folder: String,
+    pub data_folder: String,
     pub(super) local_song_folder_path: Option<String>,
 }
 

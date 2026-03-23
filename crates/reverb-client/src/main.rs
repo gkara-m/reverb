@@ -28,6 +28,8 @@ pub static CONFIG: OnceCell<Config> = OnceCell::new();
 pub static DATA_FOLDER: OnceCell<String> = OnceCell::new();
 pub static LOCAL_SONG_FOLDER_PATH: OnceCell<String> = OnceCell::new();
 
+pub static MAIN_SENDER: OnceCell<mpsc::Sender<Command>> = OnceCell::new();
+
 fn main() {
     //clear terminal first without clearing scrollback buffer
     let (_, height) = match crossterm::terminal::size() {
@@ -44,8 +46,9 @@ fn main() {
 
 
     let (transmit, receive) = mpsc::channel::<Command>();
+    MAIN_SENDER.set(transmit);
 
-    let mut internal = match startup(transmit.clone()) {
+    let mut internal = match startup() {
         Ok(i) => {
             println!("Startup successful!");
             i
@@ -57,7 +60,7 @@ fn main() {
     };
 
     thread::spawn(move || {
-        cli::run_cli(transmit, 100);
+        cli::run_cli(100);
     });
 
     for command in receive {
@@ -120,6 +123,8 @@ fn main() {
                     .send(internal.song_duration_gone())
                     .map_err(|e| Failure::from((e.into(), FailureType::Warning))),
             Command::ServerConnect => {internal.connect_to_server(); Ok(())},
+            Command::ServerUpdateStatus(status) => {internal.update_server_connection_status(status); Ok(())},
+            Command::Failure(failure) => Err(failure),
         } {
             Ok(_) => {},
             Err(failure) => match failure.failure_type() {
@@ -193,4 +198,6 @@ enum Command {
     SongDuration(mpsc::Sender<Result<Duration, Failure>>),
     SongDurationGone(mpsc::Sender<Result<Duration, Failure>>),
     ServerConnect,
+    ServerUpdateStatus(internal::internet::ConnectionStatus),
+    Failure(Failure),
 }

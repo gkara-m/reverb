@@ -4,14 +4,13 @@ use crate::{Command, failure::failure::Failure};
 
 pub(super) struct CommandSpec {
     nodes: HashMap<String, CommandSpecNode>,
-    transmit: Sender<Command>,
 }
 
 struct CommandSpecNode {
     valid_aliases: Vec<String>,
     help: String,
     children: Vec<String>,
-    handler: Option<fn(&str, &Sender<Command>) -> Result<(), Failure>>,
+    handler: Option<fn(&str) -> Result<(), Failure>>,
     call_type: CommandCallType,
 }
 
@@ -23,7 +22,7 @@ pub enum CommandCallType {
 }
 
 impl CommandSpecNode {
-    fn new(valid_aliases: Vec<&str>, help: String, handler: Option<fn(&str, &Sender<Command>) -> Result<(), Failure>>, call_type: CommandCallType) -> CommandSpecNode {
+    fn new(valid_aliases: Vec<&str>, help: String, handler: Option<fn(&str) -> Result<(), Failure>>, call_type: CommandCallType) -> CommandSpecNode {
         CommandSpecNode {
             valid_aliases: valid_aliases.into_iter().map(|s| s.to_string()).collect(),
             help,
@@ -33,7 +32,7 @@ impl CommandSpecNode {
         }
     }
 
-    fn call(&self, input: Vec<&str>, position: usize, transmit: &Sender<Command>, command_spec: &CommandSpec) -> Result<(), Failure> {
+    fn call(&self, input: Vec<&str>, position: usize, command_spec: &CommandSpec) -> Result<(), Failure> {
         // global help handling, if the current node is help, handle it here since it is a special case.
         if self.valid_aliases.contains(&"help".to_string()) {
             command_spec.print_help(1);
@@ -45,15 +44,15 @@ impl CommandSpecNode {
             let node = command_spec.get(child).unwrap();
             for alias in &node.valid_aliases {
                 if alias == input.get(position).unwrap_or(&"") {
-                    return node.call(input, position + 1, transmit, command_spec);
+                    return node.call(input, position + 1, command_spec);
                 }
             }
         }
-        self.handle(input, position, transmit, command_spec)?;
+        self.handle(input, position, command_spec)?;
         Ok(())
     }
 
-    fn handle(&self, input: Vec<&str>, position: usize, transmit: &Sender<Command>, command_spec: &CommandSpec) -> Result<(), Failure> {
+    fn handle(&self, input: Vec<&str>, position: usize, command_spec: &CommandSpec) -> Result<(), Failure> {
         println!("handling: {}", input.join(","));
         let mut valid= true;
         let args;
@@ -76,7 +75,7 @@ impl CommandSpecNode {
             },
         }
         if valid && let Some(handler) = self.handler {
-            handler(args.as_str(), transmit)?;
+            handler(args.as_str())?;
         } else {
             self.print_help(command_spec, format!("{}", input[0..position.saturating_sub(1)].join(" ")), 3);
         }
@@ -100,16 +99,15 @@ impl CommandSpecNode {
 }
 
 impl CommandSpec {
-    pub fn new (transmit: Sender<Command>) -> CommandSpec {
+    pub fn new () -> CommandSpec {
         let mut command_spec = CommandSpec {
             nodes: HashMap::new(),
-            transmit,
         };
         command_spec.nodes.insert("root".to_string(), CommandSpecNode::new(vec![], "REVERB commands:".to_string(), None, CommandCallType::NotCallable));
         command_spec
     }
 
-    pub fn add (mut self, name: &str, valid_aliases: Vec<&str>, help: &str, handler: Option<fn(&str, &Sender<Command>) -> Result<(), Failure>>, call_type: CommandCallType, parent: Option<&str>) -> CommandSpec {
+    pub fn add (mut self, name: &str, valid_aliases: Vec<&str>, help: &str, handler: Option<fn(&str) -> Result<(), Failure>>, call_type: CommandCallType, parent: Option<&str>) -> CommandSpec {
         let name = name.to_string();
         if self.nodes.contains_key(&name) {
             unreachable!("Command spec node with name {} already exists, this should not be possible please report this bug", name);
@@ -139,7 +137,7 @@ impl CommandSpec {
 
     pub fn call(&self, input: &str) -> Result<(), Failure> {
         let parts: Vec<&str> = input.split(' ').collect();
-        self.root().call(parts, 0, &self.transmit, &self)
+        self.root().call(parts, 0, &self)
     }
 
     fn get(&self, name: &str) -> Option<&CommandSpecNode> {

@@ -1,5 +1,5 @@
 use crate::{
-    Command, external::external::{self, External, ExternalRun, ExternalType}, failure::failure::{Failure, FailureType}, internal::{playlist::Playlist, queue::Queue, song::Song}
+    Command, MAIN_SENDER, external::external::{self, External, ExternalRun, ExternalType}, failure::failure::{Failure, FailureType}, internal::{internet::InternetClient, playlist::Playlist, queue::Queue, song::Song}
 };
 
 use std::{thread, time::Duration};
@@ -7,27 +7,27 @@ use std::
     sync::mpsc::Sender
 ;
 use std::sync::mpsc;
+use anyhow::anyhow;
 
 pub struct Internal {
     current_external: ExternalRun,
     current_playlist: Playlist,
     queue: Queue,
-    sender: std::sync::mpsc::Sender<crate::Command>,
     kill_sender: Sender<()>,
+    server_connection: Option<super::internet::InternetClient>,
 }
 
 impl Internal {
     pub fn new(
         queue: Queue,
         playlist: Playlist,
-        sender: std::sync::mpsc::Sender<crate::Command>,
     ) -> Result<Self, Failure> {
         Ok(Internal {
             current_external: external::get_new_external_run_from_song(&queue.current_song()?)?,
             current_playlist: playlist,
             queue,
-            sender,
             kill_sender: mpsc::channel().0,
+            server_connection: None,
         })
     }
 
@@ -206,11 +206,11 @@ impl Internal {
         if self.is_song_playing()? {
             let time_left = self.song_duration()? - self.song_duration_gone()?;
             if time_left.is_zero() {
-                let sender = self.sender.clone();
+                let sender = MAIN_SENDER.get().unwrap().clone();
                 sender.send(Command::QueueNext).map_err(|e| Failure::from((e.into(), FailureType::Fetal)))?;
                 Ok(())
             } else {
-                let sender = self.sender.clone();
+                let sender = MAIN_SENDER.get().unwrap().clone();
                 let (kill_sender, kill_receiver) = mpsc::channel();
                 self.kill_sender = kill_sender;
                 thread::spawn(move || {
@@ -242,7 +242,31 @@ impl Internal {
 }
 
 impl Internal {
-    pub fn connect_to_server(&mut self) {
-        super::internet::connect();
+    pub fn connect_to_server(&mut self) -> Result<(), Failure> {
+        self.server_connection = match self.server_connection {
+            Some(_) => {
+                return Err(Failure::from((anyhow!("Already connected to server"), FailureType::Warning)));
+            },
+            None => {
+                let mut sc = super::internet::InternetClient::new();
+                sc.connect()?;
+                Some(sc)
+            },
+        };
+        Ok(())
+    }
+
+    pub fn send_command_to_server(&mut self, command: String) -> Result<(), Failure> {
+        if let Some(sc) = self.server_connection.as_mut() {
+            sc.send_message(command)
+        } else {
+            Err(Failure::from((anyhow!("Not connected to server"), FailureType::Warning)))
+        }
+    }
+
+    pub fn update_server_connection_status(&mut self, status: super::internet::ConnectionStatus) {
+        if let Some(sc) = self.server_connection.as_mut() {
+            sc.update_connection(status);
+        }
     }
 }

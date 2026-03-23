@@ -1,5 +1,6 @@
 use anyhow::Error as AnyError;
 
+#[derive(Debug)]
 pub enum Failure {
     Fetal(AnyError, String),
     Warning(AnyError, String),

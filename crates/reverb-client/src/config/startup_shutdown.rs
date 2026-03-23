@@ -3,7 +3,7 @@ use anyhow::anyhow;
 
 use crate::{CONFIG_FOLDER, CONFIG, Command, DATA_FOLDER, LOCAL_SONG_FOLDER_PATH, config::{config::Config, data::StartupData}, failure::failure::{Failure, FailureType}, internal::{internal::Internal, playlist::Playlist}};
 
-pub fn startup(transmit: Sender<Command>) -> Result<Internal, Failure> {
+pub fn startup() -> Result<Internal, Failure> {
     println!("Starting up... ");
 
     // Check for config file, create default if not exists
@@ -64,7 +64,7 @@ pub fn startup(transmit: Sender<Command>) -> Result<Internal, Failure> {
     };
         
 
-    Ok(Internal::new(startup_data.queue, playlist, transmit)?)
+    Ok(Internal::new(startup_data.queue, playlist)?)
 }
 
 pub fn shutdown (internal: &Internal) -> Result<(), Failure> {

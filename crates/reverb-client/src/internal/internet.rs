@@ -1,4 +1,4 @@
-use std::{fs, net::SocketAddr};
+use std::{fs, net::SocketAddr, sync::mpsc};
 
 use anyhow::{Result, anyhow};
 use quinn::Connection;
@@ -8,29 +8,75 @@ use std::net::AddrParseError;
 
 use std::sync::Arc;
 
-use crate::failure::failure::{Failure, FailureType};
+use crate::{CONFIG, Command, DATA_FOLDER, MAIN_SENDER, config::internet::{self, ServerConfig}, failure::failure::{Failure, FailureType}};
+
+static VERSION: &str = "0.1.0";
 
 
-struct InternetClient {}
+#[derive(Debug)]
+pub enum ConnectionStatus {
+    Connected(Connection),
+    Connecting,
+    NotConnected,
+}
 
-pub fn connect() {
-    // Install the default cryptographic provider for Rustls (required for cryptographic operations)
-    let _ = rustls::crypto::ring::default_provider().install_default();
-    // Define the server address and the message to send
-    let server = "127.0.0.1:4433".to_string(); // TODO change to collect from config
-    let message = "Hello".to_string();
-    println!("Client connecting to {}", server);
-    // Run the async client logic and handle any errors
-    if let Err(e) = run(server, message) {
-        eprintln!("Client error: {e}");
-        std::process::exit(1);
+pub(super) struct InternetClient {
+    connection: ConnectionStatus,
+}
+
+impl InternetClient {
+    pub fn new() -> Self {
+        InternetClient { 
+            connection: ConnectionStatus::NotConnected,
+        }
+    }
+
+    pub fn connect(&mut self) -> Result<(), Failure> {
+        match self.connection {
+            ConnectionStatus::Connected(_) => {
+                return Err(Failure::from((anyhow!("Already connected to server"), FailureType::Warning)));
+            },
+            ConnectionStatus::Connecting => {
+                return Err(Failure::from((anyhow!("Already connecting to server"), FailureType::Warning)));
+            },
+            ConnectionStatus::NotConnected => {
+                 self.connection = ConnectionStatus::Connecting;
+
+                let data_folder = DATA_FOLDER.get().ok_or(Failure::from((anyhow!("Data folder not found"), FailureType::Fetal)))?.clone();
+                let server_config = toml::from_str::<ServerConfig>(&std::fs::read_to_string(format!("{}{}", data_folder, internet::SERVER_CONFIG_PATH))
+                    .map_err(|e| Failure::from((e.into(), FailureType::Warning)))?)
+                    .map_err(|e| Failure::from((e.into(), FailureType::Warning)))?;
+                let conn = connect_to(server_config); // TODO make this async
+                Ok(())
+            },
+        }
+    }
+
+    pub fn send_message(&mut self, message: String) -> Result<(), Failure> {
+        match &mut self.connection {
+            ConnectionStatus::Connected(conn) => send_message(conn.clone(), message),
+            ConnectionStatus::Connecting => Err(Failure::from((anyhow!("Currently connecting to server, cannot send message"), FailureType::Warning))),
+            ConnectionStatus::NotConnected => Err(Failure::from((anyhow!("Not connected to server, cannot send message"), FailureType::Warning))),
+        }
+    }
+
+    pub fn update_connection(&mut self, connection_status: ConnectionStatus) {
+        self.connection = connection_status;
     }
 }
 
-async fn connect_to(server: String) -> Result<Connection, Failure> {
+
+async fn connect_to(server_config: ServerConfig) {
     // Locate the directory where the server's certificate is stored (shared location)
-    let path = std::path::Path::new("certs"); // TODO collect from config, add command to add it to teh config
-    let cert_path = path.join("cert.der");
+    let data_folder = match CONFIG.get() {
+        Some(cfg) => cfg.data_folder.clone(),
+        None => {
+            let _ = MAIN_SENDER.get().unwrap().clone().send(Command::Failure(Failure::from((anyhow!("Config folder not found"), FailureType::Fetal))));
+            return;
+        }
+    };
+    let path = std::path::Path::new(&data_folder); // TODO add command to add it to the config
+    let cert_path = path.join(&server_config.server_cert_path);
 
     println!("Loading server certificate from: {:?}", cert_path);
 
@@ -38,11 +84,16 @@ async fn connect_to(server: String) -> Result<Connection, Failure> {
     let mut roots = rustls::RootCertStore::empty();
     // If the server's certificate exists, add it to the root store for TLS validation
     if let Ok(cert) = fs::read(&cert_path) {
-        roots.add(CertificateDer::from(cert))
-        .map_err(|e| Failure::from((anyhow!(e), FailureType::Warning)))?;
+        if let Err(e) = roots.add(CertificateDer::from(cert)) {
+            let _ = MAIN_SENDER.get().unwrap().clone().send(Command::Failure(Failure::from((anyhow!(e), FailureType::Warning))));
+            return;
+        }
     }
 
-    println!("{:?}", roots);
+    if roots.is_empty() {
+        MAIN_SENDER.get().unwrap().clone().send(Command::Failure(Failure::from((anyhow!("No valid server certificate found at path: {:?}", cert_path), FailureType::Warning)))).unwrap_or_else(|e| eprintln!("Failed to send failure command: {}", e));
+        return;
+    }
 
     // Build the client cryptographic configuration with the root certificates and no client authentication
     let client_crypto = rustls::ClientConfig::builder()
@@ -51,44 +102,66 @@ async fn connect_to(server: String) -> Result<Connection, Failure> {
 
 
     // Wrap the client crypto config in a Quinn QUIC client config
+    let client_config = match QuicClientConfig::try_from(client_crypto) {
+        Ok(c) => quinn::ClientConfig::new(Arc::new(c)),
+        Err(e) => {
+            let _ = MAIN_SENDER.get().unwrap().clone().send(Command::Failure(Failure::from((e.into(), FailureType::Warning))));
+            return;
+        }
+    };
     let client_config =
-        quinn::ClientConfig::new(Arc::new(QuicClientConfig::try_from(client_crypto)
-        .map_err(|e| Failure::from((e.into(), FailureType::Warning)))?));
+        client_config;
     // Create a new QUIC endpoint for the client, binding to an ephemeral port on all interfaces
-    let mut endpoint = quinn::Endpoint::client("[::]:0".parse()
-        .map_err(|e: AddrParseError| Failure::from((e.into(), FailureType::Warning)))?)
-        .map_err(|e| Failure::from((e.into(), FailureType::Warning)))?;
+    let mut endpoint = match "[::]:0".parse::<SocketAddr>() {
+        Ok(addr) => match quinn::Endpoint::client(addr) {
+            Ok(ep) => ep,
+            Err(e) => {
+                let _ = MAIN_SENDER.get().unwrap().clone().send(Command::Failure(Failure::from((e.into(), FailureType::Warning))));
+                return;
+            }
+        },
+        Err(e) => {
+            let _ = MAIN_SENDER.get().unwrap().clone().send(Command::Failure(Failure::from((e.into(), FailureType::Warning))));
+            return;
+        }
+    };
     // Set the default client configuration for outgoing connections
     endpoint.set_default_client_config(client_config);
 
-    // Extract the host part for SNI (Server Name Indication) and certificate validation
-    let host_part = server.split(':').next().unwrap_or("localhost");
-    let host = if host_part == "127.0.0.1" || host_part == "::1" {// TODO ip should be collected from config aswell as name
-        "localhost"
-    } else {
-        host_part
-    };
+    // get the server name for TLS validation from the server config
+    let host = server_config.server_name.as_str();
+
     // Parse the server address string into a SocketAddr
-    let remote = server
-        .parse::<SocketAddr>()
-        .map_err(|e| Failure::from((e.into(), FailureType::Warning)))?;
+    let remote = match server_config.server_address.parse::<SocketAddr>() {
+        Ok(addr) => addr,
+        Err(e) => {
+            let _ = MAIN_SENDER.get().unwrap().clone().send(Command::Failure(Failure::from((e.into(), FailureType::Warning))));
+            return;
+        }
+    };
 
     // Initiate a QUIC connection to the server with the given address and host
-    let conn = endpoint
-        .connect(remote, host)
-        .map_err(|e| Failure::from((e.into(), FailureType::Warning)))?
-        .await
-        .map_err(|e| Failure::from((e.into(), FailureType::Warning)))?;
+    let conn = match endpoint.connect(remote, host) {
+        Ok(connecting) => match connecting.await {
+            Ok(conn) => conn,
+            Err(e) => {
+                let _ = MAIN_SENDER.get().unwrap().clone().send(Command::Failure(Failure::from((e.into(), FailureType::Warning))));
+                return;
+            }
+        },
+        Err(e) => {
+            let _ = MAIN_SENDER.get().unwrap().clone().send(Command::Failure(Failure::from((e.into(), FailureType::Warning))));
+            return;
+        }
+    };
+    println!("Successfully connected to server at {}", server_config.server_address);
 
-    Ok(conn)
+    MAIN_SENDER.get().unwrap().clone().send(Command::ServerUpdateStatus(ConnectionStatus::Connected(conn))).unwrap_or_else(|e| eprintln!("Failed to send server update status command: {}", e));
 }
 
 #[tokio::main]
-async fn run(server: String, message: String) -> Result<(), Failure> {
+async fn send_message(conn: Connection, message: String) -> Result<(), Failure> {
 
-    let conn = connect_to(server).await?;
-
-    println!("Connected, opening stream");
 
     // Open a bidirectional stream to the server
     let (mut send, mut recv) = conn.open_bi().await

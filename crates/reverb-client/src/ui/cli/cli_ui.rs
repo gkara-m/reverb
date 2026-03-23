@@ -53,11 +53,11 @@ pub(super) fn run_ui(transmit: &Sender<Command>, input_tx: Sender<String>, updat
             //render
             let _ = queue!(stdout, cursor::SavePosition);
 
-            if let Err(e) = queue_progress_bar(width, (0, 1), &mut stdout, &main_transmit) {
+            if let Err(e) = queue_progress_bar(width, (0, 1), &mut stdout) {
                 print_failure(e);
             }
 
-            if let Err(e) = queue_song_name(width, (0, 0), &mut stdout, &main_transmit) {
+            if let Err(e) = queue_song_name(width, (0, 0), &mut stdout) {
                 print_failure(e);
             }
 
@@ -75,7 +75,7 @@ pub(super) fn run_ui(transmit: &Sender<Command>, input_tx: Sender<String>, updat
                 playlist_width = half_width - 1;
             }
 
-            if let Err(e) = queue_queue((queue_width, height - 20), (0, 2), &mut stdout, &main_transmit) {
+            if let Err(e) = queue_queue((queue_width, height - 20), (0, 2), &mut stdout) {
                 print_failure(e);
             }
 
@@ -96,10 +96,10 @@ pub(super) fn run_ui(transmit: &Sender<Command>, input_tx: Sender<String>, updat
 }
 
 
-fn queue_progress_bar(width: u16, position: (u16, u16), stdout: &mut std::io::Stdout, transmit: &Sender<Command>) -> Result<(), Failure> {
+fn queue_progress_bar(width: u16, position: (u16, u16), stdout: &mut std::io::Stdout) -> Result<(), Failure> {
     // get song progress
-    let song_duration_gone = ui::song_duration_gone(transmit)?;
-    let song_duration = ui::song_duration(transmit)?;
+    let song_duration_gone = ui::song_duration_gone()?;
+    let song_duration = ui::song_duration()?;
 
 
     // create progress bar
@@ -126,8 +126,8 @@ fn queue_progress_bar(width: u16, position: (u16, u16), stdout: &mut std::io::St
     Ok(())
 }
 
-fn queue_song_name(width: u16, position: (u16, u16), stdout: &mut std::io::Stdout, transmit: &Sender<Command>) -> Result<(), Failure> {
-    let song = ui::current_song(transmit)?;
+fn queue_song_name(width: u16, position: (u16, u16), stdout: &mut std::io::Stdout) -> Result<(), Failure> {
+    let song = ui::current_song()?;
     let mut song_name = song.info.title;
     let song_name = if song_name.chars().count() as u16 > width {
         let mut truncated = song_name.chars().take((width - 3) as usize).collect::<String>();
@@ -148,12 +148,12 @@ fn queue_song_name(width: u16, position: (u16, u16), stdout: &mut std::io::Stdou
 }
 
 
-fn queue_queue(size: (u16, u16), position: (u16, u16), stdout: &mut std::io::Stdout, transmit: &Sender<Command>) -> Result<(), Failure> {
+fn queue_queue(size: (u16, u16), position: (u16, u16), stdout: &mut std::io::Stdout) -> Result<(), Failure> {
     if size.1 == 0 || size.0 <= 6 {
         return Ok(());
     }
 
-    let mut queue = ui::queue_get_songs(transmit)?;
+    let mut queue = ui::queue_get_songs()?;
     queue.remove(0);
     let mut queue_text = vec![format!("Queue:{}", " ".repeat((size.0 - 6) as usize))];
     create_song_list(size, queue, &mut queue_text);
@@ -175,10 +175,10 @@ fn queue_playlist(size: (u16, u16), position: (u16, u16), stdout: &mut std::io::
         return Ok(());
     }
 
-    let playlist = ui::playlist_get_songs(transmit)?;
+    let playlist = ui::playlist_get_songs()?;
     let mut playlist_text = Vec::new();
     let mut top_line = "Playlist:".to_string();
-    push_width_aware(&mut top_line, ui::playlist_get_name(transmit)?.as_str(), "", "", &mut playlist_text, size.0);
+    push_width_aware(&mut top_line, ui::playlist_get_name()?.as_str(), "", "", &mut playlist_text, size.0);
     playlist_text.push(format!("{}{}", top_line, " ".repeat((size.0 - top_line.chars().count() as u16) as usize)));
     create_song_list(size, playlist, &mut playlist_text);
 

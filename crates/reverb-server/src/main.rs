@@ -7,6 +7,9 @@ use rustls::pki_types::{CertificateDer, PrivateKeyDer, PrivatePkcs8KeyDer};
 // The address and port the server will listen on
 const LISTEN_ADDR: &str = "127.0.0.1:4433";
 
+// The server version, included in responses for client verification
+const VERSION: &str = "0.1.0";
+
 /// Entry point for the server. Installs the default crypto provider, starts the async runtime,
 /// and runs the main server logic. Exits with error code 1 if the server fails.
 fn main() {
