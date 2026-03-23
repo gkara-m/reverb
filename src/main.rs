@@ -1,26 +1,23 @@
-use std::{sync::mpsc, time::Duration};
 use std::thread;
+use std::{sync::mpsc, time::Duration};
 
-use anyhow::anyhow;
-use internal::
-    song::Song
-;
+use internal::song::Song;
 use once_cell::sync::OnceCell;
 use ui::cli::cli;
 
 use crate::{
-    config::startup_shutdown::{shutdown, startup}, 
-    external::external::ExternalType, 
-    failure::failure::{Failure, FailureType}, 
-    internal::playlist::Playlist, 
-    ui::cli::cli::print_failure
+    config::startup_shutdown::{shutdown, startup},
+    external::external::ExternalType,
+    failure::failure::{Failure, FailureType},
+    internal::playlist::Playlist,
+    ui::cli::cli::print_failure,
 };
 
+mod config;
 mod external;
+mod failure;
 mod internal;
 mod ui;
-mod config;
-mod failure;
 
 pub static CONFIG_FOLDER: &str = "configs/";
 
@@ -39,8 +36,6 @@ fn main() {
     for _ in 0..height {
         println!()
     }
-
-
 
     let (transmit, receive) = mpsc::channel::<Command>();
 
@@ -70,7 +65,6 @@ fn main() {
                 Err(e) => Err(e),
             },
             Command::PlayNew(song) => internal.play_new(song),
-            Command::Stop => Err(Failure::from((anyhow!("Stop command not implemented"), FailureType::Warning))),
             Command::CurrentSong(sender) => match internal.current_song() {
                 Ok(song) => sender
                     .send(song)
@@ -86,11 +80,11 @@ fn main() {
             Command::PlaylistRemove(index) => internal.playlist_remove(index),
             Command::PlaylistMoveSong { from, to } => internal.playlist_move_song(from, to),
             Command::PlaylistGetSongs(sender) => sender
-                    .send(internal.playlist_get_songs())
-                    .map_err(|e| Failure::from((e.into(), FailureType::Warning))),
+                .send(internal.playlist_get_songs())
+                .map_err(|e| Failure::from((e.into(), FailureType::Warning))),
             Command::PlaylistGetName(sender) => sender
-                    .send(internal.playlist_get_name())
-                    .map_err(|e| Failure::from((e.into(), FailureType::Warning))),
+                .send(internal.playlist_get_name())
+                .map_err(|e| Failure::from((e.into(), FailureType::Warning))),
             Command::PlaylistSetName(name) => internal.playlist_set_name(name.as_str()),
             Command::PlaylistGetSong { song, index } => match internal.playlist_get_song(index) {
                 Ok(s) => song
@@ -99,30 +93,50 @@ fn main() {
                 Err(e) => Err(e),
             },
             Command::PlaylistCopyTo(name) => internal.playlist_copy_to(name.as_str()),
-            Command::PlaylistAddPlaylist(playlist_name) => internal.playlist_add_playlist(playlist_name.as_str()),
+            Command::PlaylistAddPlaylist(playlist_name) => {
+                internal.playlist_add_playlist(playlist_name.as_str())
+            }
             Command::PlaylistClear => internal.playlist_clear(),
-            Command::QueueShuffle => {internal.queue_shuffle(); Ok(())},
-            Command::QueueAdd(song) => {internal.queue_add(song); Ok(())},
+            Command::QueueShuffle => {
+                internal.queue_shuffle();
+                Ok(())
+            }
+            Command::QueueAdd(song) => {
+                internal.queue_add(song);
+                Ok(())
+            }
             Command::QueueRemove(index) => internal.queue_remove(index),
             Command::QueueNext => internal.queue_next(),
-            Command::QueuePlaylist(playlist) => {internal.queue_playlist(&playlist); Ok(())},
-            Command::QueueCurrentPlaylist => {internal.queue_current_playlist(); Ok(())},
+            Command::QueuePlaylist(playlist) => {
+                internal.queue_playlist(&playlist);
+                Ok(())
+            }
+            Command::QueueCurrentPlaylist => {
+                internal.queue_current_playlist();
+                Ok(())
+            }
             Command::QueueGetSongs(sender) => sender
-                    .send(internal.queue_get_songs())
-                    .map_err(|e| Failure::from((e.into(), FailureType::Warning))),
-            Command::QueueClear => {internal.queue_clear(); Ok(())},
+                .send(internal.queue_get_songs())
+                .map_err(|e| Failure::from((e.into(), FailureType::Warning))),
+            Command::QueueClear => {
+                internal.queue_clear();
+                Ok(())
+            }
             Command::Shutdown => break,
             Command::UpdateAutoskip => internal.update_autoskip(),
             Command::SongDuration(sender) => sender
-                    .send(internal.song_duration())
-                    .map_err(|e| Failure::from((e.into(), FailureType::Warning))),
+                .send(internal.song_duration())
+                .map_err(|e| Failure::from((e.into(), FailureType::Warning))),
             Command::SongDurationGone(sender) => sender
-                    .send(internal.song_duration_gone())
-                    .map_err(|e| Failure::from((e.into(), FailureType::Warning))),
+                .send(internal.song_duration_gone())
+                .map_err(|e| Failure::from((e.into(), FailureType::Warning))),
         } {
-            Ok(_) => {},
+            Ok(_) => {}
             Err(failure) => match failure {
-                Failure::Fetal(_) => {print_failure(failure); break;},
+                Failure::Fetal(_) => {
+                    print_failure(failure);
+                    break;
+                }
                 Failure::Warning(_) => print_failure(failure),
             },
         }
@@ -136,17 +150,19 @@ fn main() {
             }
             Err(e) => match e {
                 Failure::Fetal(e) => {
-                    eprintln!("Fetal Shutdown error: {} \n exiting immediately see logs for details",
+                    eprintln!(
+                        "Fetal Shutdown error: {} \n exiting immediately see logs for details",
                         e
                     );
                     break;
                 }
                 Failure::Warning(e) => {
-                    eprintln!("Shutdown warning: {} trying again press ^C to force exit \r",
+                    eprintln!(
+                        "Shutdown warning: {} trying again press ^C to force exit \r",
                         e
                     );
                 }
-            }
+            },
         }
     }
 }
@@ -157,7 +173,6 @@ enum Command {
     Pause,
     IsSongPlaying(mpsc::Sender<bool>),
     PlayNew(Song),
-    Stop,
     CurrentSong(mpsc::Sender<Song>),
     PlaylistLoad(String),
     PlaylistNew {
@@ -177,8 +192,8 @@ enum Command {
         song: mpsc::Sender<Song>,
         index: usize,
     },
-    PlaylistCopyTo (String),
-    PlaylistAddPlaylist (String),
+    PlaylistCopyTo(String),
+    PlaylistAddPlaylist(String),
     PlaylistClear,
     QueueShuffle,
     QueueAdd(Song),
@@ -193,3 +208,4 @@ enum Command {
     SongDuration(mpsc::Sender<Result<Duration, Failure>>),
     SongDurationGone(mpsc::Sender<Result<Duration, Failure>>),
 }
+
