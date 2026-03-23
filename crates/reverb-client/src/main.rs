@@ -122,9 +122,9 @@ fn main() {
             Command::ServerConnect => {internal.connect_to_server(); Ok(())},
         } {
             Ok(_) => {},
-            Err(failure) => match failure {
-                Failure::Fetal(_) => {print_failure(failure); break;},
-                Failure::Warning(_) => print_failure(failure),
+            Err(failure) => match failure.failure_type() {
+                FailureType::Fetal => {print_failure(failure); break;},
+                FailureType::Warning => print_failure(failure),
             },
         }
     }
@@ -135,14 +135,14 @@ fn main() {
                 println!("Shutdown successfull \n exiting");
                 break;
             }
-            Err(e) => match e {
-                Failure::Fetal(e) => {
+            Err(e) => match e.failure_type() {
+                FailureType::Fetal => {
                     eprintln!("Fetal Shutdown error: {} \n exiting immediately see logs for details",
                         e
                     );
                     break;
                 }
-                Failure::Warning(e) => {
+                FailureType::Warning => {
                     eprintln!("Shutdown warning: {} trying again press ^C to force exit \r",
                         e
                     );
