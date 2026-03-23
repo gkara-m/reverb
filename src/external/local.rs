@@ -8,6 +8,7 @@ use std::fs::File;
 use std::io::BufReader;
 use std::path::Path;
 use std::time::Duration;
+use std::vec;
 
 use crate::external::external::{External, ExternalSong::LOCAL, ExternalSongTrait};
 use crate::failure::failure::{Failure, FailureType};
@@ -33,10 +34,32 @@ impl LocalSong {
 
 impl ExternalSongTrait for LocalSong {
     fn info(&self) -> Result<crate::internal::song::SongInfo, Failure> {
-        Ok(crate::internal::song::SongInfo {
-            title: format!("Local Song at path: {}", self.song_path),
-            artists: vec![String::from("Unknown Artist")],
-        })
+        let tag = Tag::new().read_from_path(&self.song_path);
+        match tag {
+            Ok(song_tag) => {
+                let title = match song_tag.title() {
+                    Some(title) => title.to_string(),
+                    None => self.song_path.to_string(),
+                };
+                let artists = match song_tag.artists() {
+                    Some(artists) => {
+                        let mut artists_as_string: Vec<String> = Vec::new();
+                        for artist in artists {
+                            artists_as_string.push(artist.to_string());
+                        }
+                        artists_as_string
+                    }
+                    None => vec!["Unknown Artist".to_string()],
+                };
+                Ok(SongInfo { title, artists })
+            }
+            Err(_) => {
+                return Ok(SongInfo {
+                    title: self.song_path.to_string(),
+                    artists: vec!["Unknown Artist".to_string()],
+                });
+            }
+        }
     }
 
     fn new(path_str: &str) -> Result<Self, Failure> {
@@ -120,47 +143,10 @@ impl External for Local {
     fn song_duration(&self) -> Result<Duration, Failure> {
         Ok(self.song_duration)
     }
-    fn get_song_info(&self, song: &Song) -> Result<SongInfo, Failure> {
-        if let LOCAL(local_song) = &song.song_type {
-            let local_song_path = &local_song.song_path;
-            let tag = Tag::new().read_from_path(local_song_path);
-            match tag {
-                Ok(song_tag) => {
-                    let title = match song_tag.title() {
-                        Some(title) => title.to_string(),
-                        None => {
-                            return Err(Failure::from((
-                                anyhow!("Error: local get_song_info()"),
-                                FailureType::Warning,
-                            )));
-                        }
-                    };
-                    let artists = match song_tag.artists() {
-                        Some(artists) => {
-                            let mut artists_as_string: Vec<String> = Vec::new();
-                            for artist in artists {
-                                artists_as_string.push(artist.to_string());
-                            }
-                            artists_as_string
-                        }
-                        None => {
-                            return Err(Failure::from((
-                                anyhow!("Error: local get_song_info()"),
-                                FailureType::Warning,
-                            )));
-                        }
-                    };
-                    Ok(SongInfo { title, artists })
-                }
-                Err(error) => Err(Failure::from((error.into(), FailureType::Warning))),
-            }
-        } else {
-            Err(Failure::from((
-                anyhow!("Error: local get_song_info()"),
-                FailureType::Warning,
-            )))
-        }
-    }
+    //fn get_song_info(&self, song: &Song) -> Result<SongInfo, Failure> {
+    //  if let LOCAL(local_song) = &song.song_type {
+    //    let local_song_path = &local_song.song_path;
+    //      }
 }
 
 impl Local {

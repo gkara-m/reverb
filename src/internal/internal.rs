@@ -88,9 +88,9 @@ impl Internal {
         self.playlist_save()
     }
 
-    pub fn get_song_info(&self, song: &Song) -> Result<SongInfo, Failure> {
-        self.current_external.get_song_info(song)
-    }
+    //pub fn get_song_info(&self, song: &Song) -> Result<SongInfo, Failure> {
+    //    self.current_external.get_song_info(song)
+    //}
 }
 
 impl Internal {

@@ -66,8 +66,7 @@ impl External for PlaceholderRun {
         todo!()
     }
 
-    fn get_song_info(&self, _song: &song::Song) -> Result<song::SongInfo, Failure> {
-        todo!()
-    }
+    //fn get_song_info(&self, _song: &song::Song) -> Result<song::SongInfo, Failure> {
+    //    todo!()
+    //}
 }
-
