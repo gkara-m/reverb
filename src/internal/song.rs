@@ -1,8 +1,10 @@
-use serde::{Deserialize, Serialize};
 use anyhow::anyhow;
+use serde::{Deserialize, Serialize};
 
-use crate::{external::external::{ExternalSong, ExternalSongTrait, ExternalType}, failure::failure::{Failure, FailureType}};
-
+use crate::{
+    external::external::{ExternalSong, ExternalSongTrait, ExternalType},
+    failure::failure::{Failure, FailureType},
+};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Song {
@@ -22,18 +24,22 @@ impl Song {
                     song_type: external_song,
                 })
             }
-            None => Err(Failure::from((anyhow!("invalid song parameters: {}", params), FailureType::Warning))),
+            None => Err(Failure::from((
+                anyhow!("invalid song parameters: {}", params),
+                FailureType::Warning,
+            ))),
         }
     }
 
     pub fn default() -> Result<Song, Failure> {
         Ok(Song {
-            song_type: ExternalSong::LOCAL(
-                crate::external::local::LocalSong::new("sample/default_song.mp3")?),
-                    info: SongInfo {
-                        title: "Default Song".to_string(),
-                        artist: "REVERB".to_string(),
-                    },
+            song_type: ExternalSong::LOCAL(crate::external::local::LocalSong::new(
+                "sample/default_song.mp3",
+            )?),
+            info: SongInfo {
+                title: "Default Song".to_string(),
+                artists: vec!["REVERB".to_string()],
+            },
         })
     }
 }
@@ -41,5 +47,5 @@ impl Song {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct SongInfo {
     pub title: String,
-    pub artist: String,
+    pub artists: Vec<String>,
 }

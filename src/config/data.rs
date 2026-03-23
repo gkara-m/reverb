@@ -27,7 +27,7 @@ impl StartupData {
             song_type: ExternalSong::LOCAL(LocalSong::new("sample/default_song.mp3")?),
             info: SongInfo {
                 title: "Default Song".to_string(),
-                artist: "Unknown Artist".to_string(),
+                artists: vec!["Unknown Artist".to_string()],
             },
         };
         let startup_data = StartupData {
@@ -62,4 +62,3 @@ impl StartupData {
         }
     }
 }
-

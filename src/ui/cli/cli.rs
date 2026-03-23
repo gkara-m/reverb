@@ -1,13 +1,16 @@
-use std::sync::mpsc::Sender;
 use anyhow::anyhow;
+use std::sync::mpsc::Sender;
 
+use crate::Command;
 use crate::failure::failure::{Failure, FailureType};
 use crate::ui::cli::cli_ui::run_ui;
-use crate::ui::cli::command_spec::CommandSpec;
 use crate::ui::cli::command_spec::CommandCallType::{Args, NoArgs};
+use crate::ui::cli::command_spec::CommandSpec;
 use crate::ui::ui;
-use crate::Command;
-use crate::{external::external::ExternalType, internal::{playlist::Playlist, song::Song}};
+use crate::{
+    external::external::ExternalType,
+    internal::{playlist::Playlist, song::Song},
+};
 
 pub fn run_cli(transmit: Sender<Command>, update_interval: u64) {
     let command_spec = CommandSpec::new(transmit.clone())
@@ -26,14 +29,14 @@ pub fn run_cli(transmit: Sender<Command>, update_interval: u64) {
     .add("skip", vec!["skip", "s"], " : Skip the current song", Some(|_, tx| ui::queue_next(tx)), NoArgs, None)
     .add("song", vec!["song"], " : Display the currently playing song", Some(|_, tx| {
         let song = ui::current_song(tx)?;
-        println!("Currently playing: {} - {}", song.info.artist, song.info.title);
+        println!("Currently playing: {} - {}", song.info.artists[0], song.info.title);
         Ok(())
     }), NoArgs, None)
     // queue commands
     .add("queue", vec!["queue", "q"], " : List the current song queue", Some(|_, tx| {
         let songs = ui::queue_get_songs(tx)?;
         for (index, song) in songs.iter().enumerate() {
-            println!("{}: {} - {}", index, song.info.artist, song.info.title);
+            println!("{}: {} - {}", index, song.info.artists[0], song.info.title);
         }
         Ok(())
     }), NoArgs, None)
@@ -62,7 +65,7 @@ pub fn run_cli(transmit: Sender<Command>, update_interval: u64) {
         println!("{}:", ui::playlist_get_name(tx)?);
         let songs = ui::playlist_get_songs(tx)?;
         for (index, song) in songs.iter().enumerate() {
-            println!("{}: {} - {}", index, song.info.artist, song.info.title);
+            println!("{}: {} - {}", index, song.info.artists[0], song.info.title);
         }
         Ok(())
     }), NoArgs, None)
@@ -103,7 +106,7 @@ pub fn run_cli(transmit: Sender<Command>, update_interval: u64) {
     .add("playlist get", vec!["get", "g"], " <index> : Get a song by index", Some(|args, tx| {
         let index: usize = args.parse().map_err(|e: std::num::ParseIntError| Failure::from((e.into(), FailureType::Warning)))?;
         let song = ui::playlist_get_song(tx, index)?;
-        println!("{} - {}", song.info.artist, song.info.title);
+        println!("{} - {}", song.info.artists[0], song.info.title);
         Ok(())
     }), Args, Some("playlist"))
     .add("playlist name", vec!["name"], " : Print the current playlist name", Some(|_, tx| {
@@ -114,20 +117,17 @@ pub fn run_cli(transmit: Sender<Command>, update_interval: u64) {
     .add("playlist copy", vec!["copy", "c"], " <new_name> : Copy the playlist", Some(|args, tx| ui::playlist_copy_to(tx, args)), Args, Some("playlist"))
     .add("playlist clear", vec!["clear", "cl"], " : Clear the playlist", Some(|_, tx| ui::playlist_clear(tx)), NoArgs, Some("playlist"));
 
-
     // input thread
     let (input_tx, input_rx) = std::sync::mpsc::channel::<String>();
-    
 
     let renderer = run_ui(&transmit, input_tx, update_interval);
-
 
     println!("Please enter command or type 'help' for help.");
 
     for input in input_rx {
         match command_spec.call(input.as_str()) {
             Err(err) => print_failure(err),
-            Ok(_) => {},
+            Ok(_) => {}
         }
     }
 

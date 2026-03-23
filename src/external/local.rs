@@ -35,7 +35,7 @@ impl ExternalSongTrait for LocalSong {
     fn info(&self) -> Result<crate::internal::song::SongInfo, Failure> {
         Ok(crate::internal::song::SongInfo {
             title: format!("Local Song at path: {}", self.song_path),
-            artist: String::from("Unknown Artist"),
+            artists: vec![String::from("Unknown Artist")],
         })
     }
 
@@ -135,8 +135,14 @@ impl External for Local {
                             )));
                         }
                     };
-                    let artist = match song_tag.artist() {
-                        Some(artist) => artist.to_string(),
+                    let artists = match song_tag.artists() {
+                        Some(artists) => {
+                            let mut artists_as_string: Vec<String> = Vec::new();
+                            for artist in artists {
+                                artists_as_string.push(artist.to_string());
+                            }
+                            artists_as_string
+                        }
                         None => {
                             return Err(Failure::from((
                                 anyhow!("Error: local get_song_info()"),
@@ -144,7 +150,7 @@ impl External for Local {
                             )));
                         }
                     };
-                    Ok(SongInfo { title, artist })
+                    Ok(SongInfo { title, artists })
                 }
                 Err(error) => Err(Failure::from((error.into(), FailureType::Warning))),
             }
