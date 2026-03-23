@@ -4,7 +4,7 @@ use anyhow::anyhow;
 use crate::failure::failure::{Failure, FailureType};
 use crate::ui::cli::cli_ui::run_ui;
 use crate::ui::cli::command_spec::CommandSpec;
-use crate::ui::cli::command_spec::CommandCallType::{Args, NoArgs};
+use crate::ui::cli::command_spec::CommandCallType::{Args, NoArgs, NotCallable};
 use crate::ui::ui;
 use crate::{Command, MAIN_SENDER};
 use crate::{external::external::ExternalType, internal::{playlist::Playlist, song::Song}};
@@ -113,7 +113,16 @@ pub fn run_cli(update_interval: u64) {
     .add("playlist copy", vec!["copy", "c"], " <new_name> : Copy the playlist", Some(|args| ui::playlist_copy_to(args)), Args, Some("playlist"))
     .add("playlist clear", vec!["clear", "cl"], " : Clear the playlist", Some(|_| ui::playlist_clear()), NoArgs, Some("playlist"))
     // server commands
-    .add("connect", vec!["connect"], " : Connect to the server", Some(|_| ui::connect_to_server()), NoArgs, None);
+    .add("server", vec!["server"], " : Server related commands", None, NotCallable, None)
+    .add("server add", vec!["add"], " <name> <address> <certificate_path> : Add a server configuration", Some(|args| {
+        let mut parts = args.splitn(3, ' ');
+        match (parts.next(), parts.next(), parts.next()) {
+            (Some(name), Some(address), Some(certificate_path)) => ui::add_server(name.to_string(), address.to_string(), certificate_path.to_string()),
+            _ => Err(Failure::from((anyhow!("Invalid input for server add command: {}", args), FailureType::Warning))),
+        }
+    }), Args, Some("server"))
+    .add("server connect", vec!["connect", "con"], " : Connect to the server", Some(|_| ui::connect_to_server()), NoArgs, Some("server"))
+    .add("server message", vec!["message", "msg"], " <message> : Send a message to the server", Some(|args| ui::send_message_to_server(args)), Args, Some("server"));
 
 
     // input thread

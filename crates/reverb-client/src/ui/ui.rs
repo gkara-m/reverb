@@ -170,3 +170,13 @@ pub(super) fn connect_to_server() -> Result<(), Failure> {
     MAIN_SENDER.get().unwrap().clone().send(Command::ServerConnect)
     .map_err(|e| Failure::from((e.into(), FailureType::Fetal)))
 }
+
+pub(super) fn send_message_to_server(message: &str) -> Result<(), Failure> {
+    MAIN_SENDER.get().unwrap().clone().send(Command::ServerSendMessage(message.to_string()))
+    .map_err(|e| Failure::from((e.into(), FailureType::Fetal)))
+}
+
+pub(super) fn add_server(name: String, address: String, certificate_path: String) -> Result<(), Failure> {
+    MAIN_SENDER.get().unwrap().clone().send(Command::ServerAdd(name, address, certificate_path))
+    .map_err(|e| Failure::from((e.into(), FailureType::Fetal)))
+}

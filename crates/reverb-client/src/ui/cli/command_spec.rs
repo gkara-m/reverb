@@ -53,7 +53,6 @@ impl CommandSpecNode {
     }
 
     fn handle(&self, input: Vec<&str>, position: usize, command_spec: &CommandSpec) -> Result<(), Failure> {
-        println!("handling: {}", input.join(","));
         let mut valid= true;
         let args;
         match self.call_type {

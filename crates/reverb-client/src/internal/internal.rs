@@ -1,5 +1,5 @@
 use crate::{
-    Command, MAIN_SENDER, external::external::{self, External, ExternalRun, ExternalType}, failure::failure::{Failure, FailureType}, internal::{internet::InternetClient, playlist::Playlist, queue::Queue, song::Song}
+    Command, MAIN_SENDER, external::external::{self, External, ExternalRun, ExternalType}, failure::failure::{Failure, FailureType}, internal::{internet, playlist::Playlist, queue::Queue, song::Song}
 };
 
 use std::{thread, time::Duration};
@@ -14,7 +14,7 @@ pub struct Internal {
     current_playlist: Playlist,
     queue: Queue,
     kill_sender: Sender<()>,
-    server_connection: Option<super::internet::InternetClient>,
+    server_connection: Option<internet::connection::InternetClient>,
 }
 
 impl Internal {
@@ -248,7 +248,7 @@ impl Internal {
                 return Err(Failure::from((anyhow!("Already connected to server"), FailureType::Warning)));
             },
             None => {
-                let mut sc = super::internet::InternetClient::new();
+                let mut sc = internet::connection::InternetClient::new();
                 sc.connect()?;
                 Some(sc)
             },
@@ -256,17 +256,24 @@ impl Internal {
         Ok(())
     }
 
-    pub fn send_command_to_server(&mut self, command: String) -> Result<(), Failure> {
+    pub fn send_message_to_server(&mut self, message: String) -> Result<(), Failure> {
+        println!("Attempting to send message to server b: {}", message);
         if let Some(sc) = self.server_connection.as_mut() {
-            sc.send_message(command)
+            println!("Attempting to send message to server a: {}", message);
+            sc.send_message(message)
         } else {
             Err(Failure::from((anyhow!("Not connected to server"), FailureType::Warning)))
         }
     }
 
-    pub fn update_server_connection_status(&mut self, status: super::internet::ConnectionStatus) {
+    pub fn update_server_connection_status(&mut self, status: internet::connection::ConnectionStatus) {
         if let Some(sc) = self.server_connection.as_mut() {
             sc.update_connection(status);
         }
+    }
+
+    pub fn add_server(&mut self, name: String, address: String, certificate_path: String) -> Result<(), Failure> {
+        crate::config::internet::ServerConfig::new(&address, &name, &certificate_path)?;
+        Ok(())
     }
 }

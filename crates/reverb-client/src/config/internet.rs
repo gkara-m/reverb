@@ -16,7 +16,7 @@ pub struct ServerConfig {
 }
 
 impl ServerConfig {
-    pub(super) fn new(server_address: &str, server_name: &str, server_cert_path: &str) -> Result<ServerConfig, Failure> {
+    pub fn new(server_address: &str, server_name: &str, server_cert_path: &str) -> Result<ServerConfig, Failure> {
         let server_config = ServerConfig {
             server_address: server_address.to_string(),
             server_name: server_name.to_string(),
@@ -26,7 +26,7 @@ impl ServerConfig {
         Ok(server_config)
     }
 
-    pub(super) fn save(&self) -> Result<(), Failure> {
+    fn save(&self) -> Result<(), Failure> {
         match std::fs::create_dir_all(CONFIG.get().ok_or(Failure::from((anyhow!("Config folder not found"), FailureType::Fetal)))?.data_folder.clone()) {
             Err(e) => return Err(Failure::from((e.into(), FailureType::Warning))),
             Ok(_) => {},

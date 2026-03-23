@@ -46,7 +46,7 @@ fn main() {
 
 
     let (transmit, receive) = mpsc::channel::<Command>();
-    MAIN_SENDER.set(transmit);
+    MAIN_SENDER.set(transmit).unwrap();
 
     let mut internal = match startup() {
         Ok(i) => {
@@ -122,8 +122,10 @@ fn main() {
             Command::SongDurationGone(sender) => sender
                     .send(internal.song_duration_gone())
                     .map_err(|e| Failure::from((e.into(), FailureType::Warning))),
-            Command::ServerConnect => {internal.connect_to_server(); Ok(())},
+            Command::ServerConnect => {internal.connect_to_server()},
             Command::ServerUpdateStatus(status) => {internal.update_server_connection_status(status); Ok(())},
+            Command::ServerSendMessage(message) => {internal.send_message_to_server(message)},
+            Command::ServerAdd(name, address, certificate) => {internal.add_server(name, address, certificate)},
             Command::Failure(failure) => Err(failure),
         } {
             Ok(_) => {},
@@ -158,7 +160,7 @@ fn main() {
 }
 
 #[derive(Debug)]
-enum Command {
+pub enum Command {
     Play,
     Pause,
     IsSongPlaying(mpsc::Sender<bool>),
@@ -197,7 +199,9 @@ enum Command {
     UpdateAutoskip,
     SongDuration(mpsc::Sender<Result<Duration, Failure>>),
     SongDurationGone(mpsc::Sender<Result<Duration, Failure>>),
+    ServerAdd(String, String, String), // name, address, certificate path
     ServerConnect,
-    ServerUpdateStatus(internal::internet::ConnectionStatus),
+    ServerUpdateStatus(internal::internet::connection::ConnectionStatus),
+    ServerSendMessage(String),
     Failure(Failure),
 }
