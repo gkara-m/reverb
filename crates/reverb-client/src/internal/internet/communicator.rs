@@ -17,24 +17,22 @@ use std::sync::Arc;
 pub(super) fn start_communicator_thread(server_config: ServerConfig) {
     let (tx, rx) = std::sync::mpsc::channel();
     std::thread::spawn(move || {
-        let conn = match tokio::runtime::Runtime::new().unwrap().block_on(connect_to(server_config)) {
-            Ok(conn) => conn,
+        match tokio::runtime::Runtime::new().unwrap().block_on(async{
+            let conn = connect_to(server_config).await?;
+            MAIN_SENDER.get().unwrap().clone().send(Command::ServerUpdateStatus(crate::internal::internet::connection::ConnectionStatus::Connected(tx))).unwrap_or_else(|e| eprintln!("Failed to send server update status command: {}", e));
+            for message in rx {
+                // Handle incoming messages
+                send_message(conn.clone(), message).await?;
+            }
+            Ok(())
+        }) {
+            Ok(_) => println!("Communicator thread exited normally"),
             Err(e) => {
                 MAIN_SENDER.get().unwrap().clone().send(Command::Failure(e)).unwrap_or_else(|e| eprintln!("Failed to send failure command: {}", e));
                 MAIN_SENDER.get().unwrap().clone().send(Command::ServerUpdateStatus(crate::internal::internet::connection::ConnectionStatus::NotConnected)).unwrap_or_else(|e| eprintln!("Failed to send server update status command: {}", e));
                 return;
             }
         };
-        MAIN_SENDER.get().unwrap().clone().send(Command::ServerUpdateStatus(crate::internal::internet::connection::ConnectionStatus::Connected(tx))).unwrap_or_else(|e| eprintln!("Failed to send server update status command: {}", e));
-        
-        for message in rx {
-            // Handle incoming messages
-            if let Err(e) = tokio::runtime::Runtime::new().unwrap().block_on(send_message(conn.clone(), message)) {
-                MAIN_SENDER.get().unwrap().clone().send(Command::Failure(e)).unwrap_or_else(|e| eprintln!("Failed to send failure command: {}", e));
-                MAIN_SENDER.get().unwrap().clone().send(Command::ServerUpdateStatus(crate::internal::internet::connection::ConnectionStatus::NotConnected)).unwrap_or_else(|e| eprintln!("Failed to send server update status command: {}", e));
-                return;
-            }
-        }
     });
 }
 
