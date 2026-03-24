@@ -75,3 +75,13 @@ Requirements: cargo.
 
 Feel free to add issues or discussions about any features you would like added or bugs you find we love any new ideas! But bare in mind we are a small team working on this for fun mostly so may or may not get round to it.
 If you wish to contribute either fork this repository or send us a message!
+
+## License
+
+This project is licensed under the GNU General Public License v3.0 or later.
+See the repository `LICENSE` file for the full text. Third-party dependency
+license information and attributions are collected in `licenses/THIRD-PARTY-LICENSES.txt`.
+If you distribute binaries derived from this project, include the `LICENSE`
+and `licenses/THIRD-PARTY-LICENSES.txt` files so recipients can review
+source availability and dependency obligations.
+
