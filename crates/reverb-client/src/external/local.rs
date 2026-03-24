@@ -10,6 +10,7 @@ use std::path::Path;
 use std::time::Duration;
 use std::vec;
 
+use crate::CONFIG;
 use crate::external::external::{External, ExternalSong::LOCAL, ExternalSongTrait};
 use crate::failure::failure::{Failure, FailureType};
 use crate::internal::song::{Song, SongInfo};
@@ -63,7 +64,9 @@ impl ExternalSongTrait for LocalSong {
     }
 
     fn new(path_str: &str) -> Result<Self, Failure> {
-        let path = Path::new(path_str);
+        let path = Path::new(&CONFIG.get().ok_or(Failure::from((anyhow!("CONFIG not set"), FailureType::Fetal)))?
+            .local_song_folder_path).join(path_str);
+
         let duration = {
             let tagged_file = Probe::open(&path)
                 .map_err(|e| Failure::from((e.into(), FailureType::Warning)))?
@@ -74,7 +77,7 @@ impl ExternalSongTrait for LocalSong {
 
         if path.exists() {
             Ok(LocalSong {
-                song_path: path_str.to_string(),
+                song_path: path.to_string_lossy().to_string(),
                 duration,
             })
         } else {
@@ -143,10 +146,6 @@ impl External for Local {
     fn song_duration(&self) -> Result<Duration, Failure> {
         Ok(self.song_duration)
     }
-    //fn get_song_info(&self, song: &Song) -> Result<SongInfo, Failure> {
-    //  if let LOCAL(local_song) = &song.song_type {
-    //    let local_song_path = &local_song.song_path;
-    //      }
 }
 
 impl Local {

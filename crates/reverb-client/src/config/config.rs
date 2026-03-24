@@ -7,7 +7,7 @@ use crate::{CONFIG_FOLDER, failure::failure::{Failure, FailureType}};
 pub struct Config {
     // pub device_name: String,
     pub data_folder: String,
-    pub(super) local_song_folder_path: Option<String>,
+    pub local_song_folder_path: String,
 }
 
 impl Config {
@@ -15,7 +15,7 @@ impl Config {
         let config = Config {
             // device_name: "REVERB_user".to_string(),
             data_folder: "data/".to_string(),
-            local_song_folder_path: None,
+            local_song_folder_path: "/".to_string(),
         };
         config.save()?;
         Ok(config)
