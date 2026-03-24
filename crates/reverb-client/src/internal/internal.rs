@@ -278,10 +278,20 @@ impl Internal {
         Ok(())
     }
 
-    pub fn send_message_to_server(&mut self, message: String) -> Result<(), Failure> {
-        println!("Attempting to send message to server b: {}", message);
+    pub fn send_query(&mut self, message: String) -> Result<(), Failure> {
+        println!("Attempting to send query to server b: {}", message);
         if let Some(sc) = self.server_connection.as_mut() {
-            println!("Attempting to send message to server a: {}", message);
+            println!("Attempting to send query to server a: {}", message);
+            sc.send_message(message)
+        } else {
+            Err(Failure::from((anyhow!("Not connected to server"), FailureType::Warning)))
+        }
+    }
+
+    pub fn send_notify(&mut self, message: String) -> Result<(), Failure> {
+        println!("Attempting to notify server b: {message}");
+        if let Some(sc) = self.server_connection.as_mut() {
+            println!("Attempting to notify server a: {message}");
             sc.send_message(message)
         } else {
             Err(Failure::from((anyhow!("Not connected to server"), FailureType::Warning)))

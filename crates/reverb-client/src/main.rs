@@ -136,7 +136,8 @@ fn main() {
                     .map_err(|e| Failure::from((e.into(), FailureType::Warning))),
             Command::ServerConnect => {internal.connect_to_server()},
             Command::ServerUpdateStatus(status) => {internal.update_server_connection_status(status); Ok(())},
-            Command::ServerSendMessage(message) => {internal.send_message_to_server(message)},
+            Command::ServerSendQuery(message) => {internal.send_query(message)},
+            Command::ServerSendNotify(message) => {internal.send_notify(message)},
             Command::ServerAdd(name, address, certificate) => {internal.add_server(name, address, certificate)},
             Command::Failure(failure) => Err(failure),
         } {
@@ -214,7 +215,8 @@ pub enum Command {
     ServerAdd(String, String, String), // name, address, certificate path
     ServerConnect,
     ServerUpdateStatus(internal::internet::connection::ConnectionStatus),
-    ServerSendMessage(String),
+    ServerSendQuery(String),
+    ServerSendNotify(String),
     Failure(Failure),
 }
 

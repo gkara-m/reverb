@@ -22,7 +22,7 @@ pub(super) fn start_communicator_thread(server_config: ServerConfig) {
             MAIN_SENDER.get().unwrap().clone().send(Command::ServerUpdateStatus(crate::internal::internet::connection::ConnectionStatus::Connected(tx))).unwrap_or_else(|e| eprintln!("Failed to send server update status command: {}", e));
             for message in rx {
                 // Handle incoming messages
-                send_message(conn.clone(), message).await?;
+                query(conn.clone(), message).await?;
             }
             Ok(())
         }) {
@@ -106,9 +106,9 @@ async fn connect_to(server_config: ServerConfig) -> Result<Connection, Failure> 
     
 
 
-async fn send_message(conn: Connection, message: String) -> Result<(), Failure> {
+async fn query(conn: Connection, message: String) -> Result<(), Failure> {
 
-    println!("Sending message to server: {}", message);
+    println!("Sending query to server: {}", message);
 
     // Open a bidirectional stream to the server
     let (mut send, mut recv) = conn.open_bi().await
@@ -131,6 +131,27 @@ async fn send_message(conn: Connection, message: String) -> Result<(), Failure> 
             eprintln!("Receive error: {e}");
         }
     }
+
+    Ok(())
+}
+
+async fn notify(conn: Connection, message: String) -> Result<(), Failure> {
+    
+    println!("Sending notification to server: {}", message);
+
+    // Open a unidirectional stream to server 
+    let mut send = conn.open_uni().await
+    .map_err(|e| Failure::from((e.into(), "connection is unusable", FailureType::Warning)))?;
+
+    // Send the message to the server 
+    send.write_all(message.as_bytes()).await
+    .map_err(|e| Failure::from((e.into(), "sending data over internet", FailureType::Warning)))?;
+
+    // Indicate that no more data will be sent on this stream 
+    send.finish()
+    .map_err(|e| Failure::from((e.into(), "closing the sending data over internet", FailureType::Warning)))?;
+    
+    println!("Sent: {message}");
 
     Ok(())
 }

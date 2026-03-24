@@ -176,8 +176,13 @@ pub(super) fn connect_to_server() -> Result<(), Failure> {
     .map_err(|e| Failure::from((e.into(), FailureType::Fatal)))
 }
 
-pub(super) fn send_message_to_server(message: &str) -> Result<(), Failure> {
-    MAIN_SENDER.get().unwrap().clone().send(Command::ServerSendMessage(message.to_string()))
+pub(super) fn send_query(message: &str) -> Result<(), Failure> {
+    MAIN_SENDER.get().unwrap().clone().send(Command::ServerSendQuery(message.to_string()))
+    .map_err(|e| Failure::from((e.into(), FailureType::Fatal)))
+}
+
+pub(super) fn send_notify(message: &str) -> Result<(), Failure> {
+    MAIN_SENDER.get().unwrap().clone().send(Command::ServerSendNotify(message.to_string()))
     .map_err(|e| Failure::from((e.into(), FailureType::Fatal)))
 }
 
