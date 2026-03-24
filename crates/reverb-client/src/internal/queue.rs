@@ -45,7 +45,7 @@ impl Queue {
             self.queued_songs.pop_front();
             match self.queued_songs.front().cloned() {
                 Some(next_song) => return Ok(next_song),
-                None => return Err(Failure::from((anyhow!("Queue is empty after popping current song, queue should not be able to pop only song"), FailureType::Fetal))),}
+                None => return Err(Failure::from((anyhow!("Queue is empty after popping current song, queue should not be able to pop only song"), FailureType::Fatal))),}
         }
         Err(Failure::from((anyhow!("Queue has only one song or is empty"), FailureType::Warning)))
     }

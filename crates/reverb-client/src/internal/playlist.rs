@@ -16,7 +16,7 @@ pub struct Playlist {
 
 impl Playlist {
     pub fn new(name: &str, external_type: Option<ExternalType>) -> Result<Playlist, Failure> {
-        let dir_str = DATA_FOLDER.get().ok_or(Failure::from((anyhow!("DATA_FOLDER not set"), FailureType::Fetal)))?;
+        let dir_str = DATA_FOLDER.get().ok_or(Failure::from((anyhow!("DATA_FOLDER not set"), FailureType::Fatal)))?;
         let mut dir = PathBuf::from(dir_str);
         dir.push("playlists");
         if dir.join(format!("{}.toml", name)).exists() {
@@ -65,7 +65,7 @@ impl Playlist {
     }
 
     pub(super) fn set_name(&mut self, name: &str) -> Result<(), Failure> {
-        let dir_str = DATA_FOLDER.get().ok_or(Failure::from((anyhow!("DATA_FOLDER not set"), FailureType::Fetal)))?;
+        let dir_str = DATA_FOLDER.get().ok_or(Failure::from((anyhow!("DATA_FOLDER not set"), FailureType::Fatal)))?;
         let mut dir = PathBuf::from(dir_str);
         dir.push("playlists");
         let new_path = dir.join(format!("{}.toml", name));
@@ -91,7 +91,7 @@ impl Playlist {
     }
 
     pub(super) fn save(&self) -> Result<(), Failure> {
-        let dir_str = DATA_FOLDER.get().ok_or(Failure::from((anyhow!("DATA_FOLDER not set"), FailureType::Fetal)))?;
+        let dir_str = DATA_FOLDER.get().ok_or(Failure::from((anyhow!("DATA_FOLDER not set"), FailureType::Fatal)))?;
         let mut dir = PathBuf::from(dir_str);
         dir.push("playlists");
         match std::fs::write(
@@ -104,7 +104,7 @@ impl Playlist {
     }
 
     pub fn load(name: &str) -> Result<Playlist, Failure> {
-        let dir_str = DATA_FOLDER.get().ok_or(Failure::from((anyhow!("DATA_FOLDER not set"), FailureType::Fetal)))?;
+        let dir_str = DATA_FOLDER.get().ok_or(Failure::from((anyhow!("DATA_FOLDER not set"), FailureType::Fatal)))?;
         let mut dir = PathBuf::from(dir_str);
         dir.push("playlists");
 

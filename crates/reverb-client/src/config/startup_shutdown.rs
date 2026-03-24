@@ -13,22 +13,22 @@ pub fn startup() -> Result<Internal, Failure> {
         Err(_) => {
             println!("Config file not found, creating default... ");
             let default = Config::new_default()?;
-            toml::to_string(&default).map_err(|e| Failure::from((e.into(), FailureType::Fetal)))?;
+            toml::to_string(&default).map_err(|e| Failure::from((e.into(), FailureType::Fatal)))?;
             Err(Failure::from((anyhow!("First run?: \n Default config created in {} \n check config and restart \n exiting automatically", CONFIG_FOLDER), FailureType::Warning)))
         }
     }?;
 
     println!("Setting global variables... ");
     //read config
-    let config: Config = toml::from_str(&content).map_err(|e| Failure::from((e.into(), FailureType::Fetal)))?;
-    CONFIG.set(config).map_err(|_| Failure::from((anyhow!("Failed to set global config"), FailureType::Fetal)))?;
+    let config: Config = toml::from_str(&content).map_err(|e| Failure::from((e.into(), FailureType::Fatal)))?;
+    CONFIG.set(config).map_err(|_| Failure::from((anyhow!("Failed to set global config"), FailureType::Fatal)))?;
 
     // Set DATA_FOLDER
-    DATA_FOLDER.set((&CONFIG.get().unwrap().data_folder).clone()).map_err(|e| Failure::from((anyhow!(e), FailureType::Fetal)))?;
+    DATA_FOLDER.set((&CONFIG.get().unwrap().data_folder).clone()).map_err(|e| Failure::from((anyhow!(e), FailureType::Fatal)))?;
 
     // Set LOCAL_SONG_FOLDER_PATH if provided in config
     if let Some(local_path) = (&CONFIG.get().unwrap().local_song_folder_path).clone() {
-        LOCAL_SONG_FOLDER_PATH.set(local_path).map_err(|e| Failure::from((anyhow!(e), FailureType::Fetal)))?;
+        LOCAL_SONG_FOLDER_PATH.set(local_path).map_err(|e| Failure::from((anyhow!(e), FailureType::Fatal)))?;
     }
 
     let data_folder = Path::new(DATA_FOLDER.get().unwrap());
@@ -39,10 +39,10 @@ pub fn startup() -> Result<Internal, Failure> {
     if data_folder.join("startup.toml").exists() {
         startup_data = toml::from_str(
             &std::fs::read_to_string(data_folder.join("startup.toml"))
-            .map_err(|e| Failure::from((e.into(), FailureType::Fetal)))?
-        ).map_err(|e| Failure::from((e.into(), FailureType::Fetal)))?;
+            .map_err(|e| Failure::from((e.into(), FailureType::Fatal)))?
+        ).map_err(|e| Failure::from((e.into(), FailureType::Fatal)))?;
     } else {
-        std::fs::create_dir_all(data_folder).map_err(|e| Failure::from((e.into(), FailureType::Fetal)))?;
+        std::fs::create_dir_all(data_folder).map_err(|e| Failure::from((e.into(), FailureType::Fatal)))?;
         startup_data = StartupData::new_default()?;
         println!("First run?: \n Default startup data created in {} \n no need to restart, continuing automatically\n enjoy REVERB!", data_folder.display());
     }

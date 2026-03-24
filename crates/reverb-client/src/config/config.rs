@@ -23,14 +23,14 @@ impl Config {
 
     pub(super) fn save(&self) -> Result<(), Failure> {
         match std::fs::create_dir_all(CONFIG_FOLDER) {
-            Err(e) => return Err(Failure::from((e.into(), FailureType::Fetal))),
+            Err(e) => return Err(Failure::from((e.into(), FailureType::Fatal))),
             Ok(_) => {},
         }
         match std::fs::write(
             format!("{}config.toml", CONFIG_FOLDER),
-            toml::to_string(self).map_err(|e| Failure::from((e.into(), FailureType::Fetal)))?,
+            toml::to_string(self).map_err(|e| Failure::from((e.into(), FailureType::Fatal)))?,
         ) {
-            Err(e) => Err(Failure::from((e.into(), FailureType::Fetal))),
+            Err(e) => Err(Failure::from((e.into(), FailureType::Fatal))),
             Ok(_) => Ok(()),
         }
     }

@@ -27,12 +27,12 @@ impl ServerConfig {
     }
 
     fn save(&self) -> Result<(), Failure> {
-        match std::fs::create_dir_all(CONFIG.get().ok_or(Failure::from((anyhow!("Config folder not found"), FailureType::Fetal)))?.data_folder.clone()) {
+        match std::fs::create_dir_all(CONFIG.get().ok_or(Failure::from((anyhow!("Config folder not found"), FailureType::Fatal)))?.data_folder.clone()) {
             Err(e) => return Err(Failure::from((e.into(), FailureType::Warning))),
             Ok(_) => {},
         }
         match std::fs::write(
-            format!("{}server_config.toml", CONFIG.get().ok_or(Failure::from((anyhow!("Config folder not found"), FailureType::Fetal)))?.data_folder.clone()),
+            format!("{}server_config.toml", CONFIG.get().ok_or(Failure::from((anyhow!("Config folder not found"), FailureType::Fatal)))?.data_folder.clone()),
             toml::to_string(self).map_err(|e| Failure::from((e.into(), FailureType::Warning)))?,
         ) {
             Err(e) => Err(Failure::from((e.into(), FailureType::Warning))),
