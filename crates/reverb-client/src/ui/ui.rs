@@ -161,6 +161,11 @@ pub(super) fn song_duration_gone() -> Result<Duration, Failure> {
     }
 }
 
+pub(super) fn queue_shuffle() -> Result<(), Failure> {
+    MAIN_SENDER.get().unwrap().clone().send(Command::QueueShuffle)
+    .map_err(|e| Failure::from((e.into(), FailureType::Fetal)))
+}
+
 pub(super) fn queue_clear() -> Result<(), Failure> {
     MAIN_SENDER.get().unwrap().clone().send(Command::QueueClear)
     .map_err(|e| Failure::from((e.into(), FailureType::Fetal)))

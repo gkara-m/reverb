@@ -177,7 +177,7 @@ fn queue_song_name(
     position: (u16, u16),
     stdout: &mut std::io::Stdout,
 ) -> Result<(), Failure> {
-    let song = ui::current_song(transmit)?;
+    let song = ui::current_song()?;
     let mut song_name = song.info.title;
     let song_name = if song_name.chars().count() as u16 > width {
         let mut truncated = song_name

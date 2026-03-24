@@ -11,7 +11,7 @@ use crate::{
     external::external::ExternalType,
     internal::{playlist::Playlist, song::Song},
 };
-use crate::{Command, MAIN_SENDER};
+use crate::MAIN_SENDER;
 
 pub fn run_cli(update_interval: u64) {
     let command_spec = CommandSpec::new()

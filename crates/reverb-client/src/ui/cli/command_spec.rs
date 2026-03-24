@@ -25,7 +25,7 @@ impl CommandSpecNode {
     fn new(
         valid_aliases: Vec<&str>,
         help: String,
-        handler: Option<fn(&str, &Sender<Command>) -> Result<(), Failure>>,
+        handler: Option<fn(&str) -> Result<(), Failure>>,
         call_type: CommandCallType,
     ) -> CommandSpecNode {
         CommandSpecNode {
@@ -146,7 +146,7 @@ impl CommandSpec {
         name: &str,
         valid_aliases: Vec<&str>,
         help: &str,
-        handler: Option<fn(&str, &Sender<Command>) -> Result<(), Failure>>,
+        handler: Option<fn(&str) -> Result<(), Failure>>,
         call_type: CommandCallType,
         parent: Option<&str>,
     ) -> CommandSpec {

@@ -4,19 +4,13 @@ use crate::{
     external::external::{self, External, ExternalRun, ExternalType},
     failure::failure::{Failure, FailureType},
     internal::{
-        playlist::Playlist,
-        queue::Queue,
-        song::{Song, SongInfo},
+        internet, playlist::Playlist, queue::Queue, song::{Song, SongInfo}
     },
 };
 
 use std::sync::mpsc;
 use std::sync::mpsc::Sender;
 use std::{thread, time::Duration};
-use std::
-    sync::mpsc::Sender
-;
-use std::sync::mpsc;
 use anyhow::anyhow;
 
 pub struct Internal {
