@@ -1,7 +1,17 @@
 use crate::{
-    Command, MAIN_SENDER, external::external::{self, External, ExternalRun, ExternalType}, failure::failure::{Failure, FailureType}, internal::{internet, playlist::Playlist, queue::Queue, song::Song}
+    Command,
+    MAIN_SENDER,
+    external::external::{self, External, ExternalRun, ExternalType},
+    failure::failure::{Failure, FailureType},
+    internal::{
+        playlist::Playlist,
+        queue::Queue,
+        song::{Song, SongInfo},
+    },
 };
 
+use std::sync::mpsc;
+use std::sync::mpsc::Sender;
 use std::{thread, time::Duration};
 use std::
     sync::mpsc::Sender
@@ -78,10 +88,18 @@ impl Internal {
     pub fn song_duration(&self) -> Result<Duration, Failure> {
         self.current_external.song_duration()
     }
+
+    pub fn playlist_load(&mut self, playlist_name: &str) -> Result<(), Failure> {
+        self.playlist_save()
+    }
+
+    //pub fn get_song_info(&self, song: &Song) -> Result<SongInfo, Failure> {
+    //    self.current_external.get_song_info(song)
+    //}
 }
 
 impl Internal {
-    pub fn playlist_load(&mut self, playlist_name: &str) -> Result<(), Failure> {
+    pub fn load_playlist(&mut self, playlist_name: &str) -> Result<(), Failure> {
         self.playlist_save()?;
         let playlist = Playlist::load(playlist_name)?;
         self.current_playlist = playlist;
@@ -148,7 +166,7 @@ impl Internal {
         let playlist_from = Playlist::load(playlist_name_from)?;
         for song in playlist_from.iter() {
             self.current_playlist.add(&song);
-        };
+        }
         self.playlist_save()?;
         Ok(())
     }
@@ -201,6 +219,10 @@ impl Internal {
         self.queue.clear();
     }
 
+    pub fn queue_shuffle(&mut self) {
+        self.queue.shuffle();
+    }
+
     pub fn update_autoskip(&mut self) -> Result<(), Failure> {
         self.kill_autoskip();
         if self.is_song_playing()? {
@@ -218,13 +240,19 @@ impl Internal {
                         return;
                     }
                     if time_left < Duration::from_secs(1) {
-                        match   sender.send(Command::QueueNext) {
-                            Err(e) => println!("Failed to send QueueNext command queue may not skip automatically: {}", e),
+                        match sender.send(Command::QueueNext) {
+                            Err(e) => println!(
+                                "Failed to send QueueNext command queue may not skip automatically: {}",
+                                e
+                            ),
                             _ => (),
                         };
                     } else {
                         match sender.send(Command::UpdateAutoskip) {
-                            Err(e) => println!("Failed to send UpdateAutoskip command queue may not skip automatically: {}", e),
+                            Err(e) => println!(
+                                "Failed to send UpdateAutoskip command queue may not skip automatically: {}",
+                                e
+                            ),
                             _ => (),
                         }
                     }

@@ -1,3 +1,5 @@
+use anyhow::anyhow;
+use audiotags::Tag;
 use lofty::file::AudioFile;
 use lofty::probe::Probe;
 use rodio::{Decoder, OutputStream, OutputStreamBuilder, Sink};
@@ -6,11 +8,11 @@ use std::fs::File;
 use std::io::BufReader;
 use std::path::Path;
 use std::time::Duration;
-use anyhow::anyhow;
+use std::vec;
 
 use crate::external::external::{External, ExternalSong::LOCAL, ExternalSongTrait};
 use crate::failure::failure::{Failure, FailureType};
-use crate::internal::song::Song;
+use crate::internal::song::{Song, SongInfo};
 
 pub struct Local {
     _output_stream: OutputStream,
@@ -32,10 +34,32 @@ impl LocalSong {
 
 impl ExternalSongTrait for LocalSong {
     fn info(&self) -> Result<crate::internal::song::SongInfo, Failure> {
-        Ok(crate::internal::song::SongInfo {
-            title: format!("Local Song at path: {}", self.song_path),
-            artist: String::from("Unknown Artist"),
-        })
+        let tag = Tag::new().read_from_path(&self.song_path);
+        match tag {
+            Ok(song_tag) => {
+                let title = match song_tag.title() {
+                    Some(title) => title.to_string(),
+                    None => self.song_path.to_string(),
+                };
+                let artists = match song_tag.artists() {
+                    Some(artists) => {
+                        let mut artists_as_string: Vec<String> = Vec::new();
+                        for artist in artists {
+                            artists_as_string.push(artist.to_string());
+                        }
+                        artists_as_string
+                    }
+                    None => vec!["Unknown Artist".to_string()],
+                };
+                Ok(SongInfo { title, artists })
+            }
+            Err(_) => {
+                return Ok(SongInfo {
+                    title: self.song_path.to_string(),
+                    artists: vec!["Unknown Artist".to_string()],
+                });
+            }
+        }
     }
 
     fn new(path_str: &str) -> Result<Self, Failure> {
@@ -54,13 +78,16 @@ impl ExternalSongTrait for LocalSong {
                 duration,
             })
         } else {
-            Err(Failure::from((std::io::Error::new(std::io::ErrorKind::NotFound, "File does not exist").into(), FailureType::Warning)))
+            Err(Failure::from((
+                std::io::Error::new(std::io::ErrorKind::NotFound, "File does not exist").into(),
+                FailureType::Warning,
+            )))
         }
     }
 }
 
 impl External for Local {
-    fn new(song:&Song) -> Result<Local, Failure> {
+    fn new(song: &Song) -> Result<Local, Failure> {
         let output_stream = match OutputStreamBuilder::open_default_stream() {
             Err(e) => return Err(Failure::from((e.into(), FailureType::Warning))),
             Ok(output_stream) => output_stream,
@@ -75,7 +102,7 @@ impl External for Local {
         local.load_new(song)?;
         Ok(local)
     }
-    
+
     fn play_new(&mut self, song: &Song) -> Result<(), Failure> {
         self.load_new(song)?;
         self.sink.play();
@@ -116,6 +143,10 @@ impl External for Local {
     fn song_duration(&self) -> Result<Duration, Failure> {
         Ok(self.song_duration)
     }
+    //fn get_song_info(&self, song: &Song) -> Result<SongInfo, Failure> {
+    //  if let LOCAL(local_song) = &song.song_type {
+    //    let local_song_path = &local_song.song_path;
+    //      }
 }
 
 impl Local {
@@ -123,11 +154,14 @@ impl Local {
         if let LOCAL(ref local_song) = song.song_type {
             self.stop()?;
             let decoder = load_decoder(&local_song.song_path);
-            self.song_duration = local_song.get_duration(); 
+            self.song_duration = local_song.get_duration();
             self.sink.append(decoder);
             Ok(())
         } else {
-            Err(Failure::from((anyhow!("Invalid song type for Local external"), FailureType::Warning)))
+            Err(Failure::from((
+                anyhow!("Invalid song type for Local external"),
+                FailureType::Warning,
+            )))
         }
     }
 

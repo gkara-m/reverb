@@ -5,3 +5,6 @@
 /configs/*
 /data/*
 certs/
+
+!sample/
+!sample/default_song.mp3

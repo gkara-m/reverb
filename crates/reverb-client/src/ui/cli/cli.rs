@@ -1,13 +1,17 @@
-use std::sync::mpsc::Sender;
 use anyhow::anyhow;
+use std::sync::mpsc::Sender;
 
+use crate::Command;
 use crate::failure::failure::{Failure, FailureType};
 use crate::ui::cli::cli_ui::run_ui;
-use crate::ui::cli::command_spec::CommandSpec;
 use crate::ui::cli::command_spec::CommandCallType::{Args, NoArgs, NotCallable};
+use crate::ui::cli::command_spec::CommandSpec;
 use crate::ui::ui;
+use crate::{
+    external::external::ExternalType,
+    internal::{playlist::Playlist, song::Song},
+};
 use crate::{Command, MAIN_SENDER};
-use crate::{external::external::ExternalType, internal::{playlist::Playlist, song::Song}};
 
 pub fn run_cli(update_interval: u64) {
     let command_spec = CommandSpec::new()
@@ -26,14 +30,14 @@ pub fn run_cli(update_interval: u64) {
     .add("skip", vec!["skip", "s"], " : Skip the current song", Some(|_| ui::queue_next()), NoArgs, None)
     .add("song", vec!["song"], " : Display the currently playing song", Some(|_| {
         let song = ui::current_song()?;
-        println!("Currently playing: {} - {}", song.info.artist, song.info.title);
+        println!("Currently playing: {} - {}", song.info.artists[0], song.info.title);
         Ok(())
     }), NoArgs, None)
     // queue commands
     .add("queue", vec!["queue", "q"], " : List the current song queue", Some(|_| {
         let songs = ui::queue_get_songs()?;
         for (index, song) in songs.iter().enumerate() {
-            println!("{}: {} - {}", index, song.info.artist, song.info.title);
+            println!("{}: {} - {}", index, song.info.artists[0], song.info.title);
         }
         Ok(())
     }), NoArgs, None)
@@ -51,6 +55,7 @@ pub fn run_cli(update_interval: u64) {
         ui::queue_playlist(playlist)
     }), Args, Some("queue"))
     .add("queue current playlist", vec!["playlist", "p"], " : Add current playlist songs to the queue", Some(|_| ui::queue_current_playlist()), NoArgs, Some("queue"))
+    .add("queue shuffle", vec!["shuffle", "sh", "s"], " : Shuffle the queue", Some(|_| ui::queue_shuffle()), NoArgs, Some("queue"))
     // play sub-commands
     .add("play new", vec!["new", "n"], " <song-type> <song-info> : Play a new song from the given info", Some(|args| {
         let song = Song::new(args)?;
@@ -61,7 +66,7 @@ pub fn run_cli(update_interval: u64) {
         println!("{}:", ui::playlist_get_name()?);
         let songs = ui::playlist_get_songs()?;
         for (index, song) in songs.iter().enumerate() {
-            println!("{}: {} - {}", index, song.info.artist, song.info.title);
+            println!("{}: {} - {}", index, song.info.artists[0], song.info.title);
         }
         Ok(())
     }), NoArgs, None)
@@ -102,7 +107,7 @@ pub fn run_cli(update_interval: u64) {
     .add("playlist get", vec!["get", "g"], " <index> : Get a song by index", Some(|args| {
         let index: usize = args.parse().map_err(|e: std::num::ParseIntError| Failure::from((e.into(), FailureType::Warning)))?;
         let song = ui::playlist_get_song(index)?;
-        println!("{} - {}", song.info.artist, song.info.title);
+        println!("{} - {}", song.info.artists[0], song.info.title);
         Ok(())
     }), Args, Some("playlist"))
     .add("playlist name", vec!["name"], " : Print the current playlist name", Some(|_| {
@@ -127,7 +132,6 @@ pub fn run_cli(update_interval: u64) {
 
     // input thread
     let (input_tx, input_rx) = std::sync::mpsc::channel::<String>();
-    
 
     let renderer = run_ui(&MAIN_SENDER.get().unwrap(), input_tx, update_interval);
 
@@ -137,7 +141,7 @@ pub fn run_cli(update_interval: u64) {
     for input in input_rx {
         match command_spec.call(input.as_str()) {
             Err(err) => print_failure(err),
-            Ok(_) => {},
+            Ok(_) => {}
         }
     }
 

@@ -2,8 +2,11 @@ use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 
-use crate::{external::external::{External, ExternalSongTrait}, failure::failure::Failure, internal::song};
-
+use crate::{
+    external::external::{External, ExternalSongTrait},
+    failure::failure::Failure,
+    internal::song,
+};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PlaceholderExternalSong;
@@ -14,8 +17,11 @@ impl ExternalSongTrait for PlaceholderExternalSong {
     fn info(&self) -> Result<crate::internal::song::SongInfo, Failure> {
         todo!()
     }
-    
-    fn new(_info: &str) -> Result<Self, Failure> where Self: Sized {
+
+    fn new(_info: &str) -> Result<Self, Failure>
+    where
+        Self: Sized,
+    {
         todo!()
     }
 }
@@ -40,15 +46,18 @@ impl External for PlaceholderRun {
     fn shutdown(&self) -> Result<(), Failure> {
         todo!()
     }
-    
-    fn new(_song: &song::Song) -> Result<Self, Failure> where Self: Sized {
+
+    fn new(_song: &song::Song) -> Result<Self, Failure>
+    where
+        Self: Sized,
+    {
         todo!()
     }
-    
+
     fn is_song_playing(&self) -> Result<bool, Failure> {
         todo!()
     }
-    
+
     fn song_duration_gone(&self) -> Result<std::time::Duration, Failure> {
         todo!()
     }
@@ -56,4 +65,8 @@ impl External for PlaceholderRun {
     fn song_duration(&self) -> Result<Duration, Failure> {
         todo!()
     }
+
+    //fn get_song_info(&self, _song: &song::Song) -> Result<song::SongInfo, Failure> {
+    //    todo!()
+    //}
 }
