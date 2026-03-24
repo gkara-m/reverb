@@ -11,7 +11,7 @@ use std::time::Duration;
 use std::vec;
 
 use crate::external::external::{External, ExternalSong::LOCAL, ExternalSongTrait};
-use crate::failure::failure::{Failure, FailureType};
+use reverb_core::failure::failure::{Failure, FailureType};
 use crate::internal::song::{Song, SongInfo};
 
 pub struct Local {

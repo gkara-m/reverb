@@ -3,8 +3,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     external::external::{ExternalSong, ExternalSongTrait, ExternalType},
-    failure::failure::{Failure, FailureType},
 };
+use reverb_core::failure::failure::{Failure, FailureType};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Song {

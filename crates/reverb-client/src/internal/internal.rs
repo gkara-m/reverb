@@ -2,11 +2,11 @@ use crate::{
     Command,
     MAIN_SENDER,
     external::external::{self, External, ExternalRun, ExternalType},
-    failure::failure::{Failure, FailureType},
     internal::{
         internet, playlist::Playlist, queue::Queue, song::{Song, SongInfo}
     },
 };
+use reverb_core::failure::failure::{Failure, FailureType};
 
 use std::sync::mpsc;
 use std::sync::mpsc::Sender;

@@ -19,3 +19,4 @@ quinn-proto = { version = "0.11.0", features = ["ring"] }
 tokio = { version = "1.36.0", features = ["full"] }
 quinn = { version = "0.11.0", features = ["ring"] }
 rand = "0.10.0"
+reverb-core = { path = "../reverb-core" }

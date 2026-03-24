@@ -2,8 +2,8 @@ use std::path::PathBuf;
 use anyhow::anyhow;
 use serde::{Deserialize, Serialize};
 
-use crate::{DATA_FOLDER, external::external::ExternalType, failure::failure::{Failure, FailureType}, internal::song::Song};
-
+use crate::{DATA_FOLDER, external::external::ExternalType, internal::song::Song};
+use reverb_core::failure::failure::{Failure, FailureType};
 
 
 #[derive(Serialize, Deserialize, Debug)]

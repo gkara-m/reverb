@@ -1,8 +1,8 @@
 use std::{path::Path, sync::mpsc::Sender};
 use anyhow::anyhow;
 
-use crate::{CONFIG_FOLDER, CONFIG, Command, DATA_FOLDER, LOCAL_SONG_FOLDER_PATH, config::{config::Config, data::StartupData}, failure::failure::{Failure, FailureType}, internal::{internal::Internal, playlist::Playlist}};
-
+use crate::{CONFIG_FOLDER, CONFIG, Command, DATA_FOLDER, LOCAL_SONG_FOLDER_PATH, config::{config::Config, data::StartupData}, internal::{internal::Internal, playlist::Playlist}};
+use reverb_core::failure::failure::{Failure, FailureType};
 pub fn startup() -> Result<Internal, Failure> {
     println!("Starting up... ");
 

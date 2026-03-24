@@ -1,7 +1,7 @@
 use std::{sync::mpsc::{self, Sender}, time::Duration};
 
-use crate::{Command, MAIN_SENDER, external::external::ExternalType, failure::failure::{Failure, FailureType}, internal::{playlist::Playlist, song::Song}};
-
+use crate::{Command, MAIN_SENDER, external::external::ExternalType, internal::{playlist::Playlist, song::Song}};
+use reverb_core::failure::failure::{Failure, FailureType};
 
 pub(super) fn play() -> Result<(), Failure> {
     MAIN_SENDER.get().unwrap().clone().send(Command::Play)

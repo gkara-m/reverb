@@ -2,7 +2,7 @@ use anyhow::anyhow;
 use std::sync::mpsc::Sender;
 
 use crate::Command;
-use crate::failure::failure::{Failure, FailureType};
+use reverb_core::failure::failure::{Failure, FailureType};
 use crate::ui::cli::cli_ui::run_ui;
 use crate::ui::cli::command_spec::CommandCallType::{Args, NoArgs, NotCallable};
 use crate::ui::cli::command_spec::CommandSpec;

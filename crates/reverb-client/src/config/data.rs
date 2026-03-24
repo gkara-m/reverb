@@ -7,12 +7,12 @@ use crate::{
         external::{ExternalSong, ExternalSongTrait},
         local::LocalSong,
     },
-    failure::failure::{Failure, FailureType},
     internal::{
         queue::Queue,
         song::{Song, SongInfo},
     },
 };
+use reverb_core::failure::failure::{Failure, FailureType};
 
 #[derive(Serialize, Deserialize)]
 pub(super) struct StartupData {

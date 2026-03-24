@@ -3,8 +3,8 @@ use std::{fs, net::SocketAddr, sync::mpsc};
 use anyhow::{Result, anyhow};
 
 
-use crate::{CONFIG, Command, DATA_FOLDER, MAIN_SENDER, config::internet::{self, ServerConfig}, failure::failure::{Failure, FailureType}, internal::internet::communicator};
-
+use crate::{CONFIG, Command, DATA_FOLDER, MAIN_SENDER, config::internet::{self, ServerConfig}, internal::internet::communicator};
+use reverb_core::failure::failure::{Failure, FailureType};
 static VERSION: &str = "0.1.0";
 
 

@@ -1221,6 +1221,7 @@ dependencies = [
  "quinn",
  "quinn-proto",
  "rand 0.10.0",
+ "reverb-core",
  "rodio",
  "rustls",
  "serde",
@@ -1231,6 +1232,9 @@ dependencies = [
 [[package]]
 name = "reverb-core"
 version = "0.1.0"
+dependencies = [
+ "anyhow",
+]
 
 [[package]]
 name = "reverb-server"

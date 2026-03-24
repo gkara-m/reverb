@@ -5,17 +5,17 @@ use internal::song::Song;
 use once_cell::sync::OnceCell;
 use ui::cli::cli;
 
+use reverb_core::failure::failure::{Failure, FailureType};
+
 use crate::{
     config::{config::Config, startup_shutdown::{shutdown, startup}}, 
     external::external::ExternalType, 
-    failure::failure::{Failure, FailureType}, 
     internal::playlist::Playlist, 
     ui::cli::cli::print_failure
 };
 
 mod config;
 mod external;
-mod failure;
 mod internal;
 mod ui;
 

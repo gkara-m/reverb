@@ -4,8 +4,8 @@ use rand::seq::SliceRandom;
 use rand::rng;
 use serde::{Deserialize, Serialize};
 
-use crate::{failure::failure::{Failure, FailureType}, internal::{playlist::Playlist, song::Song}};
-
+use crate::{internal::{playlist::Playlist, song::Song}};
+use reverb_core::failure::failure::{Failure, FailureType};
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Queue {
     pub(super) queued_songs: VecDeque<Song>

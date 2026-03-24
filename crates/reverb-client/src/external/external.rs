@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use crate::Song;
 use crate::external::local::{Local, LocalSong};
 use crate::external::placeholder::{PlaceholderExternalSong, PlaceholderRun};
-use crate::failure::failure::{Failure, FailureType};
+use reverb_core::failure::failure::{Failure, FailureType};
 use crate::internal::song::SongInfo;
 pub trait External {
     fn play_new(&mut self, song: &Song) -> Result<(), Failure>;

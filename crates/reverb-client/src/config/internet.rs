@@ -1,9 +1,9 @@
 use std::path::Path;
 
-use crate::{CONFIG, failure::failure::{Failure, FailureType}};
+use crate::{CONFIG, };
 use anyhow::anyhow;
 use serde::{Deserialize, Serialize};
-
+use reverb_core::failure::failure::{Failure, FailureType};
 
 pub static SERVER_CONFIG_PATH: &str = "server_config.toml";
 

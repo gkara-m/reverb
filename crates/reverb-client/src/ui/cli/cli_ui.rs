@@ -9,10 +9,9 @@ use crossterm::{
     style::Print,
     terminal::{self},
 };
-
+use reverb_core::failure::failure::{Failure, FailureType};
 use crate::{
     Command,
-    failure::failure::{Failure, FailureType},
     internal::song,
     ui::{cli::cli::print_failure, ui},
 };

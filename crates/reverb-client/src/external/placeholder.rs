@@ -4,9 +4,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     external::external::{External, ExternalSongTrait},
-    failure::failure::Failure,
     internal::song,
 };
+use reverb_core::failure::failure::Failure;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PlaceholderExternalSong;

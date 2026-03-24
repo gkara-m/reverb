@@ -7,8 +7,8 @@ use rustls::pki_types::CertificateDer;
 use anyhow::{Result, anyhow};
 
 
-use crate::{CONFIG, Command, MAIN_SENDER, config::internet::ServerConfig, failure::failure::{Failure, FailureType}};
-
+use crate::{CONFIG, Command, MAIN_SENDER, config::internet::ServerConfig, };
+use reverb_core::failure::failure::{Failure, FailureType};
 
 use std::sync::Arc;
 
