@@ -30,11 +30,6 @@ pub fn startup() -> Result<Internal, Failure> {
     // Set DATA_FOLDER
     DATA_FOLDER.set((&CONFIG.get().unwrap().data_folder).clone()).map_err(|e| Failure::from((anyhow!(e), FailureType::Fatal)))?;
 
-    // Set LOCAL_SONG_FOLDER_PATH if provided in config
-    if let Some(local_path) = (&CONFIG.get().unwrap().local_song_folder_path).clone() {
-        LOCAL_SONG_FOLDER_PATH.set(local_path).map_err(|e| Failure::from((anyhow!(e), FailureType::Fatal)))?;
-    }
-
     let data_folder = Path::new(DATA_FOLDER.get().unwrap());
     
     // if exists, use it if not create and use
