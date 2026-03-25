@@ -36,6 +36,7 @@ impl PacketType {
 
 pub enum Commands {
     DefaultCommand(DefaultCommand),
+    Skip(Skip),
 }
 
 impl Commands {
@@ -55,6 +56,11 @@ impl Commands {
                 let mut data = vec![cmd.number()];
                 data.append(&mut cmd.serialize()?);
                 Ok(data)
+            },
+            Commands::Skip(cmd) => {
+                let mut data = vec![cmd.number()];
+                data.append(&mut cmd.serialize()?);
+                Ok(data)
             }
         }
     }
@@ -67,8 +73,8 @@ pub trait Command {
     fn parse(data: Vec<u8>) -> Result<Self, Failure> where Self: Sized;
 }
 
-pub struct DefaultCommand {
-}
+pub struct DefaultCommand {}
+pub struct Skip {}
 
 impl Command for DefaultCommand {
     const NUMBER: u8 = 0;
@@ -79,6 +85,18 @@ impl Command for DefaultCommand {
 
     fn parse(_data: Vec<u8>) -> Result<Self, Failure> {
         Ok(DefaultCommand{})
+    }
+}
+
+impl Command for Skip {
+    const NUMBER: u8 = 1;
+
+    fn serialize(&self) -> Result<Vec<u8>, Failure> {
+        Ok(vec![])
+    }
+
+    fn parse(data: Vec<u8>) -> Result<Self, Failure> {
+        Ok(Skip{})
     }
 }
 
