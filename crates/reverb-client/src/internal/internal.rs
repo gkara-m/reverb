@@ -3,7 +3,7 @@ use crate::{
     MAIN_SENDER,
     external::external::{self, External, ExternalRun, ExternalType},
     internal::{
-        internet, playlist::Playlist, queue::Queue, song::{Song, SongInfo}
+        internet, playlist::Playlist, queue::Queue, song::Song
     },
 };
 use reverb_core::failure::failure::{Failure, FailureType};

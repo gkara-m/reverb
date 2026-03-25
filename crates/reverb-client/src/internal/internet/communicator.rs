@@ -1,4 +1,4 @@
-use std::{fs, net::SocketAddr};
+use std::{fs, net::SocketAddr, sync::Arc};
 
 use quinn::Connection;
 use quinn_proto::crypto::rustls::QuicClientConfig;
@@ -6,12 +6,8 @@ use rustls::pki_types::CertificateDer;
 
 use anyhow::{Result, anyhow};
 
-
 use crate::{CONFIG, Command, MAIN_SENDER, config::internet::ServerConfig, };
 use reverb_core::{failure::failure::{Failure, FailureType}, network::Packet};
-
-use std::sync::Arc;
-
 
 
 pub(super) fn start_communicator_thread(server_config: ServerConfig) {

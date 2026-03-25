@@ -1,13 +1,11 @@
-use std::{fs, net::SocketAddr, sync::mpsc};
-
+use std::sync::mpsc;
 use anyhow::{Result, anyhow};
-use serde::Serialize;
 
-
-use crate::{CONFIG, Command, DATA_FOLDER, MAIN_SENDER, config::internet::{self, ServerConfig}, internal::internet::communicator};
+use crate::{DATA_FOLDER, config::internet::{self, ServerConfig}, internal::internet::communicator};
 use reverb_core::{failure::failure::{Failure, FailureType}, network::{self, *}};
-static VERSION: &str = "0.1.0";
 
+
+static VERSION: &str = "0.1.0";
 
 #[derive(Debug)]
 pub enum ConnectionStatus {

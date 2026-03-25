@@ -1,7 +1,8 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{CONFIG_FOLDER, };
+use crate::CONFIG_FOLDER;
 use reverb_core::failure::failure::{Failure, FailureType};
+
 // Config struct represents the config file
 #[derive(Serialize, Deserialize)]
 pub struct Config {

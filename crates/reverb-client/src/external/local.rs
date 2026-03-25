@@ -1,18 +1,16 @@
 use anyhow::anyhow;
 use audiotags::Tag;
-use lofty::file::AudioFile;
-use lofty::probe::Probe;
+use lofty::{file::AudioFile, probe::Probe};
 use rodio::{Decoder, OutputStream, OutputStreamBuilder, Sink};
 use serde::{Deserialize, Serialize};
-use std::fs::File;
-use std::io::BufReader;
-use std::path::Path;
-use std::time::Duration;
-use std::vec;
+use std::{fs::File, io::BufReader, path::Path, time::Duration, vec};
 
-use crate::external::external::{External, ExternalSong::LOCAL, ExternalSongTrait};
+use crate::{
+    external::external::{External, ExternalSong::LOCAL, ExternalSongTrait}, 
+    internal::song::{Song, SongInfo}
+};
+
 use reverb_core::failure::failure::{Failure, FailureType};
-use crate::internal::song::{Song, SongInfo};
 
 pub struct Local {
     _output_stream: OutputStream,

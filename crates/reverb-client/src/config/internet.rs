@@ -1,6 +1,4 @@
-use std::path::Path;
-
-use crate::{CONFIG, };
+use crate::CONFIG;
 use anyhow::anyhow;
 use serde::{Deserialize, Serialize};
 use reverb_core::failure::failure::{Failure, FailureType};
