@@ -18,7 +18,7 @@ pub enum PacketType {
 }
 
 impl PacketType {
-    fn from_u8(value: u8) -> Result<Self, Failure> {
+    pub fn from_u8(value: u8) -> Result<Self, Failure> {
         match value {
             0 => Ok(PacketType::Action),
             1 => Ok(PacketType::Query),
@@ -26,7 +26,7 @@ impl PacketType {
         }
     }
 
-    fn to_u8(&self) -> u8 {
+    pub fn to_u8(&self) -> u8 {
         match self {
             PacketType::Action => 0,
             PacketType::Query => 1,
@@ -34,12 +34,12 @@ impl PacketType {
     }
 }
 
-enum Commands {
+pub enum Commands {
     DefaultCommand(DefaultCommand),
 }
 
 impl Commands {
-    fn parse(data: Vec<u8>) -> Result<Self, Failure> {
+    pub fn parse(data: Vec<u8>) -> Result<Self, Failure> {
         match data.get(0) {
             Some(num) => match num {
                 &DefaultCommand::NUMBER => Ok(Commands::DefaultCommand(DefaultCommand::parse(data[1..].to_vec())?)),
@@ -49,7 +49,7 @@ impl Commands {
         }
     }
 
-    fn serialize(&self) -> Result<Vec<u8>, Failure> {
+    pub fn serialize(&self) -> Result<Vec<u8>, Failure> {
         match self {
             Commands::DefaultCommand(cmd) => {
                 let mut data = vec![cmd.number()];
@@ -67,7 +67,7 @@ pub trait Command {
     fn parse(data: Vec<u8>) -> Result<Self, Failure> where Self: Sized;
 }
 
-struct DefaultCommand {
+pub struct DefaultCommand {
 }
 
 impl Command for DefaultCommand {
@@ -82,7 +82,7 @@ impl Command for DefaultCommand {
     }
 }
 
-struct Packet {
+pub struct Packet {
     version: [u8; 3],
     username: String,
     group: String,

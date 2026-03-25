@@ -1,16 +1,17 @@
 use std::{fs, net::SocketAddr, sync::mpsc};
 
 use anyhow::{Result, anyhow};
+use serde::Serialize;
 
 
 use crate::{CONFIG, Command, DATA_FOLDER, MAIN_SENDER, config::internet::{self, ServerConfig}, internal::internet::communicator};
-use reverb_core::failure::failure::{Failure, FailureType};
+use reverb_core::{failure::failure::{Failure, FailureType}, network::{self, *}};
 static VERSION: &str = "0.1.0";
 
 
 #[derive(Debug)]
 pub enum ConnectionStatus {
-    Connected(mpsc::Sender<String>),
+    Connected(mpsc::Sender<Packet>),
     Connecting,
     NotConnected,
 }
@@ -51,8 +52,13 @@ impl InternetClient {
 
     pub fn send_message(&mut self, message: String) -> Result<(), Failure> {
         println!("Attempting to send message to server: {}", message);
+        let username = "PLACEHOLDER USERNAME".to_string();
+        let group = "GROUP".to_string();
+        let packet_type = PacketType::from_u8(1)?;
+        let payload = Commands::DefaultCommand(DefaultCommand {});
+        let packet = Packet::new(&username, &group, packet_type, payload)?;
         match &mut self.connection_status {
-            ConnectionStatus::Connected(sender) => {sender.clone().send(message).map_err(|e| Failure::from((e.into(), FailureType::Warning)))},
+            ConnectionStatus::Connected(sender) => {sender.clone().send(packet).map_err(|e| Failure::from((e.into(), FailureType::Warning)))},
             ConnectionStatus::Connecting => Err(Failure::from((anyhow!("Currently connecting to server, cannot send message"), FailureType::Warning))),
             ConnectionStatus::NotConnected => Err(Failure::from((anyhow!("Not connected to server, cannot send message"), FailureType::Warning))),
         }

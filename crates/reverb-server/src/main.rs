@@ -2,6 +2,7 @@ use std::{fs, io, sync::Arc};
 use anyhow::{Context, Result, bail};
 use quinn_proto::crypto::rustls::QuicServerConfig;
 use rustls::pki_types::{CertificateDer, PrivateKeyDer, PrivatePkcs8KeyDer};
+use reverb_core::{network::*, failure::failure::{Failure, FailureType}};
 
 
 // The address and port the server will listen on
@@ -85,7 +86,8 @@ async fn run() -> Result<()> {
         let (mut send, mut recv) = conn.accept_bi().await?;
         // Read up to 1024 bytes from the client
         let data = recv.read_to_end(1024).await?;
-        println!("Received: {}", String::from_utf8_lossy(&data));
+        let packet = Packet::parse(&data).unwrap(); // TODO
+        println!("Received: ");
 
         // Prepare and send a response back to the client
         let response = format!("Server received {} bytes", data.len());

@@ -8,7 +8,7 @@ use anyhow::{Result, anyhow};
 
 
 use crate::{CONFIG, Command, MAIN_SENDER, config::internet::ServerConfig, };
-use reverb_core::failure::failure::{Failure, FailureType};
+use reverb_core::{failure::failure::{Failure, FailureType}, network::Packet};
 
 use std::sync::Arc;
 
@@ -106,21 +106,23 @@ async fn connect_to(server_config: ServerConfig) -> Result<Connection, Failure> 
     
 
 
-async fn query(conn: Connection, message: String) -> Result<(), Failure> {
+async fn query(conn: Connection, packet: Packet) -> Result<(), Failure> {
 
-    println!("Sending query to server: {}", message);
+    println!("Sending query to server: ");
 
     // Open a bidirectional stream to the server
     let (mut send, mut recv) = conn.open_bi().await
     .map_err(|e| Failure::from((e.into(), "connection is unusable", FailureType::Warning)))?;
 
     // Send the message to the server
-    send.write_all(message.as_bytes()).await
+    let message = &packet.serialize()?;
+    send.write_all(message).await
     .map_err(|e| Failure::from((e.into(), "sending data over internet", FailureType::Warning)))?;
+
     // Indicate that no more data will be sent on this stream
     send.finish()
     .map_err(|e| Failure::from((e.into(), "closing the sending data over internet", FailureType::Warning)))?;
-    println!("Sent: {}", message);
+    println!("Sent: ");
 
     // Wait for the server's response and print it
     match recv.read_to_end(1024).await {
@@ -135,23 +137,24 @@ async fn query(conn: Connection, message: String) -> Result<(), Failure> {
     Ok(())
 }
 
-async fn notify(conn: Connection, message: String) -> Result<(), Failure> {
+async fn notify(conn: Connection, packet: Packet) -> Result<(), Failure> {
     
-    println!("Sending notification to server: {}", message);
+    println!("Sending notification to server: ");
 
     // Open a unidirectional stream to server 
     let mut send = conn.open_uni().await
     .map_err(|e| Failure::from((e.into(), "connection is unusable", FailureType::Warning)))?;
 
     // Send the message to the server 
-    send.write_all(message.as_bytes()).await
+    let message = &packet.serialize()?;
+    send.write_all(message).await
     .map_err(|e| Failure::from((e.into(), "sending data over internet", FailureType::Warning)))?;
 
     // Indicate that no more data will be sent on this stream 
     send.finish()
     .map_err(|e| Failure::from((e.into(), "closing the sending data over internet", FailureType::Warning)))?;
     
-    println!("Sent: {message}");
+    println!("Sent: ");
 
     Ok(())
 }
