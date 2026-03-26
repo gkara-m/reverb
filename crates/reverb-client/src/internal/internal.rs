@@ -184,7 +184,7 @@ impl Internal {
             Ok(song) => song,
             Err(e) => match e.failure_type() {
                 FailureType::Warning => return Ok(()),
-                FailureType::Fetal => return Err(e),
+                FailureType::Fatal => return Err(e),
             },
         };
         self.play_new(next_song)?;
@@ -211,7 +211,7 @@ impl Internal {
             let time_left = self.song_duration()? - self.song_duration_gone()?;
             if time_left.is_zero() {
                 let sender = MAIN_SENDER.get().unwrap().clone();
-                sender.send(Command::QueueNext).map_err(|e| Failure::from((e.into(), FailureType::Fetal)))?;
+                sender.send(Command::QueueNext).map_err(|e| Failure::from((e.into(), FailureType::Fatal)))?;
                 Ok(())
             } else {
                 let sender = MAIN_SENDER.get().unwrap().clone();

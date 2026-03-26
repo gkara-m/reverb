@@ -44,9 +44,9 @@ impl StartupData {
     pub(super) fn save(&self) -> Result<(), Failure> {
         match std::fs::create_dir_all(DATA_FOLDER.get().ok_or(Failure::from((
             anyhow!("DATA_FOLDER not set"),
-            FailureType::Fetal,
+            FailureType::Fatal,
         )))?) {
-            Err(e) => return Err(Failure::from((e.into(), FailureType::Fetal))),
+            Err(e) => return Err(Failure::from((e.into(), FailureType::Fatal))),
             Ok(_) => {}
         }
         match std::fs::write(
@@ -54,12 +54,12 @@ impl StartupData {
                 "{}startup.toml",
                 DATA_FOLDER.get().ok_or(Failure::from((
                     anyhow!("DATA_FOLDER not set"),
-                    FailureType::Fetal
+                    FailureType::Fatal
                 )))?
             ),
-            toml::to_string(self).map_err(|e| Failure::from((e.into(), FailureType::Fetal)))?,
+            toml::to_string(self).map_err(|e| Failure::from((e.into(), FailureType::Fatal)))?,
         ) {
-            Err(e) => Err(Failure::from((e.into(), FailureType::Fetal))),
+            Err(e) => Err(Failure::from((e.into(), FailureType::Fatal))),
             Ok(_) => Ok(()),
         }
     }

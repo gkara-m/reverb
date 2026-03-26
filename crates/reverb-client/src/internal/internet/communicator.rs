@@ -42,7 +42,7 @@ async fn connect_to(server_config: ServerConfig) -> Result<Connection, Failure> 
     let data_folder = match CONFIG.get() {
         Some(cfg) => cfg.data_folder.clone(),
         None => {
-            return Err(Failure::from((anyhow!("Config folder not found"), FailureType::Fetal)));
+            return Err(Failure::from((anyhow!("Config folder not found"), FailureType::Fatal)));
         }
     };
     let path = std::path::Path::new(&data_folder); // TODO add command to add it to the config

@@ -137,7 +137,7 @@ fn main() {
         } {
             Ok(_) => {},
             Err(failure) => match failure.failure_type() {
-                FailureType::Fetal => {print_failure(failure); break;},
+                FailureType::Fatal => {print_failure(failure); break;},
                 FailureType::Warning => print_failure(failure),
             },
         }
@@ -150,8 +150,8 @@ fn main() {
                 break;
             }
             Err(e) => match e.failure_type() {
-                FailureType::Fetal => {
-                    eprintln!("Fetal Shutdown error: {} \n exiting immediately see logs for details",
+                FailureType::Fatal => {
+                    eprintln!("Fatal Shutdown error: {} \n exiting immediately see logs for details",
                         e
                     );
                     break;

@@ -29,9 +29,9 @@ pub(super) fn run_ui(
             match line {
                 Ok(line) => {
                     if let Err(e) = input_tx.send(line) {
-                        print_failure(Failure::from((e.into(), FailureType::Fetal)));
+                        print_failure(Failure::from((e.into(), FailureType::Fatal)));
                         if let Err(e) = main_transmit.send(Command::Shutdown) {
-                            print_failure(Failure::from((e.into(), FailureType::Fetal)));
+                            print_failure(Failure::from((e.into(), FailureType::Fatal)));
                             println!(
                                 "Automatic shutdown failed, please manually shutdown the application"
                             );
@@ -40,9 +40,9 @@ pub(super) fn run_ui(
                     }
                 }
                 Err(e) => {
-                    print_failure(Failure::from((e.into(), FailureType::Fetal)));
+                    print_failure(Failure::from((e.into(), FailureType::Fatal)));
                     if let Err(e) = main_transmit.send(Command::Shutdown) {
-                        print_failure(Failure::from((e.into(), FailureType::Fetal)));
+                        print_failure(Failure::from((e.into(), FailureType::Fatal)));
                         println!(
                             "Automatic shutdown failed, please manually shutdown the application"
                         );

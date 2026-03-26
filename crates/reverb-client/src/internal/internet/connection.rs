@@ -38,7 +38,7 @@ impl InternetClient {
             ConnectionStatus::NotConnected => {
                 self.connection_status = ConnectionStatus::Connecting;
 
-                let data_folder = DATA_FOLDER.get().ok_or(Failure::from((anyhow!("Data folder not found"), FailureType::Fetal)))?.clone();
+                let data_folder = DATA_FOLDER.get().ok_or(Failure::from((anyhow!("Data folder not found"), FailureType::Fatal)))?.clone();
                 let server_config = toml::from_str::<ServerConfig>(&std::fs::read_to_string(format!("{}{}", data_folder, internet::SERVER_CONFIG_PATH))
                     .map_err(|e| Failure::from((e.into(), "Failed to read server config, to add a server please run the server setup command", FailureType::Warning)))?)
                     .map_err(|e| Failure::from((e.into(), FailureType::Warning)))?;
