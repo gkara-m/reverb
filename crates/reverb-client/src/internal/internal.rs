@@ -86,59 +86,62 @@ impl Internal {
         Ok(())
     }
 
-    pub fn playlist_add(&mut self, playlist: &mut Playlist, song: Song) {
+    pub fn playlist_add(&mut self, playlist: &str, song: Song) -> Result<(), Failure> {
+        let mut playlist = Playlist::load(playlist)?;
         playlist.add(&song);
+        Ok(())
     }
 
-    pub fn playlist_remove(&mut self, playlist: &mut Playlist, index: usize) -> Result<(), Failure> {
+    pub fn playlist_remove(&mut self, playlist: &str, index: usize) -> Result<(), Failure> {
+        let mut playlist = Playlist::load(playlist)?;
         playlist.remove(index)
     }
 
-    // pub fn playlist_move_song(&mut self, from: usize, to: usize) -> Result<(), Failure> {
-    //     self.current_playlist.move_song(from, to)?;
-    //     self.playlist_save()
-    // }
+    pub fn playlist_move_song(&mut self, playlist: &str, from: usize, to: usize) -> Result<(), Failure> {
+        let mut playlist = Playlist::load(playlist)?;
+        playlist.move_song(from, to)?;
+        playlist.save()
+    }
 
-    // pub fn playlist_get_songs(&self) -> Vec<Song> {
-    //     self.current_playlist.get_songs()
-    // }
+    pub fn playlist_get_songs(&self, playlist: &str) -> Result<Vec<Song>, Failure> {
+        let playlist = Playlist::load(playlist)?;
+        Ok(playlist.get_songs())
+    }
 
-    // pub fn playlist_get_name(&self) -> String {
-    //     self.current_playlist.get_name()
-    // }
+    pub fn playlist_set_name(&mut self, playlist: &str, name: &str) -> Result<(), Failure> {
+        let mut playlist = Playlist::load(playlist)?;
+        playlist.set_name(name)?;
+        playlist.save()
+    }
 
-    // pub fn playlist_set_name(&mut self, name: &str) -> Result<(), Failure> {
-    //     self.current_playlist.set_name(name)?;
-    //     self.playlist_save()
-    // }
+    pub fn playlist_get_song(&self, playlist: &str, index: usize) -> Result<Song, Failure> {
+        let playlist = Playlist::load(playlist)?;
+        playlist.get_song(index)
+    }
 
-    // pub fn playlist_get_song(&self, index: usize) -> Result<Song, Failure> {
-    //     self.current_playlist.get_song(index)
-    // }
+    pub fn playlist_copy_to(&mut self, playlist: &str, name: &str) -> Result<(), Failure> {
+        let playlist = Playlist::load(playlist)?;
+        let mut new_playlist = Playlist::new(name, playlist.get_type())?;
+        for song in playlist.iter() {
+            new_playlist.add(&song);
+        }
+        new_playlist.save()
+    }
 
-    // pub fn playlist_copy_to(&mut self, name: &str) -> Result<(), Failure> {
-    //     let mut new_playlist = Playlist::new(name, self.current_playlist.get_type())?;
-    //     for song in self.current_playlist.iter() {
-    //         new_playlist.add(&song);
-    //     }
-    //     new_playlist.save()?;
-    //     self.playlist_load(name)?;
-    //     Ok(())
-    // }
+    pub fn playlist_add_playlist(&mut self, from: &str, to: &str) -> Result<(), Failure> {
+        let playlist_from = Playlist::load(from)?;
+        let mut playlist_to = Playlist::load(to)?;
+        for song in playlist_from.iter() {
+            playlist_to.add(&song);
+        }
+        playlist_to.save()
+    }
 
-    // pub fn playlist_add_playlist(&mut self, playlist_name_from: &str) -> Result<(), Failure> {
-    //     let playlist_from = Playlist::load(playlist_name_from)?;
-    //     for song in playlist_from.iter() {
-    //         self.current_playlist.add(&song);
-    //     }
-    //     self.playlist_save()?;
-    //     Ok(())
-    // }
-
-    // pub fn playlist_clear(&mut self) -> Result<(), Failure> {
-    //     self.current_playlist.clear();
-    //     self.playlist_save()
-    // }
+    pub fn playlist_clear(&mut self, playlist: &str) -> Result<(), Failure> {
+        let mut playlist = Playlist::load(playlist)?;
+        playlist.clear();
+        playlist.save()
+    }
 }
 
 impl Internal {
@@ -171,8 +174,10 @@ impl Internal {
         Ok(())
     }
 
-    pub fn queue_playlist(&mut self, playlist: &Playlist) {
-        self.queue.load_playlist(playlist);
+    pub fn queue_playlist(&mut self, playlist: &str) -> Result<(), Failure> {
+        let playlist = Playlist::load(playlist)?;
+        self.queue.load_playlist(&playlist);
+        Ok(())
     }
 
     pub fn queue_clear(&mut self) {

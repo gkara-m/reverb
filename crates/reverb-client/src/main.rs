@@ -70,37 +70,37 @@ fn main() {
             },
             Command::PlayNew(song) => internal.play_new(song),
             Command::CurrentSong(sender) => match internal.current_song() {
-                Ok(song) => sender
-                    .send(song)
+                Ok(song) => sender.send(song)
                     .map_err(|e| Failure::from((e.into(), FailureType::Warning))),
                 Err(e) => Err(e),
             },
-            Command::PlaylistLoad(name) => internal.playlist_load(&name),
             Command::PlaylistNew {
                 name,
                 external_type,
             } => internal.playlist_new(&name, external_type),
-            Command::PlaylistAdd(song) => internal.playlist_add(song),
-            Command::PlaylistRemove(index) => internal.playlist_remove(index),
-            Command::PlaylistMoveSong { from, to } => internal.playlist_move_song(from, to),
-            Command::PlaylistGetSongs(sender) => sender
-                .send(internal.playlist_get_songs())
-                .map_err(|e| Failure::from((e.into(), FailureType::Warning))),
-            Command::PlaylistGetName(sender) => sender
-                .send(internal.playlist_get_name())
-                .map_err(|e| Failure::from((e.into(), FailureType::Warning))),
-            Command::PlaylistSetName(name) => internal.playlist_set_name(name.as_str()),
-            Command::PlaylistGetSong { song, index } => match internal.playlist_get_song(index) {
-                Ok(s) => song
-                    .send(s)
+            Command::PlaylistAdd(playlist, song) => internal.playlist_add(&playlist, song),
+            Command::PlaylistRemove(playlist, index) => internal.playlist_remove(&playlist, index),
+            Command::PlaylistMoveSong {playlist, from, to } => internal.playlist_move_song(&playlist, from, to),
+            Command::PlaylistGetSongs(playlist, sender) => {
+                match internal.playlist_get_songs(&playlist) {
+                    Ok(songs) => sender
+                        .send(songs)
+                        .map_err(|e| Failure::from((e.into(), FailureType::Warning))),
+                    Err(e) => Err(e),
+                }
+            },
+            Command::PlaylistSetName(playlist, name) => internal.playlist_set_name(&playlist, &name),
+            Command::PlaylistGetSong {playlist, song, index } => match internal.playlist_get_song(&playlist, index) {
+                Ok(s) => 
+                    song.send(s)
                     .map_err(|e| Failure::from((e.into(), FailureType::Warning))),
                 Err(e) => Err(e),
             },
-            Command::PlaylistCopyTo(name) => internal.playlist_copy_to(name.as_str()),
-            Command::PlaylistAddPlaylist(playlist_name) => {
-                internal.playlist_add_playlist(playlist_name.as_str())
+            Command::PlaylistCopyTo(from, to) => internal.playlist_copy_to(&from, &to),
+            Command::PlaylistAddPlaylist(from, to) => {
+                internal.playlist_add_playlist(&from, &to)
             }
-            Command::PlaylistClear => internal.playlist_clear(),
+            Command::PlaylistClear(playlist) => internal.playlist_clear(&playlist),
             Command::QueueShuffle => {
                 internal.queue_shuffle();
                 Ok(())
@@ -113,10 +113,6 @@ fn main() {
             Command::QueueNext => internal.queue_next(),
             Command::QueuePlaylist(playlist) => {
                 internal.queue_playlist(&playlist);
-                Ok(())
-            }
-            Command::QueueCurrentPlaylist => {
-                internal.queue_current_playlist();
                 Ok(())
             }
             Command::QueueGetSongs(sender) => sender
@@ -178,33 +174,32 @@ pub enum Command {
     IsSongPlaying(mpsc::Sender<bool>),
     PlayNew(Song),
     CurrentSong(mpsc::Sender<Song>),
-    PlaylistLoad(String),
     PlaylistNew {
         name: String,
         external_type: Option<ExternalType>,
     },
-    PlaylistAdd(Song),
-    PlaylistRemove(usize),
+    PlaylistAdd(String, Song),
+    PlaylistRemove(String, usize),
     PlaylistMoveSong {
+        playlist: String,
         from: usize,
         to: usize,
     },
-    PlaylistGetSongs(mpsc::Sender<Vec<Song>>),
-    PlaylistGetName(mpsc::Sender<String>),
-    PlaylistSetName(String),
+    PlaylistGetSongs(String, mpsc::Sender<Vec<Song>>),
+    PlaylistSetName(String, String),
     PlaylistGetSong {
+        playlist: String,
         song: mpsc::Sender<Song>,
         index: usize,
     },
-    PlaylistCopyTo(String),
-    PlaylistAddPlaylist(String),
-    PlaylistClear,
+    PlaylistCopyTo(String, String),
+    PlaylistAddPlaylist(String, String),
+    PlaylistClear(String),
     QueueShuffle,
     QueueAdd(Song),
     QueueRemove(usize),
     QueueNext,
-    QueuePlaylist(Playlist),
-    QueueCurrentPlaylist,
+    QueuePlaylist(String),
     QueueGetSongs(mpsc::Sender<Vec<Song>>),
     QueueClear,
     Shutdown,
