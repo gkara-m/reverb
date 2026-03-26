@@ -2,7 +2,7 @@ use std::sync::mpsc;
 use anyhow::{Result, anyhow};
 
 use crate::{DATA_FOLDER, config::internet::{self, ServerConfig}, internal::internet::communicator};
-use reverb_core::{failure::failure::{Failure, FailureType}, network::{self, *}};
+use reverb_core::{failure::failure::{Failure, FailureType}, network::*};
 
 
 static VERSION: &str = "0.1.0";
@@ -16,6 +16,7 @@ pub enum ConnectionStatus {
 
 pub struct InternetClient {
     connection_status: ConnectionStatus,
+    group: Option<String>
 }
 
 impl InternetClient {
@@ -23,16 +24,17 @@ impl InternetClient {
         let _ = rustls::crypto::ring::default_provider().install_default();
         InternetClient { 
             connection_status: ConnectionStatus::NotConnected,
+            group: None
         }
     }
 
     pub fn connect(&mut self) -> Result<(), Failure> {
         match self.connection_status {
             ConnectionStatus::Connected(_) => {
-                return Err(Failure::from((anyhow!("Already connected to server"), FailureType::Warning)));
+                Err(Failure::from((anyhow!("Already connected to server"), FailureType::Warning)))
             },
             ConnectionStatus::Connecting => {
-                return Err(Failure::from((anyhow!("Already connecting to server"), FailureType::Warning)));
+                Err(Failure::from((anyhow!("Already connecting to server"), FailureType::Warning)))
             },
             ConnectionStatus::NotConnected => {
                 self.connection_status = ConnectionStatus::Connecting;
@@ -48,13 +50,8 @@ impl InternetClient {
         }
     }
 
-    pub fn send_message(&mut self, message: String) -> Result<(), Failure> {
-        println!("Attempting to send message to server: {}", message);
-        let username = "PLACEHOLDER USERNAME".to_string();
-        let group = "GROUP".to_string();
-        let packet_type = PacketType::from_u8(1)?;
-        let payload = Commands::DefaultCommand(DefaultCommand {});
-        let packet = Packet::new(&username, &group, packet_type, payload)?;
+    pub fn send_message(&mut self, packet: Packet) -> Result<(), Failure> {
+        println!("Attempting to send message to server: ");
         match &mut self.connection_status {
             ConnectionStatus::Connected(sender) => {sender.clone().send(packet).map_err(|e| Failure::from((e.into(), FailureType::Warning)))},
             ConnectionStatus::Connecting => Err(Failure::from((anyhow!("Currently connecting to server, cannot send message"), FailureType::Warning))),

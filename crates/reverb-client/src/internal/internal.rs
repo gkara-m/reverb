@@ -1,12 +1,9 @@
 use crate::{
-    Command,
-    MAIN_SENDER,
-    external::external::{self, External, ExternalRun, ExternalType},
-    internal::{
+    CONFIG, Command, MAIN_SENDER, external::external::{self, External, ExternalRun, ExternalType}, internal::{
         internet, playlist::Playlist, queue::Queue, song::Song
-    },
+    }
 };
-use reverb_core::failure::failure::{Failure, FailureType};
+use reverb_core::{failure::failure::{Failure, FailureType}, network::{self, Packet, PacketType, Commands}};
 
 use std::sync::mpsc;
 use std::sync::mpsc::Sender;
@@ -279,10 +276,18 @@ impl Internal {
     }
 
     pub fn send_query(&mut self, message: String) -> Result<(), Failure> {
-        println!("Attempting to send query to server b: {}", message);
+        println!("Attempting to notify server b: {message}");
         if let Some(sc) = self.server_connection.as_mut() {
-            println!("Attempting to send query to server a: {}", message);
-            sc.send_message(message)
+            println!("Attempting to notify server a: {message}");
+            let config = if let Some(config) = CONFIG.get() {config} else {
+                return Err(Failure::from((anyhow!("Failed to get config"), FailureType::Warning)));
+            };
+            let username = &config.username;
+            let packet_type = PacketType::Query;
+            let group= "PLACEHOLDER"; // TODO
+            let payload = Commands::new_from_str(&message)?;
+            let packet = Packet::new(username, group, packet_type, payload)?;
+            sc.send_message(packet)
         } else {
             Err(Failure::from((anyhow!("Not connected to server"), FailureType::Warning)))
         }
@@ -292,7 +297,15 @@ impl Internal {
         println!("Attempting to notify server b: {message}");
         if let Some(sc) = self.server_connection.as_mut() {
             println!("Attempting to notify server a: {message}");
-            sc.send_message(message)
+            let config = if let Some(config) = CONFIG.get() {config} else {
+                return Err(Failure::from((anyhow!("Failed to get config"), FailureType::Warning)));
+            };
+            let username = &config.username;
+            let packet_type = PacketType::Action;
+            let group= "PLACEHOLDER"; // TODO
+            let payload = Commands::new_from_str(&message)?;
+            let packet = Packet::new(username, group, packet_type, payload)?;
+            sc.send_message(packet)
         } else {
             Err(Failure::from((anyhow!("Not connected to server"), FailureType::Warning)))
         }

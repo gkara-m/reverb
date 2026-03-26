@@ -26,7 +26,6 @@ pub(super) fn start_communicator_thread(server_config: ServerConfig) {
             Err(e) => {
                 MAIN_SENDER.get().unwrap().clone().send(Command::Failure(e)).unwrap_or_else(|e| eprintln!("Failed to send failure command: {}", e));
                 MAIN_SENDER.get().unwrap().clone().send(Command::ServerUpdateStatus(crate::internal::internet::connection::ConnectionStatus::NotConnected)).unwrap_or_else(|e| eprintln!("Failed to send server update status command: {}", e));
-                return;
             }
         };
     });

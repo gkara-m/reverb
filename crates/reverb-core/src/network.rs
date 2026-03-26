@@ -78,6 +78,13 @@ impl Commands {
             }
         }
     }
+
+    pub fn new_from_str(command: &str) -> Result<Self, Failure>{
+        match command {
+            "scan" => Ok(Commands::GetOnlineUsers(GetOnlineUsers {})),
+            _ => Err(Failure::from((anyhow!("Invalid Command"), FailureType::Warning)))
+        }
+    }
 }
 
 pub trait Command {
