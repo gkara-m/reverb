@@ -22,18 +22,22 @@ pub(super) struct StartupData {
 
 impl StartupData {
     pub(super) fn new_default() -> Result<StartupData, Failure> {
+        println!("Attempting to initialize Startup Song");
         let song = Song {
-            song_type: ExternalSong::LOCAL(LocalSong::new("sample/default_song.mp3")?),
+            song_type: ExternalSong::LOCAL(LocalSong::new("default_song.mp3")?),
             info: SongInfo {
                 title: "Default Song".to_string(),
                 artists: vec!["Unknown Artist".to_string()],
             },
         };
+        println!("Successfully initialized Startup Song");
         let startup_data = StartupData {
             queue: Queue::new(song),
             last_shutdown_clean: true,
         };
+        println!("Successfully initialized StartupData");
         startup_data.save()?;
+        println!("Successfully saved StartupData");
         Ok(startup_data)
     }
 
