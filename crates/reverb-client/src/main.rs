@@ -85,8 +85,8 @@ fn main() {
             Command::PlaylistMoveSong {playlist, from, to } => internal.playlist_move_song(&playlist, from, to),
             Command::PlaylistGetSongs(playlist, sender) => {
                 match internal.playlist_get_songs(&playlist) {
-                    Ok(songs) => sender
-                        .send(songs)
+                    Ok(songs) => 
+                        sender.send(songs)
                         .map_err(|e| Failure::from((e.into(), FailureType::Warning))),
                     Err(e) => Err(e),
                 }

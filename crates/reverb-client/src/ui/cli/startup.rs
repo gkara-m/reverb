@@ -43,7 +43,13 @@ impl Startup {
                 last_played_playlist: "default playlist".into(),
             }
         };
-        Playlist::new(&startup.last_played_playlist, None)?;
+        match Playlist::load(&startup.last_played_playlist) {
+            Ok(_) => {},
+            Err(e) => {
+                println!("Failed to load last played playlist '{}', error: {}. Attempting to continue with default playlist", startup.last_played_playlist, e);
+                Playlist::new(&startup.last_played_playlist, None)?;
+            }
+        }
         startup.save()?;
         Ok(startup)
     }

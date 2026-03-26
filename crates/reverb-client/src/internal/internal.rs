@@ -82,19 +82,22 @@ impl Internal {
 
 impl Internal {
     pub fn playlist_new(&mut self, name: &str, external_type: Option<ExternalType>) -> Result<(), Failure> {
-        let _ = Playlist::new(name, external_type)?;
+        let playlist = Playlist::new(name, external_type)?;
+        playlist.save()?;
         Ok(())
     }
 
     pub fn playlist_add(&mut self, playlist: &str, song: Song) -> Result<(), Failure> {
         let mut playlist = Playlist::load(playlist)?;
         playlist.add(&song);
+        playlist.save()?;
         Ok(())
     }
 
     pub fn playlist_remove(&mut self, playlist: &str, index: usize) -> Result<(), Failure> {
         let mut playlist = Playlist::load(playlist)?;
-        playlist.remove(index)
+        playlist.remove(index)?;
+        playlist.save()
     }
 
     pub fn playlist_move_song(&mut self, playlist: &str, from: usize, to: usize) -> Result<(), Failure> {
