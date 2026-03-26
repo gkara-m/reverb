@@ -29,17 +29,17 @@ pub(super) fn queue_get_songs() -> Result<Vec<Song>, Failure> {
     .map_err(|e| Failure::from((e.into(), FailureType::Fetal)))
 }
 
-pub(super) fn playlist_get_name() -> Result<String, Failure> {
-    let (tx, rx) = mpsc::channel();
-    MAIN_SENDER.get().unwrap().clone().send(Command::PlaylistGetName(tx))
-    .map_err(|e| Failure::from((e.into(), FailureType::Fetal)))?;
-    rx.recv()
-    .map_err(|e| Failure::from((e.into(), FailureType::Fetal)))
-}
+// pub(super) fn playlist_get_name() -> Result<String, Failure> {
+//     let (tx, rx) = mpsc::channel();
+//     MAIN_SENDER.get().unwrap().clone().send(Command::PlaylistGetName(tx))
+//     .map_err(|e| Failure::from((e.into(), FailureType::Fetal)))?;
+//     rx.recv()
+//     .map_err(|e| Failure::from((e.into(), FailureType::Fetal)))
+// }
 
-pub(super) fn playlist_get_songs() -> Result<Vec<Song>, Failure> {
+pub(super) fn playlist_get_songs(playlist: &str) -> Result<Vec<Song>, Failure> {
     let (tx, rx) = mpsc::channel();
-    MAIN_SENDER.get().unwrap().clone().send(Command::PlaylistGetSongs(tx))
+    MAIN_SENDER.get().unwrap().clone().send(Command::PlaylistGetSongs { playlist, tx })
     .map_err(|e| Failure::from((e.into(), FailureType::Fetal)))?;
     rx.recv()
     .map_err(|e| Failure::from((e.into(), FailureType::Fetal)))
@@ -73,33 +73,33 @@ pub(super) fn queue_remove(song_index: usize) -> Result<(), Failure> {
     .map_err(|e| Failure::from((e.into(), FailureType::Fetal)))
 }
 
-pub(super) fn queue_playlist(playlist: Playlist) -> Result<(), Failure> {
+pub(super) fn queue_playlist(playlist: &str) -> Result<(), Failure> {
     MAIN_SENDER.get().unwrap().clone().send(Command::QueuePlaylist(playlist))
     .map_err(|e| Failure::from((e.into(), FailureType::Fetal)))
 }
 
-pub(super) fn queue_current_playlist() -> Result<(), Failure> {
-    MAIN_SENDER.get().unwrap().clone().send(Command::QueueCurrentPlaylist)
+// pub(super) fn queue_current_playlist() -> Result<(), Failure> {
+//     MAIN_SENDER.get().unwrap().clone().send(Command::QueueCurrentPlaylist)
+//     .map_err(|e| Failure::from((e.into(), FailureType::Fetal)))
+// }
+
+pub(super) fn playlist_add(playlist: &str, song: Song) -> Result<(), Failure> {
+    MAIN_SENDER.get().unwrap().clone().send(Command::PlaylistAdd { playlist, song })
     .map_err(|e| Failure::from((e.into(), FailureType::Fetal)))
 }
 
-pub(super) fn playlist_add(song: Song) -> Result<(), Failure> {
-    MAIN_SENDER.get().unwrap().clone().send(Command::PlaylistAdd(song))
+pub(super) fn playlist_remove(playlist: &str, index: usize) -> Result<(), Failure> {
+    MAIN_SENDER.get().unwrap().clone().send(Command::PlaylistRemove { playlist, index })
     .map_err(|e| Failure::from((e.into(), FailureType::Fetal)))
 }
 
-pub(super) fn playlist_remove(index: usize) -> Result<(), Failure> {
-    MAIN_SENDER.get().unwrap().clone().send(Command::PlaylistRemove(index))
-    .map_err(|e| Failure::from((e.into(), FailureType::Fetal)))
-}
+// pub(super) fn playlist_load(name: &str) -> Result<(), Failure> {
+//     MAIN_SENDER.get().unwrap().clone().send(Command::PlaylistLoad(name.to_string()))
+//     .map_err(|e| Failure::from((e.into(), FailureType::Fetal)))
+// }
 
-pub(super) fn playlist_load(name: &str) -> Result<(), Failure> {
-    MAIN_SENDER.get().unwrap().clone().send(Command::PlaylistLoad(name.to_string()))
-    .map_err(|e| Failure::from((e.into(), FailureType::Fetal)))
-}
-
-pub(super) fn playlist_move_song(from: usize, to: usize) -> Result<(), Failure> {
-    MAIN_SENDER.get().unwrap().clone().send(Command::PlaylistMoveSong { from, to })
+pub(super) fn playlist_move_song(playlist: &str, from: usize, to: usize) -> Result<(), Failure> {
+    MAIN_SENDER.get().unwrap().clone().send(Command::PlaylistMoveSong { playlist, from, to })
     .map_err(|e| Failure::from((e.into(), FailureType::Fetal)))
 }
 
@@ -108,31 +108,23 @@ pub(super) fn playlist_new(name: &str, external_type: Option<ExternalType>) -> R
     .map_err(|e| Failure::from((e.into(), FailureType::Fetal)))
 }
 
-pub(super) fn playlist_get_song(index: usize) -> Result<Song, Failure> {
-    let (tx, rx) = mpsc::channel();
-    MAIN_SENDER.get().unwrap().clone().send(Command::PlaylistGetSong { song: tx, index })
-    .map_err(|e| Failure::from((e.into(), FailureType::Fetal)))?;
-    rx.recv()
+pub(super) fn playlist_set_name(playlist: &str, name: &str) -> Result<(), Failure> {
+    MAIN_SENDER.get().unwrap().clone().send(Command::PlaylistSetName { playlist, name: name.to_string() })
     .map_err(|e| Failure::from((e.into(), FailureType::Fetal)))
 }
 
-pub(super) fn playlist_set_name(name: &str) -> Result<(), Failure> {
-    MAIN_SENDER.get().unwrap().clone().send(Command::PlaylistSetName(name.to_string()))
+pub(super) fn playlist_copy_to(from: &str, to: &str) -> Result<(), Failure> {
+    MAIN_SENDER.get().unwrap().clone().send(Command::PlaylistCopyTo(from, to))
     .map_err(|e| Failure::from((e.into(), FailureType::Fetal)))
 }
 
-pub(super) fn playlist_copy_to(name: &str) -> Result<(), Failure> {
-    MAIN_SENDER.get().unwrap().clone().send(Command::PlaylistCopyTo(name.to_string()))
+pub(super) fn playlist_add_playlist(from: &str, to: &str) -> Result<(), Failure> {
+    MAIN_SENDER.get().unwrap().clone().send(Command::PlaylistAddPlaylist(from, to))
     .map_err(|e| Failure::from((e.into(), FailureType::Fetal)))
 }
 
-pub(super) fn playlist_add_playlist(playlist_name: &str) -> Result<(), Failure> {
-    MAIN_SENDER.get().unwrap().clone().send(Command::PlaylistAddPlaylist(playlist_name.to_string()))
-    .map_err(|e| Failure::from((e.into(), FailureType::Fetal)))
-}
-
-pub(super) fn playlist_clear() -> Result<(), Failure> {
-    MAIN_SENDER.get().unwrap().clone().send(Command::PlaylistClear)
+pub(super) fn playlist_clear(playlist: &str) -> Result<(), Failure> {
+    MAIN_SENDER.get().unwrap().clone().send(Command::PlaylistClear(playlist))
     .map_err(|e| Failure::from((e.into(), FailureType::Fetal)))
 }
 

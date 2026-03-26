@@ -235,12 +235,12 @@ fn queue_playlist(
         return Ok(());
     }
 
-    let playlist = ui::playlist_get_songs()?;
+    let playlist = ui::playlist_get_songs(crate::ui::cli::cli::PLAYLIST.lock().unwrap().as_str())?;
     let mut playlist_text = Vec::new();
     let mut top_line = "Playlist:".to_string();
     push_width_aware(
         &mut top_line,
-        ui::playlist_get_name()?.as_str(),
+        crate::ui::cli::cli::PLAYLIST.lock().unwrap().as_str(),
         "",
         "",
         &mut playlist_text,
