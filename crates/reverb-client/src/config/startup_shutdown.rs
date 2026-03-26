@@ -28,7 +28,7 @@ pub fn startup() -> Result<Internal, Failure> {
     CONFIG.set(config).map_err(|_| Failure::from((anyhow!("Failed to set global config"), FailureType::Fatal)))?;
 
     // Set DATA_FOLDER
-    DATA_FOLDER.set((&CONFIG.get().unwrap().data_folder).clone()).map_err(|e| Failure::from((anyhow!(e), FailureType::Fatal)))?;
+    DATA_FOLDER.set((CONFIG.get().unwrap().data_folder).clone()).map_err(|e| Failure::from((anyhow!(e), FailureType::Fatal)))?;
 
     let data_folder = Path::new(DATA_FOLDER.get().unwrap());
     
@@ -41,8 +41,8 @@ pub fn startup() -> Result<Internal, Failure> {
             .map_err(|e| Failure::from((e.into(), FailureType::Fatal)))?
         ).map_err(|e| Failure::from((e.into(), FailureType::Fatal)))?;
     } else {
-        std::fs::create_dir_all(data_folder).map_err(|e| Failure::from((e.into(), FailureType::Fatal)))?;
-        startup_data = StartupData::new_default()?;
+        std::fs::create_dir_all(data_folder).map_err(|e| Failure::from((e.into(), "create_dir_all failed", FailureType::Fatal)))?;
+        startup_data = StartupData::new_default().map_err(|_| Failure::from((anyhow!("StartupData::new_default() Failed"), FailureType::Fatal)))?;
         println!("First run?: \n Default startup data created in {} \n no need to restart, continuing automatically\n enjoy REVERB!", data_folder.display());
     }
 

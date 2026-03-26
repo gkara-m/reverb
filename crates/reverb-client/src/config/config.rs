@@ -16,7 +16,7 @@ impl Config {
         let config = Config {
             // device_name: "REVERB_user".to_string(),
             data_folder: "data/".to_string(),
-            local_song_folder_path: "/".to_string(),
+            local_song_folder_path: "sample/".to_string(),
         };
         config.save()?;
         Ok(config)
