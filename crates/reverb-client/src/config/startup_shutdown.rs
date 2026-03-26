@@ -52,18 +52,9 @@ pub fn startup() -> Result<Internal, Failure> {
 
     startup_data.last_shutdown_clean = false;
     startup_data.save()?;
-
-    // check if last played playlist exists, if not create default
-    let playlist =
-    if data_folder.join("playlists").join(format!("{}.toml", startup_data.last_played_playlist)).exists() {
-        Playlist::load(&startup_data.last_played_playlist)?
-    } else {
-        println!("Last played playlist not found, creating default playlist... ");
-        Playlist::new("Default Playlist", None)?
-    };
         
 
-    Ok(Internal::new(startup_data.queue, playlist)?)
+    Ok(Internal::new(startup_data.queue)?)
 }
 
 pub fn shutdown (internal: &Internal) -> Result<(), Failure> {
@@ -71,7 +62,6 @@ pub fn shutdown (internal: &Internal) -> Result<(), Failure> {
 
     println!("Saving startup data... ");
     StartupData {
-        last_played_playlist: internal.playlist_get_name().clone(),
         queue: internal.queue_get().clone(),
         last_shutdown_clean: true,
     }.save()?;

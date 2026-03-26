@@ -17,7 +17,6 @@ use reverb_core::failure::failure::{Failure, FailureType};
 
 #[derive(Serialize, Deserialize)]
 pub(super) struct StartupData {
-    pub(super) last_played_playlist: String,
     pub(super) queue: Queue,
     pub(super) last_shutdown_clean: bool,
 }
@@ -34,7 +33,6 @@ impl StartupData {
         };
         println!("Successfully initialized Startup Song");
         let startup_data = StartupData {
-            last_played_playlist: "Default Playlist".to_string(),
             queue: Queue::new(song),
             last_shutdown_clean: true,
         };
