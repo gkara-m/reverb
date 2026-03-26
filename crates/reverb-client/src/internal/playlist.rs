@@ -4,8 +4,6 @@ use serde::{Deserialize, Serialize};
 
 use crate::{DATA_FOLDER, external::external::ExternalType, failure::failure::{Failure, FailureType}, internal::song::Song};
 
-
-
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Playlist {
     name: String,

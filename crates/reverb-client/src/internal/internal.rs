@@ -8,7 +8,8 @@ use crate::{
     },
 };
 
-use std::sync::mpsc;
+use std::{num::NonZeroUsize, sync::mpsc};
+use lru::LruCache;
 use std::sync::mpsc::Sender;
 use std::{thread, time::Duration};
 use anyhow::anyhow;
@@ -18,6 +19,7 @@ pub struct Internal {
     queue: Queue,
     kill_sender: Sender<()>,
     server_connection: Option<internet::connection::InternetClient>,
+    playlists: LruCache<String, Playlist>,
 }
 
 impl Internal {
@@ -29,6 +31,7 @@ impl Internal {
             queue,
             kill_sender: mpsc::channel().0,
             server_connection: None,
+            playlists: LruCache::new(NonZeroUsize::new(10).unwrap()),
         })
     }
 
@@ -84,41 +87,42 @@ impl Internal {
     pub fn playlist_new(&mut self, name: &str, external_type: Option<ExternalType>) -> Result<(), Failure> {
         let playlist = Playlist::new(name, external_type)?;
         playlist.save()?;
+        self.playlists.put(name.into(), playlist);
         Ok(())
     }
 
     pub fn playlist_add(&mut self, playlist: &str, song: Song) -> Result<(), Failure> {
-        let mut playlist = Playlist::load(playlist)?;
+        let playlist = self.load_playlist(playlist)?;
         playlist.add(&song);
         playlist.save()?;
         Ok(())
     }
 
     pub fn playlist_remove(&mut self, playlist: &str, index: usize) -> Result<(), Failure> {
-        let mut playlist = Playlist::load(playlist)?;
+        let playlist = self.load_playlist(playlist)?;
         playlist.remove(index)?;
         playlist.save()
     }
 
     pub fn playlist_move_song(&mut self, playlist: &str, from: usize, to: usize) -> Result<(), Failure> {
-        let mut playlist = Playlist::load(playlist)?;
+        let playlist = self.load_playlist(playlist)?;
         playlist.move_song(from, to)?;
         playlist.save()
     }
 
-    pub fn playlist_get_songs(&self, playlist: &str) -> Result<Vec<Song>, Failure> {
-        let playlist = Playlist::load(playlist)?;
+    pub fn playlist_get_songs(&mut self, playlist: &str) -> Result<Vec<Song>, Failure> {
+        let playlist = self.load_playlist(playlist)?;
         Ok(playlist.get_songs())
     }
 
     pub fn playlist_set_name(&mut self, playlist: &str, name: &str) -> Result<(), Failure> {
-        let mut playlist = Playlist::load(playlist)?;
+        let playlist = self.load_playlist(playlist)?;
         playlist.set_name(name)?;
         playlist.save()
     }
 
-    pub fn playlist_get_song(&self, playlist: &str, index: usize) -> Result<Song, Failure> {
-        let playlist = Playlist::load(playlist)?;
+    pub fn playlist_get_song(&mut self, playlist: &str, index: usize) -> Result<Song, Failure> {
+        let playlist = self.load_playlist(playlist)?;
         playlist.get_song(index)
     }
 
@@ -128,22 +132,32 @@ impl Internal {
         for song in playlist.iter() {
             new_playlist.add(&song);
         }
-        new_playlist.save()
+        new_playlist.save()?;
+        self.playlists.put(name.into(), new_playlist);
+        Ok(())
     }
 
     pub fn playlist_add_playlist(&mut self, from: &str, to: &str) -> Result<(), Failure> {
-        let playlist_from = Playlist::load(from)?;
-        let mut playlist_to = Playlist::load(to)?;
-        for song in playlist_from.iter() {
+        let playlist_from_songs = self.playlist_get_songs(from)?;
+        let playlist_to = self.load_playlist(to)?;
+        for song in playlist_from_songs {
             playlist_to.add(&song);
         }
         playlist_to.save()
     }
 
     pub fn playlist_clear(&mut self, playlist: &str) -> Result<(), Failure> {
-        let mut playlist = Playlist::load(playlist)?;
+        let playlist = self.load_playlist(playlist)?;
         playlist.clear();
         playlist.save()
+    }
+
+    fn load_playlist(&mut self, playlist: &str) -> Result<&mut Playlist, Failure> {
+        if !self.playlists.contains(playlist) {
+            let playlist = Playlist::load(playlist)?;
+            self.playlists.put(playlist.get_name(), playlist);
+        }
+        Ok(self.playlists.get_mut(playlist).unwrap())
     }
 }
 
@@ -273,3 +287,4 @@ impl Internal {
         Ok(())
     }
 }
+
