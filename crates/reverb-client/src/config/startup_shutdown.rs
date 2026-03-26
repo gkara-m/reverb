@@ -1,7 +1,7 @@
 use std::path::Path;
 use anyhow::anyhow;
 
-use crate::{CONFIG_FOLDER, CONFIG, DATA_FOLDER, LOCAL_SONG_FOLDER_PATH, 
+use crate::{CONFIG_FOLDER, CONFIG, DATA_FOLDER, 
     config::{config::Config, data::StartupData}, 
     internal::{internal::Internal, playlist::Playlist}};
 

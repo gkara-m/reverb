@@ -37,6 +37,9 @@ impl PacketType {
 pub enum Commands {
     DefaultCommand(DefaultCommand),
     Skip(Skip),
+    Echo(Echo),
+    GetOnlineUsers(GetOnlineUsers),
+
 }
 
 impl Commands {
@@ -61,6 +64,17 @@ impl Commands {
                 let mut data = vec![cmd.number()];
                 data.append(&mut cmd.serialize()?);
                 Ok(data)
+            },
+            Commands::Echo(cmd) => {
+                let mut data = vec![cmd.echo_type.number()];
+                let target = cmd.echo_target.as_bytes();
+                data.extend_from_slice(target);
+                Ok(data)
+            },
+            Commands::GetOnlineUsers(cmd) => {
+                let mut data = vec![cmd.number()];
+                data.append(&mut cmd.serialize()?);
+                Ok(data)
             }
         }
     }
@@ -75,6 +89,16 @@ pub trait Command {
 
 pub struct DefaultCommand {}
 pub struct Skip {}
+pub struct Echo {
+    echo_type: EchoType,
+    echo_target: String
+}
+pub struct GetOnlineUsers {}
+
+pub enum EchoType {
+    Group,
+    User
+}
 
 impl Command for DefaultCommand {
     const NUMBER: u8 = 0;
@@ -82,7 +106,6 @@ impl Command for DefaultCommand {
     fn serialize(&self) -> Result<Vec<u8>, Failure> {
         Ok(vec![])
     }
-
     fn parse(_data: Vec<u8>) -> Result<Self, Failure> {
         Ok(DefaultCommand{})
     }
@@ -94,11 +117,41 @@ impl Command for Skip {
     fn serialize(&self) -> Result<Vec<u8>, Failure> {
         Ok(vec![])
     }
-
-    fn parse(data: Vec<u8>) -> Result<Self, Failure> {
+    fn parse(_data: Vec<u8>) -> Result<Self, Failure> {
         Ok(Skip{})
     }
 }
+
+impl Command for EchoType {
+    const NUMBER: u8 = 2;
+
+    fn serialize(&self) -> Result<Vec<u8>, Failure> {
+        match self {
+            EchoType::Group => Ok(vec![0]),
+            EchoType::User => Ok(vec![1])
+        }
+    }
+
+    fn parse(data: Vec<u8>) -> Result<Self, Failure> where Self: Sized {
+        match data.as_slice() {
+            [0] => Ok(EchoType::Group),
+            [1] => Ok(EchoType::User),
+            _ => Err(Failure::from((anyhow!("Invalid Echo Type"), FailureType::Warning)))
+        }
+    }
+}
+
+impl Command for GetOnlineUsers {
+    const NUMBER: u8 = 3;
+
+    fn serialize(&self) -> Result<Vec<u8>, Failure> {
+        Ok(vec![])
+    }
+    fn parse(_data: Vec<u8>) -> Result<Self, Failure> where Self: Sized {
+        Ok(GetOnlineUsers {})
+    }
+}
+
 
 pub struct Packet {
     version: [u8; 3],
