@@ -1,8 +1,8 @@
 use std::path::Path;
 use anyhow::anyhow;
 
-use crate::{DATA_FOLDER, failure::failure::{Failure, FailureType}, internal::playlist::Playlist};
-
+use crate::{DATA_FOLDER, internal::playlist::Playlist};
+use reverb_core::failure::failure::{Failure, FailureType};
 
 #[derive(serde::Deserialize, serde::Serialize)]
 pub(super) struct Startup{
