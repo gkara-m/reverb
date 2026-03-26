@@ -63,7 +63,7 @@ impl ExternalSongTrait for LocalSong {
     }
 
     fn new(path_str: &str) -> Result<Self, Failure> {
-        let path = Path::new(&CONFIG.get().ok_or(Failure::from((anyhow!("CONFIG not set"), FailureType::Fetal)))?
+        let path = Path::new(&CONFIG.get().ok_or(Failure::from((anyhow!("CONFIG not set"), FailureType::Fatal)))?
             .local_song_folder_path).join(path_str);
 
         let duration = {
