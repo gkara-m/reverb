@@ -153,11 +153,7 @@ fn main() {
             }
             Err(e) => match e.failure_type() {
                 FailureType::Fatal => {
-<<<<<<< HEAD
-                    eprintln!("Fetal Shutdown error: {} \n exiting immediately see logs for details",
-=======
                     eprintln!("Fatal Shutdown error: {} \n exiting immediately see logs for details",
->>>>>>> main
                         e
                     );
                     break;
