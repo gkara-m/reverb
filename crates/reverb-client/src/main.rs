@@ -9,8 +9,7 @@ use crate::{
     config::{config::Config, startup_shutdown::{shutdown, startup}}, 
     external::external::ExternalType, 
     failure::failure::{Failure, FailureType}, 
-    internal::playlist::Playlist, 
-    ui::cli::cli::print_failure
+    ui::cli::cli::print_failure,
 };
 
 mod config;
@@ -55,7 +54,10 @@ fn main() {
     };
 
     thread::spawn(move || {
-        cli::run_cli(100);
+        match cli::run_cli(100) {
+            Ok(_) => println!("CLI exited successfully"),
+            Err(e) => MAIN_SENDER.get().unwrap().send(Command::Failure(e)).unwrap(),
+        }
     });
 
     for command in receive {
@@ -111,10 +113,7 @@ fn main() {
             }
             Command::QueueRemove(index) => internal.queue_remove(index),
             Command::QueueNext => internal.queue_next(),
-            Command::QueuePlaylist(playlist) => {
-                internal.queue_playlist(&playlist);
-                Ok(())
-            }
+            Command::QueuePlaylist(playlist) => internal.queue_playlist(&playlist),
             Command::QueueGetSongs(sender) => sender
                 .send(internal.queue_get_songs())
                 .map_err(|e| Failure::from((e.into(), FailureType::Warning))),

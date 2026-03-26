@@ -3,7 +3,7 @@ use std::sync::mpsc::Sender;
 use std::sync::{Mutex, Arc};
 use once_cell::sync::Lazy;
 
-use crate::ui::cli::startup::Startup;
+use crate::ui::cli::startup::{self, Startup};
 use crate::{Command, DATA_FOLDER};
 use crate::failure::failure::{Failure, FailureType};
 use crate::ui::cli::cli_ui::run_ui;
@@ -21,14 +21,8 @@ pub(super) static PLAYLIST: Lazy<Arc<Mutex<String>>> = Lazy::new(|| Arc::new(Mut
 pub fn run_cli(update_interval: u64) -> Result<(), Failure> {
 
     // load the last played playlist
-    let data_folder = std::path::Path::new(DATA_FOLDER.get().unwrap());
-    if data_folder.join("cli_startup.toml").exists() {
-        let startup_info: Startup = toml::from_str(
-            &std::fs::read_to_string(data_folder.join("cli_startup.toml"))
-            .map_err(|e| Failure::from((e.into(), FailureType::Fetal)))?
-        ).map_err(|e| Failure::from((e.into(), FailureType::Fetal)))?;
-        *PLAYLIST.lock().unwrap() = startup_info.last_played_playlist;
-    }
+    let startup = Startup::load()?;
+    *PLAYLIST.lock().unwrap() = startup.last_played_playlist;
     
     let command_spec = CommandSpec::new()
     // top-level commands
@@ -121,7 +115,7 @@ pub fn run_cli(update_interval: u64) -> Result<(), Failure> {
     }), Args, Some("playlist"))
     .add("playlist get", vec!["get", "g"], " <index> : Get a song by index", Some(|args| {
         let index: usize = args.parse().map_err(|e: std::num::ParseIntError| Failure::from((e.into(), FailureType::Warning)))?;
-        let song = ui::playlist_get_songs(PLAYLIST.lock().unwrap().as_str())?[index - 1].clone();
+        let song = ui::playlist_get_song(PLAYLIST.lock().unwrap().as_str(), index - 1)?;
         println!("{} - {}", song.info.artists[0], song.info.title);
         Ok(())
     }), Args, Some("playlist"))

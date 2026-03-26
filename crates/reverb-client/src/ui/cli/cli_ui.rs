@@ -114,7 +114,6 @@ pub(super) fn run_ui(
                 (playlist_width, height - 20),
                 (half_width, 2),
                 &mut stdout,
-                &main_transmit,
             ) {
                 print_failure(e);
             }
@@ -229,7 +228,6 @@ fn queue_playlist(
     size: (u16, u16),
     position: (u16, u16),
     stdout: &mut std::io::Stdout,
-    transmit: &Sender<Command>,
 ) -> Result<(), Failure> {
     if size.1 == 0 || size.0 <= 8 {
         return Ok(());

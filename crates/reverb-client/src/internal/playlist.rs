@@ -110,8 +110,8 @@ impl Playlist {
 
         Ok(toml::from_str(
             &std::fs::read_to_string(dir.join(format!("{}.toml", name)))
-            .map_err(|e| Failure::from((e.into(), FailureType::Warning)))?
-        ).map_err(|e| Failure::from((e.into(), FailureType::Warning)))?)
+            .map_err(|e| Failure::from((e.into(), "playlist_load", FailureType::Warning)))?
+        ).map_err(|e| Failure::from((e.into(), "playlist_load, playlist does not exist", FailureType::Warning)))?)
     }
 
     pub(super) fn iter(&self) -> std::slice::Iter<'_, Song> {
