@@ -3,7 +3,7 @@ use crate::{
         internet, playlist::Playlist, queue::Queue, song::Song
     }
 };
-use reverb_core::{failure::failure::{Failure, FailureType}, network::{self, Packet, PacketType, Commands}};
+use reverb_core::{failure::failure::{Failure, FailureType}, network::{self, Commands, GetOnlineUsers, Packet, PacketType}};
 
 use std::{num::NonZeroUsize, sync::mpsc};
 use lru::LruCache;
@@ -263,35 +263,15 @@ impl Internal {
         Ok(())
     }
 
-    pub fn send_query(&mut self, message: String) -> Result<(), Failure> {
-        println!("Attempting to notify server b: {message}");
+    pub fn scan_online_users(&mut self) -> Result<(), Failure> {
         if let Some(sc) = self.server_connection.as_mut() {
-            println!("Attempting to notify server a: {message}");
-            let config = if let Some(config) = CONFIG.get() {config} else {
-                return Err(Failure::from((anyhow!("Failed to get config"), FailureType::Warning)));
-            };
-            let username = &config.username;
-            let packet_type = PacketType::Query;
-            let group= "PLACEHOLDER"; // TODO
-            let payload = Commands::new_from_str(&message)?;
-            let packet = Packet::new(username, group, packet_type, payload)?;
-            sc.send_message(packet)
-        } else {
-            Err(Failure::from((anyhow!("Not connected to server"), FailureType::Warning)))
-        }
-    }
-
-    pub fn send_notify(&mut self, message: String) -> Result<(), Failure> {
-        println!("Attempting to notify server b: {message}");
-        if let Some(sc) = self.server_connection.as_mut() {
-            println!("Attempting to notify server a: {message}");
             let config = if let Some(config) = CONFIG.get() {config} else {
                 return Err(Failure::from((anyhow!("Failed to get config"), FailureType::Warning)));
             };
             let username = &config.username;
             let packet_type = PacketType::Action;
             let group= "PLACEHOLDER"; // TODO
-            let payload = Commands::new_from_str(&message)?;
+            let payload = Commands::GetOnlineUsers(GetOnlineUsers {});
             let packet = Packet::new(username, group, packet_type, payload)?;
             sc.send_message(packet)
         } else {

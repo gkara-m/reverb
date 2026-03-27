@@ -10,8 +10,7 @@ use reverb_core::failure::failure::{Failure, FailureType};
 use crate::{
     config::{config::Config, startup_shutdown::{shutdown, startup}}, 
     external::external::ExternalType, 
-    internal::playlist::Playlist, 
-    ui::cli::cli::print_failure
+    ui::cli::cli::print_failure,
 };
 
 mod config;
@@ -132,9 +131,8 @@ fn main() {
                     .map_err(|e| Failure::from((e.into(), FailureType::Warning))),
             Command::ServerConnect => {internal.connect_to_server()},
             Command::ServerUpdateStatus(status) => {internal.update_server_connection_status(status); Ok(())},
-            Command::ServerSendQuery(message) => {internal.send_query(message)},
-            Command::ServerSendNotify(message) => {internal.send_notify(message)},
             Command::ServerAdd(name, address, certificate) => {internal.add_server(name, address, certificate)},
+            Command::ServerScanOnline => internal.scan_online_users(),
             Command::Failure(failure) => Err(failure),
         } {
             Ok(_) => {},
@@ -210,8 +208,7 @@ pub enum Command {
     ServerAdd(String, String, String), // name, address, certificate path
     ServerConnect,
     ServerUpdateStatus(internal::internet::connection::ConnectionStatus),
-    ServerSendQuery(String),
-    ServerSendNotify(String),
+    ServerScanOnline,
     Failure(Failure),
 }
 

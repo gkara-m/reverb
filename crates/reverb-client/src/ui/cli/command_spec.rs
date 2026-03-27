@@ -1,6 +1,5 @@
-use std::{collections::HashMap, sync::mpsc::Sender};
+use std::{collections::HashMap};
 
-use crate::Command;
 use reverb_core::failure::failure::Failure;
 
 pub(super) struct CommandSpec {

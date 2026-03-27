@@ -137,8 +137,7 @@ pub fn run_cli(update_interval: u64) -> Result<(), Failure> {
         }
     }), Args, Some("server"))
     .add("server connect", vec!["connect", "con"], " : Connect to the server", Some(|_| ui::connect_to_server()), NoArgs, Some("server"))
-    .add("server query", vec!["query", "qry"], " <message> : Send a query to the server", Some(|args| ui::send_query(args)), Args, Some("server"))
-    .add("server notify", vec!["notify", "send", "snd"], " <message> : Notify the server", Some(|args| ui::send_notify(args)), Args, Some("server"));
+    .add("server scan", vec!["scan", "s"], " : Ask server for users open to echo", Some(|_| ui::get_online_users()), NoArgs, Some("server"));
 
 
     // input thread
