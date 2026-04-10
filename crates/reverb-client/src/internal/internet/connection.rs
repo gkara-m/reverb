@@ -9,7 +9,7 @@ static VERSION: &str = "0.1.0";
 
 #[derive(Debug)]
 pub enum ConnectionStatus {
-    Connected(mpsc::Sender<Packet>),
+    Connected(mpsc::Sender<Box<dyn NetworkCommand + Send + Sync>>),
     Connecting,
     NotConnected,
 }
@@ -50,10 +50,10 @@ impl InternetClient {
         }
     }
 
-    pub fn send_message(&mut self, packet: Packet) -> Result<(), Failure> {
+    pub fn send_message(&mut self, command: Box<dyn NetworkCommand + Send + Sync>) -> Result<(), Failure> {
         println!("Attempting to send message to server: ");
         match &mut self.connection_status {
-            ConnectionStatus::Connected(sender) => {sender.clone().send(packet).map_err(|e| Failure::from((e.into(), FailureType::Warning)))},
+            ConnectionStatus::Connected(sender) => {sender.clone().send(command).map_err(|e| Failure::from((e.into(), FailureType::Warning)))},
             ConnectionStatus::Connecting => Err(Failure::from((anyhow!("Currently connecting to server, cannot send message"), FailureType::Warning))),
             ConnectionStatus::NotConnected => Err(Failure::from((anyhow!("Not connected to server, cannot send message"), FailureType::Warning))),
         }

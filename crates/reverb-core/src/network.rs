@@ -12,86 +12,31 @@ use anyhow::anyhow;
 //  e.g. fixing a bug, changing error messages, changing a functions internals, ect.
 pub static VERSION: [u8; 3] = [0, 0, 0];
 
-pub enum PacketType {
-    Action,
+pub enum QueryOrNotify {
     Query,
+    Notify
 }
 
-impl PacketType {
-    pub fn from_u8(value: u8) -> Result<Self, Failure> {
-        match value {
-            0 => Ok(PacketType::Action),
-            1 => Ok(PacketType::Query),
-            _ => Err(Failure::from((anyhow!("Invalid packet type value: {}", value), FailureType::Warning))),
-        }
+pub fn parse(data: Vec<u8>) -> Result<Box<dyn NetworkCommand + Send + Sync>, Failure> {
+    let number = data.get(0).unwrap() // TODO: better error handling
+        .to_owned();
+    if (number == DefaultCommand{}.number()) {
+        return Ok(Box::new(DefaultCommand::parse(data).unwrap())); // TODO: better error handling
     }
-
-    pub fn to_u8(&self) -> u8 {
-        match self {
-            PacketType::Action => 0,
-            PacketType::Query => 1,
-        }
-    }
+    Err(Failure::from((anyhow!["invalid command recived"], FailureType::Warning)))
 }
 
-pub enum Commands {
-    DefaultCommand(DefaultCommand),
-    Skip(Skip),
-    Echo(Echo),
-    GetOnlineUsers(GetOnlineUsers),
-
+pub fn serialize(boxed_cmd: Box<dyn NetworkCommand + Send + Sync>) -> Result<Vec<u8>, Failure> {
+    let mut data = vec![boxed_cmd.number()];
+    data.append(&mut boxed_cmd.serialize()?);
+    Ok(data)
 }
 
-impl Commands {
-    pub fn parse(data: Vec<u8>) -> Result<Self, Failure> {
-        match data.get(0) {
-            Some(num) => match num {
-                &DefaultCommand::NUMBER => Ok(Commands::DefaultCommand(DefaultCommand::parse(data[1..].to_vec())?)),
-                _ => Err(Failure::from((anyhow!("Unknown command type: {}", num), FailureType::Warning))),
-            }
-            None => Err(Failure::from((anyhow!("No command type specified in data"), FailureType::Warning))),
-        }
-    }
-
-    pub fn serialize(&self) -> Result<Vec<u8>, Failure> {
-        match self {
-            Commands::DefaultCommand(cmd) => {
-                let mut data = vec![cmd.number()];
-                data.append(&mut cmd.serialize()?);
-                Ok(data)
-            },
-            Commands::Skip(cmd) => {
-                let mut data = vec![cmd.number()];
-                data.append(&mut cmd.serialize()?);
-                Ok(data)
-            },
-            Commands::Echo(cmd) => {
-                let mut data = vec![cmd.echo_type.number()];
-                let target = cmd.echo_target.as_bytes();
-                data.extend_from_slice(target);
-                Ok(data)
-            },
-            Commands::GetOnlineUsers(cmd) => {
-                let mut data = vec![cmd.number()];
-                data.append(&mut cmd.serialize()?);
-                Ok(data)
-            }
-        }
-    }
-
-    pub fn new_from_str(command: &str) -> Result<Self, Failure>{
-        match command {
-            "scan" => Ok(Commands::GetOnlineUsers(GetOnlineUsers {})),
-            _ => Err(Failure::from((anyhow!("Invalid Command"), FailureType::Warning)))
-        }
-    }
-}
-
-pub trait Command {
-    const NUMBER: u8;
-    fn number(&self) -> u8 { Self::NUMBER }
+pub trait NetworkCommand {
+    fn number(&self) -> u8; // numbers should be changed when any functionality changes as we are NOT maintaining backwards compatability
     fn serialize(&self) -> Result<Vec<u8>, Failure>;
     fn parse(data: Vec<u8>) -> Result<Self, Failure> where Self: Sized;
+    fn query_or_notify(&self) -> QueryOrNotify;
 }
 
 pub struct DefaultCommand {}
@@ -107,8 +52,10 @@ pub enum EchoType {
     User
 }
 
-impl Command for DefaultCommand {
-    const NUMBER: u8 = 0;
+impl NetworkCommand for DefaultCommand {
+    fn number(&self) -> u8 {
+        0
+    }
 
     fn serialize(&self) -> Result<Vec<u8>, Failure> {
         Ok(vec![])
@@ -116,64 +63,74 @@ impl Command for DefaultCommand {
     fn parse(_data: Vec<u8>) -> Result<Self, Failure> {
         Ok(DefaultCommand{})
     }
+
+    fn query_or_notify(&self) -> QueryOrNotify {
+        QueryOrNotify::Query
+    }
 }
 
-impl Command for Skip {
-    const NUMBER: u8 = 1;
-
+impl NetworkCommand for Skip {
+    fn number(&self) -> u8 {
+        1
+    }
     fn serialize(&self) -> Result<Vec<u8>, Failure> {
         Ok(vec![])
     }
     fn parse(_data: Vec<u8>) -> Result<Self, Failure> {
         Ok(Skip{})
     }
+
+    fn query_or_notify(&self) -> QueryOrNotify {
+        QueryOrNotify::Notify
+    }
 }
 
-impl Command for EchoType {
-    const NUMBER: u8 = 2;
-
+impl NetworkCommand for Echo {
+    fn number(&self) -> u8 {
+        2
+    }
     fn serialize(&self) -> Result<Vec<u8>, Failure> {
-        match self {
-            EchoType::Group => Ok(vec![0]),
-            EchoType::User => Ok(vec![1])
-        }
+        Err(Failure::from((anyhow!("Echo command serialization not implemented yet"), FailureType::Warning)))
     }
 
     fn parse(data: Vec<u8>) -> Result<Self, Failure> where Self: Sized {
-        match data.as_slice() {
-            [0] => Ok(EchoType::Group),
-            [1] => Ok(EchoType::User),
-            _ => Err(Failure::from((anyhow!("Invalid Echo Type"), FailureType::Warning)))
-        }
+        Err(Failure::from((anyhow!("Echo command parsing not implemented yet"), FailureType::Warning)))
+    }
+
+    fn query_or_notify(&self) -> QueryOrNotify {
+        QueryOrNotify::Query
     }
 }
 
-impl Command for GetOnlineUsers {
-    const NUMBER: u8 = 3;
-
+impl NetworkCommand for GetOnlineUsers {
+    fn number(&self) -> u8 {
+        3
+    }
     fn serialize(&self) -> Result<Vec<u8>, Failure> {
         Ok(vec![])
     }
     fn parse(_data: Vec<u8>) -> Result<Self, Failure> where Self: Sized {
         Ok(GetOnlineUsers {})
     }
+
+    fn query_or_notify(&self) -> QueryOrNotify {
+        QueryOrNotify::Query
+    }
 }
 
 
 pub struct Packet {
-    version: [u8; 3],
-    username: String,
-    group: String,
-    packet_type: PacketType,
-    payload: Commands,
+    pub version: [u8; 3],
+    pub username: String,
+    pub group: String,
+    pub payload: Box<dyn NetworkCommand + Send + Sync>,
 }
 
 impl Packet {
     pub fn new(
         username: &str,
         group: &str,
-        packet_type: PacketType,
-        payload: Commands,
+        payload: Box<dyn NetworkCommand + Send + Sync>,
     ) -> Result<Self, Failure> {
         check_parameters(username, group)?;
 
@@ -181,7 +138,6 @@ impl Packet {
             version: VERSION,
             username: username.to_string(),
             group: group.to_string(),
-            packet_type,
             payload,
         })
     }
@@ -193,14 +149,12 @@ impl Packet {
         let version = [_data[0], _data[1], _data[2]];
         let username = String::from_utf8_lossy(&_data[3..35]).trim_matches(char::from(0)).to_string();
         let group = String::from_utf8_lossy(&_data[35..51]).trim_matches(char::from(0)).to_string();
-        let packet_type = PacketType::from_u8(_data[51])?;
-        let payload = Commands::parse(_data[52..].to_vec())?;
+        let payload = parse(_data[52..].to_vec())?;
 
         Ok(Packet {
             version,
             username,
             group,
-            packet_type,
             payload,
         })
     }
@@ -222,7 +176,6 @@ impl Packet {
                 data.push(0);
             }
         }
-        data.push(self.packet_type.to_u8());
         data.append(&mut self.payload.serialize()?);
         Ok(data)
     }
@@ -236,10 +189,7 @@ impl Packet {
     pub fn group(&self) -> &str {
         &self.group
     }
-    pub fn packet_type(&self) -> &PacketType {
-        &self.packet_type
-    }
-    pub fn payload(&self) -> &Commands {
+    pub fn payload(&self) -> &Box<dyn NetworkCommand + Send + Sync> {
         &self.payload
     }
 }
