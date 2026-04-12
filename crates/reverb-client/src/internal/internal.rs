@@ -1,9 +1,10 @@
+use reverb_core::network::{GetOnlineUsers, Packet};
 use crate::{
     CONFIG, Command, MAIN_SENDER, external::external::{self, External, ExternalRun, ExternalType}, internal::{
         internet, playlist::Playlist, queue::Queue, song::Song
     }
 };
-use reverb_core::{failure::failure::{Failure, FailureType}, network::{self, Commands, GetOnlineUsers, Packet, PacketType}};
+use reverb_core::{failure::failure::{Failure, FailureType}};
 
 use std::{num::NonZeroUsize, sync::mpsc};
 use lru::LruCache;
@@ -265,15 +266,7 @@ impl Internal {
 
     pub fn scan_online_users(&mut self) -> Result<(), Failure> {
         if let Some(sc) = self.server_connection.as_mut() {
-            let config = if let Some(config) = CONFIG.get() {config} else {
-                return Err(Failure::from((anyhow!("Failed to get config"), FailureType::Warning)));
-            };
-            let username = &config.username;
-            let packet_type = PacketType::Action;
-            let group= "PLACEHOLDER"; // TODO
-            let payload = Commands::GetOnlineUsers(GetOnlineUsers {});
-            let packet = Packet::new(username, group, packet_type, payload)?;
-            sc.send_message(packet)
+            sc.send_message(Box::new(GetOnlineUsers{}))
         } else {
             Err(Failure::from((anyhow!("Not connected to server"), FailureType::Warning)))
         }

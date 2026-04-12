@@ -16,9 +16,15 @@ pub(super) fn start_communicator_thread(server_config: ServerConfig) {
         match tokio::runtime::Runtime::new().unwrap().block_on(async{
             let conn = connect_to(server_config).await?;
             MAIN_SENDER.get().unwrap().clone().send(Command::ServerUpdateStatus(crate::internal::internet::connection::ConnectionStatus::Connected(tx))).unwrap_or_else(|e| eprintln!("Failed to send server update status command: {}", e));
-            for message in rx {
+            for command in rx {
                 // Handle incoming messages
-                query(conn.clone(), message).await?;
+                let packet = Packet {
+                    version: reverb_core::network::VERSION,
+                    username: "client_plhdr".to_string(),
+                    group: "none".to_string(),
+                    payload: command,
+                };
+                query(conn.clone(), packet).await?;
             }
             Ok(())
         }) {
