@@ -5,11 +5,10 @@ use crate::{DATA_FOLDER, config::internet::{self, ServerConfig}, internal::inter
 use reverb_core::{failure::failure::{Failure, FailureType}, network::*};
 
 
-static VERSION: &str = "0.1.0";
 
 #[derive(Debug)]
 pub enum ConnectionStatus {
-    Connected(mpsc::Sender<Box<dyn NetworkCommand + Send + Sync>>),
+    Connected(mpsc::Sender<Packet>),
     Connecting,
     NotConnected,
 }
@@ -52,8 +51,14 @@ impl InternetClient {
 
     pub fn send_message(&mut self, command: Box<dyn NetworkCommand + Send + Sync>) -> Result<(), Failure> {
         println!("Attempting to send message to server: ");
+        let packet = Packet {
+            version: VERSION,
+            username: "client_plhdr".to_string(),
+            group: self.group.clone().unwrap_or_else(|| "none".to_string()),
+            payload: command,
+        };
         match &mut self.connection_status {
-            ConnectionStatus::Connected(sender) => {sender.clone().send(command).map_err(|e| Failure::from((e.into(), FailureType::Warning)))},
+            ConnectionStatus::Connected(sender) => {sender.clone().send(packet).map_err(|e| Failure::from((e.into(), FailureType::Warning)))},
             ConnectionStatus::Connecting => Err(Failure::from((anyhow!("Currently connecting to server, cannot send message"), FailureType::Warning))),
             ConnectionStatus::NotConnected => Err(Failure::from((anyhow!("Not connected to server, cannot send message"), FailureType::Warning))),
         }
