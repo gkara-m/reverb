@@ -27,7 +27,7 @@ pub fn parse(data: Vec<u8>) -> Result<Box<dyn NetworkCommand + Send + Sync>, Fai
     Err(Failure::from((anyhow!["invalid command recived"], FailureType::Warning)))
 }
 
-pub fn serialize(boxed_cmd: Box<dyn NetworkCommand + Send + Sync>) -> Result<Vec<u8>, Failure> {
+pub fn serialize(boxed_cmd: &Box<dyn NetworkCommand + Send + Sync>) -> Result<Vec<u8>, Failure> {
     let mut data = vec![boxed_cmd.number()];
     data.append(&mut boxed_cmd.serialize()?);
     println!("serialized into: {} bytes", data.len()); // Debug line
@@ -179,7 +179,7 @@ impl Packet {
             }
         }
         data.append(&mut vec![self.payload.number()]);
-        data.append(&mut self.payload.serialize()?);
+        data.append(&mut serialize(&self.payload)?);
         Ok(data)
     }
 

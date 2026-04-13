@@ -1,7 +1,7 @@
 use std::sync::mpsc;
 use anyhow::{Result, anyhow};
 
-use crate::{DATA_FOLDER, config::internet::{self, ServerConfig}, internal::internet::communicator};
+use crate::{CONFIG, DATA_FOLDER, config::internet::{self, ServerConfig}, internal::internet::communicator};
 use reverb_core::{failure::failure::{Failure, FailureType}, network::*};
 
 
@@ -53,7 +53,7 @@ impl InternetClient {
         println!("Attempting to send message to server: ");
         let packet = Packet {
             version: NETWORK_VERSION,
-            username: "client_plhdr".to_string(),
+            username: CONFIG.get().unwrap().username.clone(),
             group: self.group.clone().unwrap_or_else(|| "none".to_string()),
             payload: command,
         };
