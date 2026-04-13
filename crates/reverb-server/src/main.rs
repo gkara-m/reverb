@@ -32,6 +32,8 @@ async fn run() -> Result<(), Failure> {
 
     let endpoint = server_startup::startup()?;
 
+
+
     // --- Accept a single client connection ---
     if let Some(conn) = endpoint.accept().await {
         // Wait for the connection handshake to complete
