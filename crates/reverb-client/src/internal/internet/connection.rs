@@ -52,7 +52,7 @@ impl InternetClient {
     pub fn send_message(&mut self, command: Box<dyn NetworkCommand + Send + Sync>) -> Result<(), Failure> {
         println!("Attempting to send message to server: ");
         let packet = Packet {
-            version: VERSION,
+            version: NETWORK_VERSION,
             username: "client_plhdr".to_string(),
             group: self.group.clone().unwrap_or_else(|| "none".to_string()),
             payload: command,
