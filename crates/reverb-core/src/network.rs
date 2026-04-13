@@ -18,7 +18,7 @@ pub enum QueryOrNotify {
 }
 
 pub fn parse(data: Vec<u8>) -> Result<Box<dyn NetworkCommand + Send + Sync>, Failure> {
-    let number = data.get(0).unwrap() // TODO: better error handling
+    let number = data.get(52).unwrap() // TODO: better error handling
         .to_owned();
     if (number == DefaultCommand{}.number()) {
         return Ok(Box::new(DefaultCommand::parse(data).unwrap())); // TODO: better error handling
@@ -176,6 +176,7 @@ impl Packet {
                 data.push(0);
             }
         }
+        data.append(&mut vec![self.payload.number()]);
         data.append(&mut self.payload.serialize()?);
         Ok(data)
     }
