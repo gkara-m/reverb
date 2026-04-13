@@ -7,7 +7,7 @@ use rustls::pki_types::CertificateDer;
 use anyhow::{Result, anyhow};
 
 use crate::{CONFIG, Command, MAIN_SENDER, config::internet::ServerConfig, };
-use reverb_core::{failure::failure::{Failure, FailureType}, network::Packet};
+use reverb_core::{failure::failure::{Failure, FailureType}, network::{Packet, QueryOrNotify}};
 
 
 pub(super) fn start_communicator_thread(server_config: ServerConfig) {
@@ -18,7 +18,10 @@ pub(super) fn start_communicator_thread(server_config: ServerConfig) {
             MAIN_SENDER.get().unwrap().clone().send(Command::ServerUpdateStatus(crate::internal::internet::connection::ConnectionStatus::Connected(tx))).unwrap_or_else(|e| eprintln!("Failed to send server update status command: {}", e));
             for packet in rx {
                 // Handle incoming messages
-                query(conn.clone(), packet).await?;
+                match packet.payload.query_or_notify() {
+                    QueryOrNotify::Query => query(conn.clone(), packet).await?,
+                    QueryOrNotify::Notify => notify(conn.clone(), packet).await?,
+                }
             }
             Ok(())
         }) {
