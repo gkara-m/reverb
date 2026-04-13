@@ -19,7 +19,7 @@ pub(super) fn start_communicator_thread(server_config: ServerConfig) {
             for command in rx {
                 // Handle incoming messages
                 let packet = Packet {
-                    version: reverb_core::network::VERSION,
+                    version: reverb_core::network::NETWORK_VERSION,
                     username: "client_plhdr".to_string(),
                     group: "none".to_string(),
                     payload: command,
