@@ -10,7 +10,7 @@ use anyhow::anyhow;
 //  e.g. adding new possible functions to payload ect.
 // Patch release when there is a change to the packet structure or protocol which is backwards compatible and does not add any new features.
 //  e.g. fixing a bug, changing error messages, changing a functions internals, ect.
-pub static VERSION: [u8; 3] = [0, 0, 0];
+pub static NETWORK_VERSION: [u8; 3] = [0, 0, 0];
 
 pub enum QueryOrNotify {
     Query,
@@ -18,10 +18,11 @@ pub enum QueryOrNotify {
 }
 
 pub fn parse(data: Vec<u8>) -> Result<Box<dyn NetworkCommand + Send + Sync>, Failure> {
-    let number = data.get(0).unwrap() // TODO: better error handling
+    println!("packet size: {} bytes", data.len()); // Debug line
+    let number = data.get(51).ok_or(Failure::from((anyhow!("invalid packet: packet too small"), FailureType::Warning)))?
         .to_owned();
     if (number == DefaultCommand{}.number()) {
-        return Ok(Box::new(DefaultCommand::parse(data).unwrap())); // TODO: better error handling
+        return Ok(Box::new(DefaultCommand::parse(data)?));
     }
     Err(Failure::from((anyhow!["invalid command recived"], FailureType::Warning)))
 }
@@ -29,6 +30,7 @@ pub fn parse(data: Vec<u8>) -> Result<Box<dyn NetworkCommand + Send + Sync>, Fai
 pub fn serialize(boxed_cmd: Box<dyn NetworkCommand + Send + Sync>) -> Result<Vec<u8>, Failure> {
     let mut data = vec![boxed_cmd.number()];
     data.append(&mut boxed_cmd.serialize()?);
+    println!("serialized into: {} bytes", data.len()); // Debug line
     Ok(data)
 }
 
@@ -135,7 +137,7 @@ impl Packet {
         check_parameters(username, group)?;
 
         Ok(Packet {
-            version: VERSION,
+            version: NETWORK_VERSION,
             username: username.to_string(),
             group: group.to_string(),
             payload,
@@ -161,7 +163,7 @@ impl Packet {
 
     pub fn serialize(&self) -> Result<Vec<u8>, Failure> {
         check_parameters(&self.username, &self.group)?;
-        let mut data = VERSION.to_vec();
+        let mut data = NETWORK_VERSION.to_vec();
         for i in 0..32 {
             if i < self.username.len() {
                 data.push(self.username.as_bytes()[i]);
@@ -176,6 +178,7 @@ impl Packet {
                 data.push(0);
             }
         }
+        data.append(&mut vec![self.payload.number()]);
         data.append(&mut self.payload.serialize()?);
         Ok(data)
     }
