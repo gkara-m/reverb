@@ -1,5 +1,3 @@
-use std::vec;
-
 use crate::failure::failure::{Failure, FailureType};
 use anyhow::anyhow;
 
@@ -17,20 +15,27 @@ pub enum QueryOrNotify {
     Notify
 }
 
-pub fn parse(data: Vec<u8>) -> Result<Box<dyn NetworkCommand + Send + Sync>, Failure> {
-    println!("packet size: {} bytes", data.len()); // Debug line
-    let number = data.get(51).ok_or(Failure::from((anyhow!("invalid packet: packet too small"), FailureType::Warning)))?
+pub fn parse_command(data: Vec<u8>) -> Result<Box<dyn NetworkCommand + Send + Sync>, Failure> {
+    println!("command size: {} bytes", data.len()); // Debug line
+    let cmd_number = data.get(0).ok_or(Failure::from((anyhow!("failed to get command number"), FailureType::Warning)))?
         .to_owned();
-    if (number == DefaultCommand{}.number()) {
-        return Ok(Box::new(DefaultCommand::parse(data)?));
-    }
-    Err(Failure::from((anyhow!["invalid command recived"], FailureType::Warning)))
+
+    match cmd_number {
+        DefaultCommand::ID => {return Ok(Box::new(DefaultCommand{}));},
+        Skip::ID => {return Ok(Box::new(Skip{}));},
+        Echo::ID => {
+            let parsed_data = Echo::parse(data)?;
+            return Ok(Box::new(parsed_data));
+        },
+        GetOnlineUsers::ID => {return Ok(Box::new(GetOnlineUsers{}));},
+        _ => {return Err(Failure::from((anyhow!("invalid command"), FailureType::Warning)));}
+    };
 }
 
 pub fn serialize(boxed_cmd: &Box<dyn NetworkCommand + Send + Sync>) -> Result<Vec<u8>, Failure> {
     let mut data = vec![boxed_cmd.number()];
     data.append(&mut boxed_cmd.serialize()?);
-    println!("serialized into: {} bytes", data.len()); // Debug line
+    println!("serialized command into: {} bytes", data.len()); // Debug line
     Ok(data)
 }
 
@@ -50,13 +55,26 @@ pub struct Echo {
 pub struct GetOnlineUsers {}
 
 pub enum EchoType {
-    Group,
-    User
+    Group = 0,
+    User = 1
+}
+
+impl DefaultCommand {
+    pub const ID: u8 = 0;
+}
+impl Skip {
+    pub const ID: u8 = 1;
+}
+impl Echo {
+    pub const ID: u8 = 2;
+}
+impl GetOnlineUsers {
+    pub const ID: u8 = 3;
 }
 
 impl NetworkCommand for DefaultCommand {
     fn number(&self) -> u8 {
-        0
+        DefaultCommand::ID
     }
 
     fn serialize(&self) -> Result<Vec<u8>, Failure> {
@@ -73,7 +91,7 @@ impl NetworkCommand for DefaultCommand {
 
 impl NetworkCommand for Skip {
     fn number(&self) -> u8 {
-        1
+        Skip::ID
     }
     fn serialize(&self) -> Result<Vec<u8>, Failure> {
         Ok(vec![])
@@ -89,14 +107,33 @@ impl NetworkCommand for Skip {
 
 impl NetworkCommand for Echo {
     fn number(&self) -> u8 {
-        2
+        Echo::ID
     }
     fn serialize(&self) -> Result<Vec<u8>, Failure> {
-        Err(Failure::from((anyhow!("Echo command serialization not implemented yet"), FailureType::Warning)))
+        let mut data = match self.echo_type {
+            EchoType::Group => vec![EchoType::Group as u8],
+            EchoType::User => vec![EchoType::User as u8]
+        };
+        data.extend_from_slice(self.echo_target.as_bytes());
+        Ok(data)
     }
 
     fn parse(data: Vec<u8>) -> Result<Self, Failure> where Self: Sized {
-        Err(Failure::from((anyhow!("Echo command parsing not implemented yet"), FailureType::Warning)))
+        let id_group = EchoType::Group as u8;
+        let is_user = EchoType::User as u8;
+        let echo_type = match data[1] {
+            id_group => EchoType::Group,
+            id_user => EchoType::User
+        };
+
+        let target_data = data[2..].to_vec();
+        let echo_target = String::from_utf8(target_data)
+            .map_err(|e| Failure::from((anyhow!("failed to parse echo target: {e}"), FailureType::Warning)))?;
+
+        Ok(Echo{
+            echo_type,
+            echo_target
+        })
     }
 
     fn query_or_notify(&self) -> QueryOrNotify {
@@ -106,7 +143,7 @@ impl NetworkCommand for Echo {
 
 impl NetworkCommand for GetOnlineUsers {
     fn number(&self) -> u8 {
-        3
+        GetOnlineUsers::ID
     }
     fn serialize(&self) -> Result<Vec<u8>, Failure> {
         Ok(vec![])
@@ -144,14 +181,15 @@ impl Packet {
         })
     }
 
-    pub fn parse(_data: &[u8]) -> Result<Self, Failure> {
+    pub fn parse(_data: &[u8]) -> Result<Packet, Failure> {
+        println!("data length to parse: {} bytes", _data.len()); // Debug line
         if _data.len() < 52 {
             return Err(Failure::from((anyhow!("Data too short to be a valid packet"), FailureType::Warning)));
         }
         let version = [_data[0], _data[1], _data[2]];
         let username = String::from_utf8_lossy(&_data[3..35]).trim_matches(char::from(0)).to_string();
         let group = String::from_utf8_lossy(&_data[35..51]).trim_matches(char::from(0)).to_string();
-        let payload = parse(_data[52..].to_vec())?;
+        let payload = parse_command(_data[52..].to_vec())?;
 
         Ok(Packet {
             version,
@@ -180,6 +218,7 @@ impl Packet {
         }
         data.append(&mut vec![self.payload.number()]);
         data.append(&mut serialize(&self.payload)?);
+        println!("serialized packet into: {} bytes", data.len()); // Debug line
         Ok(data)
     }
 

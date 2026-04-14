@@ -1,5 +1,6 @@
 use std::{fs, io, sync::Arc};
 use anyhow::anyhow;
+use quinn::Endpoint;
 use quinn_proto::crypto::rustls::QuicServerConfig; 
 use rustls::pki_types::{CertificateDer, PrivateKeyDer, PrivatePkcs8KeyDer};
 
@@ -20,18 +21,24 @@ const VERSION: &str = "0.1.0";
 fn main() {
     let _ = rustls::crypto::ring::default_provider().install_default();
     println!("Server starting on {}", LISTEN_ADDR);
-    // run the server (async) and handle any errors
-    if let Err(e) = tokio::runtime::Runtime::new().unwrap().block_on(run()) {
-        eprintln!("Server error: {e}");
-        std::process::exit(1);
+
+    // run server startup
+    let endpoint = match server_startup::startup() {
+        Ok(endpoint) => endpoint,
+        Err(failure) => {
+            eprintln!("Server startup error: {failure}");
+            std::process::exit(1);
+        }
+    };
+
+    if let Err(e) = tokio::runtime::Runtime::new().unwrap().block_on(run(endpoint)) {
+        eprintln!("Server runtime error: {e}");
+        std::process::exit(2);
     }
 }
 
 
-async fn run() -> Result<(), Failure> {
-
-    let endpoint = server_startup::startup()?;
-
+async fn run(endpoint: Endpoint) -> Result<(), Failure> {
     // --- Accept a single client connection ---
     if let Some(conn) = endpoint.accept().await {
         // Wait for the connection handshake to complete
@@ -47,7 +54,7 @@ async fn run() -> Result<(), Failure> {
         let data = recv.read_to_end(1024).await
             .map_err(|e| Failure::from((e.into(), FailureType::Warning)))?;
 
-        let packet = Packet::parse(&data)?; // TODO
+        let packet = Packet::parse(&data)?;
         println!("Received from: {}", packet.username());
 
         // Prepare and send a response back to the client
