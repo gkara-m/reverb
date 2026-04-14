@@ -15,11 +15,13 @@ use anyhow::anyhow;
 pub struct Internal {
     current_external: ExternalRun,
     queue: Queue,
-    kill_sender: Sender<()>,
+    autoskip_kill_sender: Sender<()>,
     server_connection: internet::connection::InternetClient,
     playlists: LruCache<String, Playlist>,
+    ui_update_sender: Sender<()>,
 }
 
+// general functions for internal state management
 impl Internal {
     pub fn new(
         queue: Queue,
@@ -27,9 +29,10 @@ impl Internal {
         Ok(Internal {
             current_external: external::get_new_external_run_from_song(&queue.current_song()?)?,
             queue,
-            kill_sender: mpsc::channel().0,
+            autoskip_kill_sender: mpsc::channel().0,
             server_connection: internet::connection::InternetClient::new(),
             playlists: LruCache::new(NonZeroUsize::new(10).unwrap()),
+            ui_update_sender: mpsc::channel().0,
         })
     }
 
@@ -81,6 +84,8 @@ impl Internal {
     }
 }
 
+
+// playlist management
 impl Internal {
     pub fn playlist_new(&mut self, name: &str, external_type: Option<ExternalType>) -> Result<(), Failure> {
         let playlist = Playlist::new(name, external_type)?;
@@ -159,6 +164,7 @@ impl Internal {
     }
 }
 
+// queue management
 impl Internal {
     pub fn queue_add(&mut self, song: Song) {
         self.queue.add(song);
@@ -214,7 +220,7 @@ impl Internal {
             } else {
                 let sender = MAIN_SENDER.get().unwrap().clone();
                 let (kill_sender, kill_receiver) = mpsc::channel();
-                self.kill_sender = kill_sender;
+                self.autoskip_kill_sender = kill_sender;
                 thread::spawn(move || {
                     if let Ok(_) = kill_receiver.recv_timeout(time_left) {
                         return;
@@ -245,10 +251,11 @@ impl Internal {
     }
 
     pub fn kill_autoskip(&self) {
-        let _ = self.kill_sender.send(());
+        let _ = self.autoskip_kill_sender.send(());
     }
 }
 
+// server connection management
 impl Internal {
     pub fn connect_to_server(&mut self) -> Result<(), Failure> {
         self.server_connection.connect()
@@ -267,4 +274,3 @@ impl Internal {
         Ok(())
     }
 }
-

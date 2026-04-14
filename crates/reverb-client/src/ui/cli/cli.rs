@@ -143,7 +143,7 @@ pub fn run_cli(update_interval: u64) -> Result<(), Failure> {
     // input thread
     let (input_tx, input_rx) = std::sync::mpsc::channel::<String>();
 
-    let renderer = run_ui(&MAIN_SENDER.get().unwrap(), input_tx, update_interval);
+    let renderer = run_ui(input_tx, update_interval);
 
 
     println!("Please enter command or type 'help' for help.");

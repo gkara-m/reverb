@@ -29,14 +29,6 @@ pub(super) fn queue_get_songs() -> Result<Vec<Song>, Failure> {
     .map_err(|e| Failure::from((e.into(), "queue_get_songs", FailureType::Fatal)))
 }
 
-// pub(super) fn playlist_get_name() -> Result<String, Failure> {
-//     let (tx, rx) = mpsc::channel();
-//     MAIN_SENDER.get().unwrap().clone().send(Command::PlaylistGetName(tx))
-//     .map_err(|e| Failure::from((e.into(), "playlist_get_name", FailureType::Fatal)))?;
-//     rx.recv()
-//     .map_err(|e| Failure::from((e.into(), "playlist_get_name", FailureType::Fatal)))
-// }
-
 pub(super) fn playlist_get_songs(playlist: &str) -> Result<Vec<Song>, Failure> {
     let (tx, rx) = mpsc::channel();
     MAIN_SENDER.get().unwrap().clone().send(Command::PlaylistGetSongs(playlist.to_string(), tx))
@@ -86,11 +78,6 @@ pub(super) fn queue_playlist(playlist: &str) -> Result<(), Failure> {
     .map_err(|e| Failure::from((e.into(), "queue_playlist", FailureType::Fatal)))
 }
 
-// pub(super) fn queue_current_playlist() -> Result<(), Failure> {
-//     MAIN_SENDER.get().unwrap().clone().send(Command::QueueCurrentPlaylist)
-//     .map_err(|e| Failure::from((e.into(), "queue_current_playlist", FailureType::Fatal)))
-// }
-
 pub(super) fn playlist_add(playlist: &str, song: Song) -> Result<(), Failure> {
     MAIN_SENDER.get().unwrap().clone().send(Command::PlaylistAdd(playlist.to_string(), song))
     .map_err(|e| Failure::from((e.into(), "playlist_add", FailureType::Fatal)))
@@ -100,11 +87,6 @@ pub(super) fn playlist_remove(playlist: &str, index: usize) -> Result<(), Failur
     MAIN_SENDER.get().unwrap().clone().send(Command::PlaylistRemove(playlist.to_string(), index))
     .map_err(|e| Failure::from((e.into(), "playlist_remove", FailureType::Fatal)))
 }
-
-// pub(super) fn playlist_load(name: &str) -> Result<(), Failure> {
-//     MAIN_SENDER.get().unwrap().clone().send(Command::PlaylistLoad(name.to_string()))
-//     .map_err(|e| Failure::from((e.into(), "playlist_load", FailureType::Fatal)))
-// }
 
 pub(super) fn playlist_move_song(playlist: &str, from: usize, to: usize) -> Result<(), Failure> {
     MAIN_SENDER.get().unwrap().clone().send(Command::PlaylistMoveSong { playlist: playlist.to_string(), from, to })
