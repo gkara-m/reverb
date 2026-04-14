@@ -1,5 +1,3 @@
-use std::vec;
-
 use crate::failure::failure::{Failure, FailureType};
 use anyhow::anyhow;
 
@@ -57,8 +55,8 @@ pub struct Echo {
 pub struct GetOnlineUsers {}
 
 pub enum EchoType {
-    Group,
-    User
+    Group = 0,
+    User = 1
 }
 
 impl DefaultCommand {
@@ -112,11 +110,30 @@ impl NetworkCommand for Echo {
         Echo::ID
     }
     fn serialize(&self) -> Result<Vec<u8>, Failure> {
-        Err(Failure::from((anyhow!("Echo command serialization not implemented yet"), FailureType::Warning))) // TODO
+        let mut data = match self.echo_type {
+            EchoType::Group => vec![EchoType::Group as u8],
+            EchoType::User => vec![EchoType::User as u8]
+        };
+        data.extend_from_slice(self.echo_target.as_bytes());
+        Ok(data)
     }
 
     fn parse(data: Vec<u8>) -> Result<Self, Failure> where Self: Sized {
-        Err(Failure::from((anyhow!("Echo command parsing not implemented yet"), FailureType::Warning))) // TODO
+        let id_group = EchoType::Group as u8;
+        let is_user = EchoType::User as u8;
+        let echo_type = match data[1] {
+            id_group => EchoType::Group,
+            id_user => EchoType::User
+        };
+
+        let target_data = data[2..].to_vec();
+        let echo_target = String::from_utf8(target_data)
+            .map_err(|e| Failure::from((anyhow!("failed to parse echo target: {e}"), FailureType::Warning)))?;
+
+        Ok(Echo{
+            echo_type,
+            echo_target
+        })
     }
 
     fn query_or_notify(&self) -> QueryOrNotify {
