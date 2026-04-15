@@ -1,12 +1,9 @@
 use std::{fs, io, sync::Arc};
-use anyhow::anyhow;
-use quinn::{Endpoint, Incoming};
-use quinn_proto::crypto::rustls::QuicServerConfig; 
+use quinn::{Connection, Endpoint, Incoming, RecvStream};
 use rustls::pki_types::{CertificateDer, PrivateKeyDer, PrivatePkcs8KeyDer};
 
 
 use reverb_core::{network::*, failure::failure::{Failure, FailureType}};
-use tokio::sync::oneshot;
 
 mod network;
 mod server_startup;
@@ -43,16 +40,10 @@ async fn main() {
 
 }
 
-
+// accepts incoming connections and hands them off to new tokio async task
 async fn run(endpoint: &Endpoint) -> Result<(), Failure> {
-    // --- Accept a single client connection ---
     if let Some(conn) = endpoint.accept().await {
         tokio::spawn(async move {
-
-            // Wait for all packets to be sent before shutting down
-            // endpoint.wait_idle().await;
-            // println!("Response sent, server exiting");
-
             if let Err(e) = handle_connection(conn).await {
                 eprintln!("Server runtime error: error handling connection: {e}")
             };
@@ -68,23 +59,33 @@ async fn handle_connection(conn: Incoming) -> Result<(), Failure> {
         .map_err(|e| Failure::from((e.into(), FailureType::Warning)))?;
     println!("Client connected");
 
-    // Accept a bidirectional stream from the client
+    tokio::spawn(async move {
+        loop {
+            if let Err(e) = handle_bi(&conn).await {eprintln!("Server connection error: {e}")}
+        }
+    });
+
+    Ok(())
+}
+
+async fn handle_bi(conn: &Connection) -> Result<(), Failure> {
     let (mut send, mut recv) = conn.accept_bi().await
         .map_err(|e| Failure::from((e.into(), FailureType::Warning)))?;
 
-    // Read up to 1024 bytes from the client
-    let data = recv.read_to_end(1024).await
-        .map_err(|e| Failure::from((e.into(), FailureType::Warning)))?;
-
+    let data = read_incoming(recv).await?;
     let packet = Packet::parse(&data)?;
-    println!("Received from: {}", packet.username());
 
     // Prepare and send a response back to the client
-    let response = format!("Server received {} bytes", data.len());
-    send.write_all(response.as_bytes()).await;
+    let response = Packet::new("server", "server", Box::new(DefaultCommand{}))?; // TODO placeholder
+    send.write_all(&response.serialize()?).await;
     send.finish();
-
+    
     Ok(())
+} // TODO
 
+async fn read_incoming(mut recv: RecvStream) -> Result<Vec<u8>, Failure> {
+    recv.read_to_end(1024).await
+        .map_err(|e| Failure::from((e.into(), FailureType::Warning)))
 }
+
 
