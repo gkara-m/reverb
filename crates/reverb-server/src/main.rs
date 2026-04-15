@@ -1,11 +1,12 @@
 use std::{fs, io, sync::Arc};
 use anyhow::anyhow;
-use quinn::Endpoint;
+use quinn::{Endpoint, Incoming};
 use quinn_proto::crypto::rustls::QuicServerConfig; 
 use rustls::pki_types::{CertificateDer, PrivateKeyDer, PrivatePkcs8KeyDer};
 
 
 use reverb_core::{network::*, failure::failure::{Failure, FailureType}};
+use tokio::sync::oneshot;
 
 mod network;
 mod server_startup;
@@ -46,32 +47,44 @@ async fn main() {
 async fn run(endpoint: &Endpoint) -> Result<(), Failure> {
     // --- Accept a single client connection ---
     if let Some(conn) = endpoint.accept().await {
-        // Wait for the connection handshake to complete
-        let conn = conn.await
-            .map_err(|e| Failure::from((e.into(), FailureType::Warning)))?;
-        println!("Client connected");
+        tokio::spawn(async move {
 
-        // Accept a bidirectional stream from the client
-        let (mut send, mut recv) = conn.accept_bi().await
-            .map_err(|e| Failure::from((e.into(), FailureType::Warning)))?;
+            // Wait for all packets to be sent before shutting down
+            // endpoint.wait_idle().await;
+            // println!("Response sent, server exiting");
 
-        // Read up to 1024 bytes from the client
-        let data = recv.read_to_end(1024).await
-            .map_err(|e| Failure::from((e.into(), FailureType::Warning)))?;
-
-        let packet = Packet::parse(&data)?;
-        println!("Received from: {}", packet.username());
-
-        // Prepare and send a response back to the client
-        let response = format!("Server received {} bytes", data.len());
-        send.write_all(response.as_bytes()).await;
-        send.finish();
-
-        // Wait for all packets to be sent before shutting down
-        // endpoint.wait_idle().await;
-        // println!("Response sent, server exiting");
+            if let Err(e) = handle_connection(conn).await {
+                eprintln!("Server runtime error: error handling connection: {e}")
+            };
+        });
     }
 
     Ok(())
+}
+
+async fn handle_connection(conn: Incoming) -> Result<(), Failure> {
+    // Wait for the connection handshake to complete
+    let conn = conn.await
+        .map_err(|e| Failure::from((e.into(), FailureType::Warning)))?;
+    println!("Client connected");
+
+    // Accept a bidirectional stream from the client
+    let (mut send, mut recv) = conn.accept_bi().await
+        .map_err(|e| Failure::from((e.into(), FailureType::Warning)))?;
+
+    // Read up to 1024 bytes from the client
+    let data = recv.read_to_end(1024).await
+        .map_err(|e| Failure::from((e.into(), FailureType::Warning)))?;
+
+    let packet = Packet::parse(&data)?;
+    println!("Received from: {}", packet.username());
+
+    // Prepare and send a response back to the client
+    let response = format!("Server received {} bytes", data.len());
+    send.write_all(response.as_bytes()).await;
+    send.finish();
+
+    Ok(())
+
 }
 
