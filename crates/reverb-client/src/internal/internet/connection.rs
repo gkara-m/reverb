@@ -51,12 +51,11 @@ impl InternetClient {
 
     pub fn send_message(&mut self, command: Box<dyn NetworkCommand + Send + Sync>) -> Result<(), Failure> {
         println!("Attempting to send message to server: ");
-        let packet = Packet {
-            version: NETWORK_VERSION,
-            username: CONFIG.get().unwrap().username.clone(),
-            group: self.group.clone().unwrap_or_else(|| "none".to_string()),
-            payload: command,
-        };
+        let packet = Packet::new(
+            CONFIG.get().ok_or(Failure::from((anyhow!("Config not created"), FailureType::Fatal)))?.username.clone().as_str(),
+            self.group.clone().unwrap_or_else(|| "none".to_string()).as_str(),
+            command
+        )?;
         match &mut self.connection_status {
             ConnectionStatus::Connected(sender) => {sender.clone().send(packet).map_err(|e| Failure::from((e.into(), FailureType::Warning)))},
             ConnectionStatus::Connecting => Err(Failure::from((anyhow!("Currently connecting to server, cannot send message"), FailureType::Warning))),

@@ -16,7 +16,7 @@ pub struct Internal {
     current_external: ExternalRun,
     queue: Queue,
     kill_sender: Sender<()>,
-    server_connection: Option<internet::connection::InternetClient>,
+    server_connection: internet::connection::InternetClient,
     playlists: LruCache<String, Playlist>,
 }
 
@@ -28,7 +28,7 @@ impl Internal {
             current_external: external::get_new_external_run_from_song(&queue.current_song()?)?,
             queue,
             kill_sender: mpsc::channel().0,
-            server_connection: None,
+            server_connection: internet::connection::InternetClient::new(),
             playlists: LruCache::new(NonZeroUsize::new(10).unwrap()),
         })
     }
@@ -251,31 +251,15 @@ impl Internal {
 
 impl Internal {
     pub fn connect_to_server(&mut self) -> Result<(), Failure> {
-        self.server_connection = match self.server_connection {
-            Some(_) => {
-                return Err(Failure::from((anyhow!("Already connected to server"), FailureType::Warning)));
-            },
-            None => {
-                let mut sc = internet::connection::InternetClient::new();
-                sc.connect()?;
-                Some(sc)
-            },
-        };
-        Ok(())
+        self.server_connection.connect()
     }
 
     pub fn scan_online_users(&mut self) -> Result<(), Failure> {
-        if let Some(sc) = self.server_connection.as_mut() {
-            sc.send_message(Box::new(GetOnlineUsers{}))
-        } else {
-            Err(Failure::from((anyhow!("Not connected to server"), FailureType::Warning)))
-        }
+        self.server_connection.send_message(Box::new(GetOnlineUsers{}))
     }
 
     pub fn update_server_connection_status(&mut self, status: internet::connection::ConnectionStatus) {
-        if let Some(sc) = self.server_connection.as_mut() {
-            sc.update_connection(status);
-        }
+        self.server_connection.update_connection(status);
     }
 
     pub fn add_server(&mut self, name: String, address: String, certificate_path: String) -> Result<(), Failure> {
