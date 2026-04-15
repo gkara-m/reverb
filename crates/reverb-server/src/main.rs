@@ -18,7 +18,9 @@ const VERSION: &str = "0.1.0";
 
 /// Entry point for the server. Installs the default crypto provider, starts the async runtime,
 /// and runs the main server logic. Exits with error code 1 if the server fails.
-fn main() {
+
+#[tokio::main]
+async fn main() {
     let _ = rustls::crypto::ring::default_provider().install_default();
     println!("Server starting on {}", LISTEN_ADDR);
 
@@ -30,15 +32,18 @@ fn main() {
             std::process::exit(1);
         }
     };
-
-    if let Err(e) = tokio::runtime::Runtime::new().unwrap().block_on(run(endpoint)) {
-        eprintln!("Server runtime error: {e}");
-        std::process::exit(2);
+    
+    loop {
+        if let Err(e) = run(&endpoint).await {
+            eprintln!("Server runtime error: {e}");
+            std::process::exit(2);
+        }
     }
+
 }
 
 
-async fn run(endpoint: Endpoint) -> Result<(), Failure> {
+async fn run(endpoint: &Endpoint) -> Result<(), Failure> {
     // --- Accept a single client connection ---
     if let Some(conn) = endpoint.accept().await {
         // Wait for the connection handshake to complete
@@ -63,8 +68,8 @@ async fn run(endpoint: Endpoint) -> Result<(), Failure> {
         send.finish();
 
         // Wait for all packets to be sent before shutting down
-        endpoint.wait_idle().await;
-        println!("Response sent, server exiting");
+        // endpoint.wait_idle().await;
+        // println!("Response sent, server exiting");
     }
 
     Ok(())
