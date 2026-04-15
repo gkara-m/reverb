@@ -62,13 +62,19 @@ async fn handle_connection(conn: Incoming) -> Result<(), Failure> {
 
     tokio::spawn(async move {
         loop {
-            if let Err(e) = handle_bi(&conn_bi).await {eprintln!("Server connection error: {e}")}
+            if let Err(e) = handle_bi(&conn_bi).await {
+                eprintln!("Server bi_connection error: {e}");
+                return;
+            }
         }
     });
 
     tokio::spawn(async move {
         loop {
-            if let Err(e) = handle_uni(&conn_uni).await {eprintln!("Server connection error: {e}")}
+            if let Err(e) = handle_uni(&conn_uni).await {
+                eprintln!("Server uni_connection error: {e}");
+                return;
+            }
         }
     });
 
