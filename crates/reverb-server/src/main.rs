@@ -1,4 +1,4 @@
-use std::{fs, io, sync::Arc};
+use std::{collections::HashMap, fs, io, sync::{Arc, mpsc::{Receiver, Sender}}};
 use anyhow::anyhow;
 use quinn::{Connection, Endpoint, Incoming, RecvStream};
 use rustls::pki_types::{CertificateDer, PrivateKeyDer, PrivatePkcs8KeyDer};
@@ -36,10 +36,15 @@ async fn main() {
         }
     };
     
+    // TODO use parking_lot::RwLock for this 
+    let mut users: HashMap<String, User> = HashMap::new();     
+
     loop {
         if let Err(e) = run(&endpoint).await {
             eprintln!("Server runtime error: {e}");
-            std::process::exit(2);
+            if let Failure::Fatal(_, _) = e {
+                std::process::exit(2)
+            }
         }
     }
 

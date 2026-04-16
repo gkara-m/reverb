@@ -19,15 +19,15 @@ pub fn startup() -> Result<Endpoint, Failure> {
     // Wrap the rustls config for use with Quinn (QUIC implementation)
     let mut server_config =
         quinn::ServerConfig::with_crypto(Arc::new(QuicServerConfig::try_from(server_crypto)
-            .map_err(|e| Failure::from((e.into(), FailureType::Warning)))?));
+            .map_err(|e| Failure::from((e.into(), FailureType::Fatal)))?));
     // Set transport-level options: here, disable unidirectional streams
     let transport_config = Arc::get_mut(&mut server_config.transport).unwrap();
     transport_config.max_concurrent_uni_streams(0_u8.into());
 
     // --- Start the QUIC endpoint (server) ---
     let endpoint = quinn::Endpoint::server(server_config, LISTEN_ADDR.parse()
-        .map_err(|e: std::net::AddrParseError| Failure::from((e.into(), FailureType::Warning)))?) // address parse error
-        .map_err(|e| Failure::from((e.into(), FailureType::Warning)))?;
+        .map_err(|e: std::net::AddrParseError| Failure::from((e.into(), FailureType::Fatal)))?) // address parse error
+        .map_err(|e| Failure::from((e.into(), FailureType::Fatal)))?;
     println!("Server listening and waiting for one client...");
 
     Ok(endpoint)
@@ -43,7 +43,7 @@ pub fn load_generate_certificate_and_key() -> Result<(Vec<CertificateDer<'static
             // If both files exist, load them
             Ok((cert, key)) => (
                 CertificateDer::from(cert),
-                PrivateKeyDer::try_from(key).map_err(|e| Failure::from((anyhow!(e), FailureType::Warning)))?,
+                PrivateKeyDer::try_from(key).map_err(|e| Failure::from((anyhow!(e), FailureType::Fatal)))?,
             ),
             // If not found, generate a new self-signed certificate and key
             Err(ref e) if e.kind() == io::ErrorKind::NotFound => {

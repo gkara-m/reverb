@@ -77,6 +77,3 @@ pub struct User {
     availability: UserAvailability, 
 }
 
-pub struct UserConnection {
-    user: User,
-}
