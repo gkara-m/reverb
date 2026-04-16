@@ -1,18 +1,23 @@
 use std::{fs, io, sync::Arc};
+use anyhow::anyhow;
 use quinn::{Connection, Endpoint, Incoming, RecvStream};
 use rustls::pki_types::{CertificateDer, PrivateKeyDer, PrivatePkcs8KeyDer};
 
 
 use reverb_core::{network::*, failure::failure::{Failure, FailureType}};
+use crate::network::connection::{self, User};
 
 mod network;
 mod server_startup;
+mod command_handling;
 
 
 // The address and port the server will listen on
 const LISTEN_ADDR: &str = "127.0.0.1:4433";
 // The server version, included in responses for client verification
 const VERSION: &str = "0.1.0";
+const SERVER_NAME: &str = "server";
+const SERVER_GROUP: &str = "server";
 
 /// Entry point for the server. Installs the default crypto provider, starts the async runtime,
 /// and runs the main server logic. Exits with error code 1 if the server fails.
@@ -44,7 +49,7 @@ async fn main() {
 async fn run(endpoint: &Endpoint) -> Result<(), Failure> {
     if let Some(conn) = endpoint.accept().await {
         tokio::spawn(async move {
-            if let Err(e) = handle_connection(conn).await {
+            if let Err(e) = connection::handle_connection(conn).await {
                 eprintln!("Server runtime error: error handling connection: {e}")
             };
         });
@@ -53,65 +58,14 @@ async fn run(endpoint: &Endpoint) -> Result<(), Failure> {
     Ok(())
 }
 
-async fn handle_connection(conn: Incoming) -> Result<(), Failure> {
-    // Wait for the connection handshake to complete
-    let conn_bi = conn.await
-        .map_err(|e| Failure::from((e.into(), FailureType::Warning)))?;
-    println!("Client connected");
-    let conn_uni = conn_bi.clone();
-
-    tokio::spawn(async move {
-        loop {
-            if let Err(e) = handle_bi(&conn_bi).await {
-                eprintln!("Server bi_connection error: {e}");
-                return;
-            }
-        }
-    });
-
-    tokio::spawn(async move {
-        loop {
-            if let Err(e) = handle_uni(&conn_uni).await {
-                eprintln!("Server uni_connection error: {e}");
-                return;
-            }
-        }
-    });
-
-    Ok(())
-}
-
-async fn handle_bi(conn: &Connection) -> Result<(), Failure> {
-    let (mut send, mut recv) = conn.accept_bi().await
-        .map_err(|e| Failure::from((e.into(), FailureType::Warning)))?;
-
-    let data = read_incoming(recv).await?;
-    let packet = Packet::parse(&data)?;
-
-    // Prepare and send a response back to the client
-    let response = create_response(packet)?;
-    send.write_all(&response.serialize()?).await;
-    send.finish();
-    
-    Ok(())
-}
-
-async fn handle_uni(conn: &Connection) -> Result<(), Failure> {
-    let mut recv = conn.accept_uni().await
-        .map_err(|e| Failure::from((e.into(), FailureType::Warning)))?;
-
-    let data = read_incoming(recv).await?;
-    let packet = Packet::parse(&data)?;
-
-    Ok(())
-}
-
-async fn read_incoming(mut recv: RecvStream) -> Result<Vec<u8>, Failure> {
-    recv.read_to_end(1024).await
-        .map_err(|e| Failure::from((e.into(), FailureType::Warning)))
-}
-
-fn create_response(packet: Packet) -> Result<Packet, Failure> {
-    Packet::new("server", "server", Box::new(DefaultCommand{}))
+fn handle_packet(packet: Packet) -> Result<Option<Packet>, Failure> {
+    match packet.payload.number() {
+        DefaultCommand::ID => {Ok(Some(Packet::new(SERVER_NAME, SERVER_GROUP, Box::new(DefaultCommand{}))?))},
+        GetOnlineUsers::ID => {
+            let outgoing_command = command_handling::handle_get_online_users(packet)?;
+            Err(Failure::from((anyhow!("packet handling error: command not implemented"), FailureType::Warning)))
+        },
+        _ => {Err(Failure::from((anyhow!("packet handling error: command not found"), FailureType::Warning)))}
+    }
 }
 

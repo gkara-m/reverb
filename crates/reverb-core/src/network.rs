@@ -1,3 +1,5 @@
+use std::any::Any;
+
 use crate::failure::failure::{Failure, FailureType};
 use anyhow::anyhow;
 
@@ -35,15 +37,15 @@ pub fn parse_command(data: Vec<u8>) -> Result<Box<dyn NetworkCommand + Send + Sy
 pub fn serialize(boxed_cmd: &Box<dyn NetworkCommand + Send + Sync>) -> Result<Vec<u8>, Failure> {
     let mut data = vec![boxed_cmd.number()];
     data.append(&mut boxed_cmd.serialize()?);
-    println!("serialized command into: {} bytes", data.len()); // Debug line
     Ok(data)
 }
 
-pub trait NetworkCommand {
+pub trait NetworkCommand: Any {
     fn number(&self) -> u8; // numbers should be changed when any functionality changes as we are NOT maintaining backwards compatability
     fn serialize(&self) -> Result<Vec<u8>, Failure>;
     fn parse(data: Vec<u8>) -> Result<Self, Failure> where Self: Sized;
     fn query_or_notify(&self) -> QueryOrNotify;
+    fn as_any(&self) -> &dyn Any;
 }
 
 pub struct DefaultCommand {}
@@ -52,6 +54,7 @@ pub struct Echo {
     echo_type: EchoType,
     echo_target: String
 }
+#[derive(Clone, Debug, Copy)]
 pub struct GetOnlineUsers {}
 
 pub enum EchoType {
@@ -59,17 +62,21 @@ pub enum EchoType {
     User = 1
 }
 
-impl DefaultCommand {
-    pub const ID: u8 = 0;
+pub trait NetworkCommandID {
+    const ID: u8;
 }
-impl Skip {
-    pub const ID: u8 = 1;
+
+impl NetworkCommandID for DefaultCommand {
+    const ID: u8 = 0;
 }
-impl Echo {
-    pub const ID: u8 = 2;
+impl NetworkCommandID for Skip {
+    const ID: u8 = 1;
 }
-impl GetOnlineUsers {
-    pub const ID: u8 = 3;
+impl NetworkCommandID for Echo {
+    const ID: u8 = 2;
+}
+impl NetworkCommandID for GetOnlineUsers {
+    const ID: u8 = 3;
 }
 
 impl NetworkCommand for DefaultCommand {
@@ -87,6 +94,8 @@ impl NetworkCommand for DefaultCommand {
     fn query_or_notify(&self) -> QueryOrNotify {
         QueryOrNotify::Query
     }
+
+    fn as_any(&self) -> &dyn Any { self }
 }
 
 impl NetworkCommand for Skip {
@@ -103,6 +112,8 @@ impl NetworkCommand for Skip {
     fn query_or_notify(&self) -> QueryOrNotify {
         QueryOrNotify::Notify
     }
+
+    fn as_any(&self) -> &dyn Any { self }
 }
 
 impl NetworkCommand for Echo {
@@ -139,6 +150,9 @@ impl NetworkCommand for Echo {
     fn query_or_notify(&self) -> QueryOrNotify {
         QueryOrNotify::Query
     }
+
+    fn as_any(&self) -> &dyn Any { self }
+
 }
 
 impl NetworkCommand for GetOnlineUsers {
@@ -155,6 +169,9 @@ impl NetworkCommand for GetOnlineUsers {
     fn query_or_notify(&self) -> QueryOrNotify {
         QueryOrNotify::Query
     }
+
+    fn as_any(&self) -> &dyn Any { self }
+
 }
 
 
@@ -218,7 +235,6 @@ impl Packet {
         }
         data.append(&mut vec![self.payload.number()]);
         data.append(&mut serialize(&self.payload)?);
-        println!("serialized packet into: {} bytes", data.len()); // Debug line
         Ok(data)
     }
 
