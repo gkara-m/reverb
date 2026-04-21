@@ -4,7 +4,7 @@ use crate::connection::UserAvailability;
 use anyhow::anyhow;
 
 use reverb_core::{network::*, failure::failure::{Failure, FailureType}};
-use crate::{USERS, network::connection};
+use crate::USERS;
 
 pub fn handle_get_online_users(_packet: Packet) -> Box<dyn NetworkCommand + Send + Sync> {
     // let command = try_get_online_users(packet.payload)?;

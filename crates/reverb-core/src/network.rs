@@ -62,6 +62,16 @@ pub enum EchoType {
     User = 1
 }
 
+impl EchoType {
+    fn parse(data: u8) -> Result<Self, Failure> {
+        match data {
+            x if x == EchoType::Group as u8 => Ok(EchoType::Group),
+            x if x == EchoType::User as u8 => Ok(EchoType::User),
+            _ => Err(Failure::from((anyhow!("invalid echotype"), FailureType::Warning)))
+        }
+    }
+}
+
 pub trait NetworkCommandID {
     const ID: u8;
 }
@@ -133,13 +143,7 @@ impl NetworkCommand for Echo {
     }
 
     fn parse(data: Vec<u8>) -> Result<Self, Failure> where Self: Sized {
-        let _id_group = EchoType::Group as u8;
-        let _is_user = EchoType::User as u8;
-        let echo_type = match data[1] {
-            _id_group => EchoType::Group,
-            _id_user => EchoType::User
-        }; // TODO fix broken match statement
-
+        let echo_type = EchoType::parse(data[1])?;
         let target_data = data[2..].to_vec();
         let echo_target = String::from_utf8(target_data)
             .map_err(|e| Failure::from((anyhow!("failed to parse echo target: {e}"), FailureType::Warning)))?;

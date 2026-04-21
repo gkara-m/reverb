@@ -3,7 +3,7 @@ use anyhow::anyhow;
 use quinn::Endpoint;
 use quinn_proto::crypto::rustls::QuicServerConfig;
 use rustls::pki_types::{CertificateDer, PrivateKeyDer, PrivatePkcs8KeyDer};
-use reverb_core::{network::*, failure::failure::{Failure, FailureType}};
+use reverb_core::failure::failure::{Failure, FailureType};
 
 use crate::LISTEN_ADDR;
 
@@ -52,15 +52,15 @@ pub fn load_generate_certificate_and_key() -> Result<(Vec<CertificateDer<'static
                 let key = PrivatePkcs8KeyDer::from(cert.key_pair.serialize_der());
                 let cert = cert.cert.into();
                 // Ensure the directory exists
-                if let Err(_) = fs::create_dir_all(path) {
-                    Err(Failure::from((anyhow!("failed to create certificate directory"), FailureType::Fatal)))
-                } else {Ok(())};
-                if let Err(_) = fs::write(&cert_path, &cert) {
-                    Err(Failure::from((anyhow!("failed to write certificate"), FailureType::Fatal)))
-                } else {Ok(())};
-                if let Err(_) = fs::write(&key_path, key.secret_pkcs8_der()) {
-                    Err(Failure::from((anyhow!("failed to write private key"), FailureType::Fatal)))
-                } else {Ok(())};
+                if let Err(e) = fs::create_dir_all(path) {
+                    return Err(Failure::from((anyhow!("failed to create certificate directory: {e}"), FailureType::Fatal)));
+                };
+                if let Err(e) = fs::write(&cert_path, &cert) {
+                    return Err(Failure::from((anyhow!("failed to write certificate: {e}"), FailureType::Fatal)));
+                };
+                if let Err(e) = fs::write(&key_path, key.secret_pkcs8_der()) {
+                    return Err(Failure::from((anyhow!("failed to write private key: {e}"), FailureType::Fatal)));
+                };
                 (cert, key.into())
             }
             // Any other error is fatal

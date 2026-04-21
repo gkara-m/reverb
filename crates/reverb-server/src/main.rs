@@ -1,9 +1,8 @@
 use std::{collections::HashMap, sync::{LazyLock, atomic::AtomicU16}};
-use anyhow::anyhow;
 use quinn::Endpoint;
 use arc_swap::ArcSwap;
 
-use reverb_core::{network::*, failure::failure::{Failure, FailureType}};
+use reverb_core::failure::failure::Failure;
 use crate::network::connection::{self, User};
 
 mod network;
@@ -14,7 +13,7 @@ mod command_handling;
 // The address and port the server will listen on
 const LISTEN_ADDR: &str = "127.0.0.1:4433";
 // The server version, included in responses for client verification
-const VERSION: &str = "0.1.0";
+const _VERSION: &str = "0.1.0";
 const SERVER_NAME: &str = "server";
 const SERVER_GROUP: &str = "server";
 
