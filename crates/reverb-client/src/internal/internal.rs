@@ -92,9 +92,9 @@ impl Internal {
             .send(self.song_duration_gone())
             .map_err(|e| Failure::from((e.into(), FailureType::Warning))),
             Command::ServerConnect => {self.connect_to_server()},
-            Command::ServerUpdateStatus(status) => {self.update_server_connection_status(status); Ok(())},
-            Command::ServerAdd(name, address, certificate) => {self.add_server(name, address, certificate)},
-            Command::ServerScanOnline => self.scan_online_users(),
+            Command::ServerUpdateStatus(status) => {self.server_update_connection_status(status); Ok(())},
+            Command::ServerAdd(name, address, certificate) => {self.server_add(name, address, certificate)},
+            Command::ServerGetOnlineUsers => self.server_get_online_users(),
             _ => Ok(()),
         }
     }
@@ -340,15 +340,15 @@ impl Internal {
         self.server_connection.connect()
     }
 
-    pub fn scan_online_users(&mut self) -> Result<(), Failure> {
+    pub fn server_get_online_users(&mut self) -> Result<(), Failure> {
         self.server_connection.send_message(Box::new(GetOnlineUsers{}))
     }
 
-    pub fn update_server_connection_status(&mut self, status: internet::connection::ConnectionStatus) {
+    pub fn server_update_connection_status(&mut self, status: internet::connection::ConnectionStatus) {
         self.server_connection.update_connection(status);
     }
 
-    pub fn add_server(&mut self, name: String, address: String, certificate_path: String) -> Result<(), Failure> {
+    pub fn server_add(&mut self, name: String, address: String, certificate_path: String) -> Result<(), Failure> {
         crate::config::internet::ServerConfig::new(&address, &name, &certificate_path)?;
         Ok(())
     }

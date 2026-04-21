@@ -125,7 +125,13 @@ async fn query(conn: Connection, packet: Packet) -> Result<(), Failure> {
     // Wait for the server's response and print it
     match recv.read_to_end(1024).await {
         Ok(data) => {
-            println!("Received response: {}", String::from_utf8_lossy(&data));
+            let response_packet = Packet::parse(&data)?;
+            println!("Received response from server: ");
+            println!("Response version: {:?}", response_packet.version());
+            println!("Response username: {}", response_packet.username());
+            println!("Response group: {}", response_packet.group());
+            MAIN_SENDER.get().unwrap().clone().send(Command::ServerResponse(response_packet))
+            .unwrap_or_else(|e| eprintln!("Failed to send server response command to main sender: {}", e));
         }
         Err(e) => {
             eprintln!("Receive error: {e}");

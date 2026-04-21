@@ -1,4 +1,4 @@
-use std::{any::Any, collections::HashMap};
+use std::{any::Any, collections::HashMap, fmt};
 
 use crate::failure::failure::{Failure, FailureType};
 use anyhow::anyhow;
@@ -45,20 +45,24 @@ pub trait NetworkCommand: Any {
     fn as_any(&self) -> &dyn Any;
 }
 
+#[derive(Debug, Clone)]
 pub struct DefaultCommand {}
+#[derive(Debug, Clone)]
 pub struct Skip {}
+#[derive(Debug, Clone)]
 pub struct Echo {
     pub echo_type: EchoType,
     pub echo_target: String
 }
-#[derive(Clone, Debug)]
+#[derive(Debug, Clone)]
 pub struct OnlineUsers {
     pub users: HashMap<u16, String>
 }
-
+#[derive(Debug, Clone)]
 pub struct GetOnlineUsers {}
+#[derive(Debug, Clone)]
 pub struct RequestUserData {}
-
+#[derive(Debug, Clone)]
 pub enum EchoType {
     Group = 0,
     User = 1
@@ -229,12 +233,36 @@ impl NetworkCommand for RequestUserData {
     fn as_any(&self) -> &dyn Any { self }
 }
 
-
 pub struct Packet {
     pub version: [u8; 3],
     pub username: String,
     pub group: String,
     pub payload: Box<dyn NetworkCommand + Send + Sync>,
+}
+
+impl fmt::Debug for Packet {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Packet")
+            .field("version", &self.version)
+            .field("username", &self.username)
+            .field("group", &self.group)
+            .field("payload_number", &self.payload.number())
+            .finish()
+    }
+}
+
+impl Clone for Packet {
+    fn clone(&self) -> Self {
+        let payload = parse_command(serialize(&self.payload).unwrap_or_default())
+            .unwrap_or_else(|_| Box::new(DefaultCommand {}));
+
+        Packet {
+            version: self.version,
+            username: self.username.clone(),
+            group: self.group.clone(),
+            payload,
+        }
+    }
 }
 
 impl Packet {

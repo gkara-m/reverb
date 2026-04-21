@@ -164,6 +164,6 @@ pub(super) fn add_server(name: String, address: String, certificate_path: String
 }
 
 pub(super) fn get_online_users() -> Result<(), Failure> {
-    MAIN_SENDER.get().unwrap().clone().send(Command::ServerScanOnline)
+    MAIN_SENDER.get().unwrap().clone().send(Command::ServerGetOnlineUsers)
     .map_err(|e| Failure::from((e.into(), "get_online_users", FailureType::Fatal)))
 }

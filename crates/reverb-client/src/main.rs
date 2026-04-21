@@ -3,6 +3,7 @@ use std::{sync::mpsc, time::Duration};
 
 use internal::song::Song;
 use once_cell::sync::OnceCell;
+use reverb_core::network::Packet;
 use ui::cli::cli;
 
 use reverb_core::failure::failure::{Failure, FailureType};
@@ -141,7 +142,8 @@ pub enum Command {
     ServerAdd(String, String, String), // name, address, certificate path
     ServerConnect,
     ServerUpdateStatus(internal::internet::connection::ConnectionStatus),
-    ServerScanOnline,
+    ServerGetOnlineUsers,
+    ServerResponse(Packet),
     Failure(Failure),
 }
 
