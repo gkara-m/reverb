@@ -1,7 +1,7 @@
-use std::{collections::HashMap, fs, io, sync::{Arc, mpsc::{Receiver, Sender}}};
+use std::{collections::HashMap, sync::{LazyLock, Arc, atomic::{AtomicU16, Ordering}}};
 use anyhow::anyhow;
-use quinn::{Connection, Endpoint, Incoming, RecvStream};
-use rustls::pki_types::{CertificateDer, PrivateKeyDer, PrivatePkcs8KeyDer};
+use quinn::Endpoint;
+use arc_swap::ArcSwap;
 
 
 use reverb_core::{network::*, failure::failure::{Failure, FailureType}};
@@ -19,8 +19,12 @@ const VERSION: &str = "0.1.0";
 const SERVER_NAME: &str = "server";
 const SERVER_GROUP: &str = "server";
 
+static USERS: LazyLock<ArcSwap<HashMap<u16, User>>> = LazyLock::new(|| {ArcSwap::from_pointee(HashMap::new())});
+static NEXT_ID: AtomicU16 = AtomicU16::new(1);
+
 /// Entry point for the server. Installs the default crypto provider, starts the async runtime,
-/// and runs the main server logic. Exits with error code 1 if the server fails.
+/// and runs the main server logic. Exits with error code 1 if the server fails at startup or error
+/// code 2 if fails at runtime.
 
 #[tokio::main]
 async fn main() {
@@ -35,9 +39,6 @@ async fn main() {
             std::process::exit(1);
         }
     };
-    
-    // TODO use parking_lot::RwLock for this 
-    let mut users: HashMap<String, User> = HashMap::new();     
 
     loop {
         if let Err(e) = run(&endpoint).await {
@@ -74,3 +75,12 @@ fn handle_packet(packet: Packet) -> Result<Option<Packet>, Failure> {
     }
 }
 
+fn add_user(user: User) -> u16 {
+    let id = NEXT_ID.fetch_add(1, Ordering::Relaxed); // panics if exceeds 65535
+
+    let mut map = (**USERS.load()).clone();
+    map.insert(id, user);
+    USERS.store(Arc::new(map));
+
+    id
+}
