@@ -67,8 +67,13 @@ fn handle_packet(packet: Packet) -> Result<Option<Packet>, Failure> {
     match packet.payload.number() {
         DefaultCommand::ID => {Ok(Some(Packet::new(SERVER_NAME, SERVER_GROUP, Box::new(DefaultCommand{}))?))},
         GetOnlineUsers::ID => {
-            let outgoing_command = command_handling::handle_get_online_users(packet)?;
-            Err(Failure::from((anyhow!("packet handling error: command not implemented"), FailureType::Warning)))
+            let outgoing_command = command_handling::handle_get_online_users(packet);
+            Ok(Some(Packet {
+                version: NETWORK_VERSION,
+                username: SERVER_NAME.to_string(),
+                group: SERVER_GROUP.to_string(), 
+                payload: outgoing_command
+            }))
         },
         _ => {Err(Failure::from((anyhow!("packet handling error: command not found"), FailureType::Warning)))}
     }

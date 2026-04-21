@@ -48,12 +48,12 @@ pub trait NetworkCommand: Any {
 pub struct DefaultCommand {}
 pub struct Skip {}
 pub struct Echo {
-    echo_type: EchoType,
-    echo_target: String
+    pub echo_type: EchoType,
+    pub echo_target: String
 }
 #[derive(Clone, Debug)]
 pub struct GetOnlineUsers {
-    users: HashMap<u16, String>
+    pub users: HashMap<u16, String>
 }
 pub struct RequestUserData {}
 
