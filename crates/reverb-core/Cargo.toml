@@ -10,3 +10,4 @@ path = "src/lib.rs"
 
 [dependencies]
 anyhow = "1.0"
+postcard = "1.1.3"

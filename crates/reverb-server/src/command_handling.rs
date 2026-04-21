@@ -1,11 +1,20 @@
+use std::collections::HashMap;
+use crate::connection::UserAvailability;
+
 use anyhow::anyhow;
 
 use reverb_core::{network::*, failure::failure::{Failure, FailureType}};
-use crate::network::connection;
+use crate::{USERS, network::connection};
 
 pub fn handle_get_online_users(packet: Packet) -> Result<Box<dyn NetworkCommand + Send + Sync>, Failure> {
-    let boxed_command = packet.payload;
-    let command = try_get_online_users(boxed_command)?;
+    let command = try_get_online_users(packet.payload)?;
+    let users = (**USERS.load()).clone();
+    let mut open_users = HashMap::new();
+    for (id, user) in users {
+        if let UserAvailability::OpenToEcho = user.availability {
+            open_users.insert(id, user);
+        }
+    };
     
     Err(Failure::from((anyhow!("packet handling error: command not implemented"), FailureType::Warning)))
 }

@@ -3,7 +3,6 @@ use anyhow::anyhow;
 use quinn::Endpoint;
 use arc_swap::ArcSwap;
 
-
 use reverb_core::{network::*, failure::failure::{Failure, FailureType}};
 use crate::network::connection::{self, User};
 

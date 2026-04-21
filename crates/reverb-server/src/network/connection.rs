@@ -108,8 +108,8 @@ pub enum UserAvailability {
 
 #[derive(Debug, Clone)]
 pub struct User {
-    username: String,
-    group: String,
-    availability: UserAvailability, 
+    pub username: String,
+    pub group: String,
+    pub availability: UserAvailability, 
 }
 
