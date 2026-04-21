@@ -13,7 +13,7 @@ pub fn handle_get_online_users(_packet: Packet) -> Box<dyn NetworkCommand + Send
         .filter(|(_, user)| matches!(user.availability, UserAvailability::OpenToEcho))
         .map(|(&id, user)| (id, user.username.clone())).collect();
     
-    Box::new(GetOnlineUsers { users: open_users })
+    Box::new(OnlineUsers { users: open_users })
 }
 
 // fn try_get_online_users(item: Box<dyn NetworkCommand>) -> Result<GetOnlineUsers, Failure> {

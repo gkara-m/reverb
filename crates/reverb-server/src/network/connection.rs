@@ -87,7 +87,7 @@ async fn request_user_info(conn: &Connection) -> Result<Packet, Failure> {
         version: NETWORK_VERSION,
         username: SERVER_NAME.to_string(),
         group:SERVER_GROUP.to_string(),
-        payload: Box::new(RequestUserData {})
+        payload: Box::new(UserData {})
     };
     send.write_all(&request_packet.serialize()?).await
         .map_err(|e| Failure::from((e.into(), FailureType::Warning)))?;

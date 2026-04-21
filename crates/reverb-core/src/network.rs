@@ -1,4 +1,4 @@
-use std::{any::Any, collections::HashMap};
+use std::{any::Any, collections::HashMap, fmt};
 
 use crate::failure::failure::{Failure, FailureType};
 use anyhow::anyhow;
@@ -26,7 +26,7 @@ pub fn parse_command(data: Vec<u8>) -> Result<Box<dyn NetworkCommand + Send + Sy
         DefaultCommand::ID => Ok(Box::new(DefaultCommand{})),
         Skip::ID => Ok(Box::new(Skip{})),
         Echo::ID => Ok(Box::new(Echo::parse(data)?)),
-        GetOnlineUsers::ID => Ok(Box::new(GetOnlineUsers::parse(data)?)),
+        OnlineUsers::ID => Ok(Box::new(OnlineUsers::parse(data)?)),
         _ => Err(Failure::from((anyhow!("invalid command"), FailureType::Warning)))
     }
 }
@@ -45,18 +45,24 @@ pub trait NetworkCommand: Any {
     fn as_any(&self) -> &dyn Any;
 }
 
+#[derive(Debug, Clone)]
 pub struct DefaultCommand {}
+#[derive(Debug, Clone)]
 pub struct Skip {}
+#[derive(Debug, Clone)]
 pub struct Echo {
     pub echo_type: EchoType,
     pub echo_target: String
 }
-#[derive(Clone, Debug)]
-pub struct GetOnlineUsers {
+#[derive(Debug, Clone)]
+pub struct OnlineUsers {
     pub users: HashMap<u16, String>
 }
-pub struct RequestUserData {}
-
+#[derive(Debug, Clone)]
+pub struct GetOnlineUsers {}
+#[derive(Debug, Clone)]
+pub struct UserData {}
+#[derive(Debug, Clone)]
 pub enum EchoType {
     Group = 0,
     User = 1
@@ -85,12 +91,16 @@ impl NetworkCommandID for Skip {
 impl NetworkCommandID for Echo {
     const ID: u8 = 2;
 }
-impl NetworkCommandID for GetOnlineUsers {
+impl NetworkCommandID for OnlineUsers {
     const ID: u8 = 3;
 }
-impl NetworkCommandID for RequestUserData {
+impl NetworkCommandID for UserData {
     const ID: u8 = 4;
 }
+impl NetworkCommandID for GetOnlineUsers {
+    const ID: u8 = 5;
+}
+
 
 impl NetworkCommand for DefaultCommand {
     fn number(&self) -> u8 {
@@ -162,13 +172,13 @@ impl NetworkCommand for Echo {
 
 }
 
-impl NetworkCommand for GetOnlineUsers {
+impl NetworkCommand for OnlineUsers {
     fn number(&self) -> u8 {
-        GetOnlineUsers::ID
+        OnlineUsers::ID
     }
     fn serialize(&self) -> Result<Vec<u8>, Failure> {
         let mut data = Vec::new();
-        data.append(&mut [GetOnlineUsers::ID].to_vec());
+        data.append(&mut [OnlineUsers::ID].to_vec());
         let mut buffer = [0u8; 512];
         let user_data = to_slice(&self.users, &mut buffer)
             .map_err(|e| Failure::from((anyhow!("failed to serialize GetOnlineUsers: {e}"), FailureType::Warning)))?;
@@ -180,7 +190,7 @@ impl NetworkCommand for GetOnlineUsers {
         let users: HashMap<u16, String> = from_bytes(&data[1..])
             .map_err(|e| Failure::from((anyhow!("failed to parse GetOnlineUsers: {e}"), FailureType::Warning)))?;
 
-        Ok(GetOnlineUsers { users })
+        Ok(OnlineUsers { users })
     }
 
     fn query_or_notify(&self) -> QueryOrNotify {
@@ -191,15 +201,15 @@ impl NetworkCommand for GetOnlineUsers {
 
 }
 
-impl NetworkCommand for RequestUserData {
+impl NetworkCommand for GetOnlineUsers {
     fn number(&self) -> u8 {
-        RequestUserData::ID
+        GetOnlineUsers::ID
     }
     fn serialize(&self) -> Result<Vec<u8>, Failure> {
         Ok(vec![])
     }
     fn parse(_data: Vec<u8>) -> Result<Self, Failure> where Self: Sized {
-        Ok(RequestUserData {})
+        Ok(GetOnlineUsers {})
     }
     fn query_or_notify(&self) -> QueryOrNotify {
         QueryOrNotify::Query
@@ -207,12 +217,52 @@ impl NetworkCommand for RequestUserData {
     fn as_any(&self) -> &dyn Any { self }
 }
 
+impl NetworkCommand for UserData {
+    fn number(&self) -> u8 {
+        UserData::ID
+    }
+    fn serialize(&self) -> Result<Vec<u8>, Failure> {
+        Ok(vec![])
+    }
+    fn parse(_data: Vec<u8>) -> Result<Self, Failure> where Self: Sized {
+        Ok(UserData {})
+    }
+    fn query_or_notify(&self) -> QueryOrNotify {
+        QueryOrNotify::Query
+    }
+    fn as_any(&self) -> &dyn Any { self }
+}
 
 pub struct Packet {
     pub version: [u8; 3],
     pub username: String,
     pub group: String,
     pub payload: Box<dyn NetworkCommand + Send + Sync>,
+}
+
+impl fmt::Debug for Packet {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Packet")
+            .field("version", &self.version)
+            .field("username", &self.username)
+            .field("group", &self.group)
+            .field("payload_number", &self.payload.number())
+            .finish()
+    }
+}
+
+impl Clone for Packet {
+    fn clone(&self) -> Self {
+        let payload = parse_command(serialize(&self.payload).unwrap_or_default())
+            .unwrap_or_else(|_| Box::new(DefaultCommand {}));
+
+        Packet {
+            version: self.version,
+            username: self.username.clone(),
+            group: self.group.clone(),
+            payload,
+        }
+    }
 }
 
 impl Packet {

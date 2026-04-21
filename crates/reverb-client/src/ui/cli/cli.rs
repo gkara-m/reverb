@@ -1,4 +1,5 @@
 use anyhow::anyhow;
+use reverb_core::network::{NetworkCommandID, OnlineUsers};
 use std::sync::mpsc::Sender;
 use std::sync::{Mutex, Arc};
 use once_cell::sync::Lazy;
@@ -143,7 +144,7 @@ pub fn run_cli(update_interval: u64) -> Result<(), Failure> {
     // input thread
     let (input_tx, input_rx) = std::sync::mpsc::channel::<String>();
 
-    let renderer = run_ui(&MAIN_SENDER.get().unwrap(), input_tx, update_interval);
+    let renderer = run_ui(input_tx, update_interval);
 
 
     println!("Please enter command or type 'help' for help.");
@@ -157,6 +158,33 @@ pub fn run_cli(update_interval: u64) -> Result<(), Failure> {
 
     let _ = renderer.join();
     Ok(())
+}
+
+pub fn handle_command(command: Command) -> Result<(), Failure> {
+    match command {
+        Command::ServerResponse(packet) => {
+            println!("Received response from server: ");
+            println!("Response version: {:?}", packet.version());
+            println!("Response username: {}", packet.username);
+            println!("Response group: {}", packet.group);
+            match packet.payload.number() {
+                reverb_core::network::DefaultCommand::ID => {
+                    println!("{:#?}", packet);
+                    Ok(())
+                },
+                reverb_core::network::OnlineUsers::ID => {
+                    if let Some(online_users) = packet.payload.as_any().downcast_ref::<OnlineUsers>() {
+                        println!("Online users: {}", online_users.users.iter().map(|(_, username)| username.clone()).collect::<Vec<String>>().join(", "));
+                    } else {
+                        println!("Failed to parse online users from server response");
+                    }
+                    Ok(())
+                },
+                _ => Ok(())
+            }
+        },
+        _ => Ok(()),
+    }
 }
 
 pub fn print_failure(err: Failure) {

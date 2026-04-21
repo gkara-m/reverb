@@ -99,6 +99,16 @@ async fn connect_to(server_config: ServerConfig) -> Result<Connection, Failure> 
         .map_err(|e| Failure::from((e.into(), FailureType::Warning)))?;
     println!("Successfully connected to server at {}", server_config.server_address);
 
+
+    // send notification with complete header for server to identify us
+    println!("sending information about self to server");
+    let packet = Packet::new(
+        CONFIG.get().ok_or(Failure::from((anyhow!("Config not created"), FailureType::Fatal)))?.username.clone().as_str(),
+        "none",
+        Box::new(reverb_core::network::UserData {})
+    )?;
+    notify(conn.clone(), packet).await?;
+
     Ok(conn)
 }
     
@@ -125,7 +135,13 @@ async fn query(conn: Connection, packet: Packet) -> Result<(), Failure> {
     // Wait for the server's response and print it
     match recv.read_to_end(1024).await {
         Ok(data) => {
-            println!("Received response: {}", String::from_utf8_lossy(&data));
+            let response_packet = Packet::parse(&data)?;
+            println!("Received response from server: ");
+            println!("Response version: {:?}", response_packet.version());
+            println!("Response username: {}", response_packet.username());
+            println!("Response group: {}", response_packet.group());
+            MAIN_SENDER.get().unwrap().clone().send(Command::ServerResponse(response_packet))
+            .unwrap_or_else(|e| eprintln!("Failed to send server response command to main sender: {}", e));
         }
         Err(e) => {
             eprintln!("Receive error: {e}");
@@ -152,7 +168,7 @@ async fn notify(conn: Connection, packet: Packet) -> Result<(), Failure> {
     send.finish()
     .map_err(|e| Failure::from((e.into(), "closing the sending data over internet", FailureType::Warning)))?;
     
-    println!("Sent: ");
+    println!("Sent!");
 
     Ok(())
 }

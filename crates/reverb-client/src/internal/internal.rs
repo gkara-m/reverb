@@ -1,4 +1,4 @@
-use reverb_core::network::{GetOnlineUsers, Packet};
+use reverb_core::network::{GetOnlineUsers, OnlineUsers, Packet};
 use crate::{
     CONFIG, Command, MAIN_SENDER, external::external::{self, External, ExternalRun, ExternalType}, internal::{
         internet, playlist::Playlist, queue::Queue, song::Song
@@ -15,11 +15,92 @@ use anyhow::anyhow;
 pub struct Internal {
     current_external: ExternalRun,
     queue: Queue,
-    kill_sender: Sender<()>,
+    autoskip_kill_sender: Sender<()>,
     server_connection: internet::connection::InternetClient,
     playlists: LruCache<String, Playlist>,
+    ui_update_sender: Sender<()>,
 }
 
+// command handling
+impl Internal {
+    pub fn handle_command(&mut self, command: Command) -> Result<(), Failure> {
+        match command {
+                        Command::Play => self.play(),
+            Command::Pause => self.pause(),
+            Command::IsSongPlaying(sender) => match self.is_song_playing() {
+                Ok(is_playing) => sender
+                    .send(is_playing)
+                    .map_err(|e| Failure::from((e.into(), FailureType::Warning))),
+                Err(e) => Err(e),
+            },
+            Command::PlayNew(song) => self.play_new(song),
+            Command::CurrentSong(sender) => match self.current_song() {
+                Ok(song) => sender.send(song)
+                    .map_err(|e| Failure::from((e.into(), FailureType::Warning))),
+                Err(e) => Err(e),
+            },
+            Command::PlaylistNew {
+                name,
+                external_type,
+            } => self.playlist_new(&name, external_type),
+            Command::PlaylistAdd(playlist, song) => self.playlist_add(&playlist, song),
+            Command::PlaylistRemove(playlist, index) => self.playlist_remove(&playlist, index),
+            Command::PlaylistMoveSong {playlist, from, to } => self.playlist_move_song(&playlist, from, to),
+            Command::PlaylistGetSongs(playlist, sender) => {
+                match self.playlist_get_songs(&playlist) {
+                    Ok(songs) => 
+                        sender.send(songs)
+                        .map_err(|e| Failure::from((e.into(), FailureType::Warning))),
+                    Err(e) => Err(e),
+                }
+            },
+            Command::PlaylistSetName(playlist, name) => self.playlist_set_name(&playlist, &name),
+            Command::PlaylistGetSong {playlist, song, index } => match self.playlist_get_song(&playlist, index) {
+                Ok(s) => 
+                    song.send(s)
+                    .map_err(|e| Failure::from((e.into(), FailureType::Warning))),
+                Err(e) => Err(e),
+            },
+            Command::PlaylistCopyTo(from, to) => self.playlist_copy_to(&from, &to),
+            Command::PlaylistAddPlaylist(from, to) => {
+                self.playlist_add_playlist(&from, &to)
+            }
+            Command::PlaylistClear(playlist) => self.playlist_clear(&playlist),
+            Command::QueueShuffle => {
+                self.queue_shuffle();
+                Ok(())
+            }
+            Command::QueueAdd(song) => {
+                self.queue_add(song);
+                Ok(())
+            }
+            Command::QueueRemove(index) => self.queue_remove(index),
+            Command::QueueNext => self.queue_next(),
+            Command::QueuePlaylist(playlist) => self.queue_playlist(&playlist),
+            Command::QueueGetSongs(sender) => sender
+                .send(self.queue_get_songs())
+                .map_err(|e| Failure::from((e.into(), FailureType::Warning))),
+            Command::QueueClear => {
+                self.queue_clear();
+                Ok(())
+            }
+            Command::UpdateAutoskip => self.update_autoskip(),
+            Command::SongDuration(sender) => sender
+            .send(self.song_duration())
+            .map_err(|e| Failure::from((e.into(), FailureType::Warning))),
+            Command::SongDurationGone(sender) => sender
+            .send(self.song_duration_gone())
+            .map_err(|e| Failure::from((e.into(), FailureType::Warning))),
+            Command::ServerConnect => {self.connect_to_server()},
+            Command::ServerUpdateStatus(status) => {self.server_update_connection_status(status); Ok(())},
+            Command::ServerAdd(name, address, certificate) => {self.server_add(name, address, certificate)},
+            Command::ServerGetOnlineUsers => self.server_get_online_users(),
+            _ => Ok(()),
+        }
+    }
+}
+
+// general functions for internal state management
 impl Internal {
     pub fn new(
         queue: Queue,
@@ -27,9 +108,10 @@ impl Internal {
         Ok(Internal {
             current_external: external::get_new_external_run_from_song(&queue.current_song()?)?,
             queue,
-            kill_sender: mpsc::channel().0,
+            autoskip_kill_sender: mpsc::channel().0,
             server_connection: internet::connection::InternetClient::new(),
             playlists: LruCache::new(NonZeroUsize::new(10).unwrap()),
+            ui_update_sender: mpsc::channel().0,
         })
     }
 
@@ -81,6 +163,8 @@ impl Internal {
     }
 }
 
+
+// playlist management
 impl Internal {
     pub fn playlist_new(&mut self, name: &str, external_type: Option<ExternalType>) -> Result<(), Failure> {
         let playlist = Playlist::new(name, external_type)?;
@@ -159,6 +243,7 @@ impl Internal {
     }
 }
 
+// queue management
 impl Internal {
     pub fn queue_add(&mut self, song: Song) {
         self.queue.add(song);
@@ -214,7 +299,7 @@ impl Internal {
             } else {
                 let sender = MAIN_SENDER.get().unwrap().clone();
                 let (kill_sender, kill_receiver) = mpsc::channel();
-                self.kill_sender = kill_sender;
+                self.autoskip_kill_sender = kill_sender;
                 thread::spawn(move || {
                     if let Ok(_) = kill_receiver.recv_timeout(time_left) {
                         return;
@@ -245,26 +330,26 @@ impl Internal {
     }
 
     pub fn kill_autoskip(&self) {
-        let _ = self.kill_sender.send(());
+        let _ = self.autoskip_kill_sender.send(());
     }
 }
 
+// server connection management
 impl Internal {
     pub fn connect_to_server(&mut self) -> Result<(), Failure> {
         self.server_connection.connect()
     }
 
-    pub fn scan_online_users(&mut self) -> Result<(), Failure> {
+    pub fn server_get_online_users(&mut self) -> Result<(), Failure> {
         self.server_connection.send_message(Box::new(GetOnlineUsers{}))
     }
 
-    pub fn update_server_connection_status(&mut self, status: internet::connection::ConnectionStatus) {
+    pub fn server_update_connection_status(&mut self, status: internet::connection::ConnectionStatus) {
         self.server_connection.update_connection(status);
     }
 
-    pub fn add_server(&mut self, name: String, address: String, certificate_path: String) -> Result<(), Failure> {
+    pub fn server_add(&mut self, name: String, address: String, certificate_path: String) -> Result<(), Failure> {
         crate::config::internet::ServerConfig::new(&address, &name, &certificate_path)?;
         Ok(())
     }
 }
-

@@ -11,17 +11,13 @@ use crossterm::{
 };
 use reverb_core::failure::failure::{Failure, FailureType};
 use crate::{
-    Command,
-    internal::song,
-    ui::{cli::cli::print_failure, ui},
+    Command, MAIN_SENDER, internal::song, ui::{cli::cli::print_failure, ui}
 };
 
 pub(super) fn run_ui(
-    transmit: &Sender<Command>,
     input_tx: Sender<String>,
     update_interval: u64,
 ) -> std::thread::JoinHandle<()> {
-    let main_transmit = transmit.clone();
     std::thread::spawn(move || {
         let stdin = io::stdin();
         for line in stdin.lock().lines() {
@@ -29,7 +25,7 @@ pub(super) fn run_ui(
                 Ok(line) => {
                     if let Err(e) = input_tx.send(line) {
                         print_failure(Failure::from((e.into(), FailureType::Fatal)));
-                        if let Err(e) = main_transmit.send(Command::Shutdown) {
+                        if let Err(e) = MAIN_SENDER.get().unwrap().clone().send(Command::Shutdown) {
                             print_failure(Failure::from((e.into(), FailureType::Fatal)));
                             println!(
                                 "Automatic shutdown failed, please manually shutdown the application"
@@ -40,7 +36,7 @@ pub(super) fn run_ui(
                 }
                 Err(e) => {
                     print_failure(Failure::from((e.into(), FailureType::Fatal)));
-                    if let Err(e) = main_transmit.send(Command::Shutdown) {
+                    if let Err(e) = MAIN_SENDER.get().unwrap().clone().send(Command::Shutdown) {
                         print_failure(Failure::from((e.into(), FailureType::Fatal)));
                         println!(
                             "Automatic shutdown failed, please manually shutdown the application"
@@ -53,7 +49,6 @@ pub(super) fn run_ui(
     });
 
     //renderer thread
-    let main_transmit = transmit.clone();
     let renderer = std::thread::spawn(move || {
         let mut stdout = io::stdout();
         loop {

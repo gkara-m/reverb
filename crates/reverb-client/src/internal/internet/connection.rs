@@ -6,7 +6,7 @@ use reverb_core::{failure::failure::{Failure, FailureType}, network::*};
 
 
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum ConnectionStatus {
     Connected(mpsc::Sender<Packet>),
     Connecting,
