@@ -1,2 +1,2 @@
-mod connection;
-mod communicator;
+pub mod connection;
+pub mod packet_handling;

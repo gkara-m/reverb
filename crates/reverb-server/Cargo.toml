@@ -13,3 +13,5 @@ quinn-proto = { version = "0.11.0", features = ["ring"] }
 tokio = { version = "1.36.0", features = ["full"] }
 quinn = { version = "0.11.0", features = ["ring"] }
 rcgen = "0.13.0"
+arc-swap = "1.9.1"
+postcard = "1.1.3"

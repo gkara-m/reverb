@@ -1,24 +1,31 @@
-use std::{fs, io, sync::Arc};
-use anyhow::anyhow;
+use std::{collections::HashMap, sync::{LazyLock, atomic::AtomicU16}};
 use quinn::Endpoint;
-use quinn_proto::crypto::rustls::QuicServerConfig; 
-use rustls::pki_types::{CertificateDer, PrivateKeyDer, PrivatePkcs8KeyDer};
+use arc_swap::ArcSwap;
 
-
-use reverb_core::{network::*, failure::failure::{Failure, FailureType}};
+use reverb_core::failure::failure::Failure;
+use crate::network::connection::{self, User};
 
 mod network;
 mod server_startup;
+mod command_handling;
 
 
 // The address and port the server will listen on
 const LISTEN_ADDR: &str = "127.0.0.1:4433";
 // The server version, included in responses for client verification
-const VERSION: &str = "0.1.0";
+const _VERSION: &str = "0.1.0";
+const SERVER_NAME: &str = "server";
+const SERVER_GROUP: &str = "server";
+
+static USERS: LazyLock<ArcSwap<HashMap<u16, User>>> = LazyLock::new(|| {ArcSwap::from_pointee(HashMap::new())});
+static NEXT_ID: AtomicU16 = AtomicU16::new(1);
 
 /// Entry point for the server. Installs the default crypto provider, starts the async runtime,
-/// and runs the main server logic. Exits with error code 1 if the server fails.
-fn main() {
+/// and runs the main server logic. Exits with error code 1 if the server fails at startup or error
+/// code 2 if fails at runtime.
+
+#[tokio::main]
+async fn main() {
     let _ = rustls::crypto::ring::default_provider().install_default();
     println!("Server starting on {}", LISTEN_ADDR);
 
@@ -31,40 +38,25 @@ fn main() {
         }
     };
 
-    if let Err(e) = tokio::runtime::Runtime::new().unwrap().block_on(run(endpoint)) {
-        eprintln!("Server runtime error: {e}");
-        std::process::exit(2);
+    loop {
+        if let Err(e) = run(&endpoint).await {
+            eprintln!("Server runtime error: {e}");
+            if let Failure::Fatal(_, _) = e {
+                std::process::exit(2)
+            }
+        }
     }
+
 }
 
-
-async fn run(endpoint: Endpoint) -> Result<(), Failure> {
-    // --- Accept a single client connection ---
+// accepts incoming connections and hands them off to new tokio async task
+async fn run(endpoint: &Endpoint) -> Result<(), Failure> {
     if let Some(conn) = endpoint.accept().await {
-        // Wait for the connection handshake to complete
-        let conn = conn.await
-            .map_err(|e| Failure::from((e.into(), FailureType::Warning)))?;
-        println!("Client connected");
-
-        // Accept a bidirectional stream from the client
-        let (mut send, mut recv) = conn.accept_bi().await
-            .map_err(|e| Failure::from((e.into(), FailureType::Warning)))?;
-
-        // Read up to 1024 bytes from the client
-        let data = recv.read_to_end(1024).await
-            .map_err(|e| Failure::from((e.into(), FailureType::Warning)))?;
-
-        let packet = Packet::parse(&data)?;
-        println!("Received from: {}", packet.username());
-
-        // Prepare and send a response back to the client
-        let response = format!("Server received {} bytes", data.len());
-        send.write_all(response.as_bytes()).await;
-        send.finish();
-
-        // Wait for all packets to be sent before shutting down
-        endpoint.wait_idle().await;
-        println!("Response sent, server exiting");
+        tokio::spawn(async move {
+            if let Err(e) = connection::handle_connection(conn).await {
+                eprintln!("Server runtime error: error handling connection: {e}")
+            };
+        });
     }
 
     Ok(())

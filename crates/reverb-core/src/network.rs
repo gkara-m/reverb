@@ -1,5 +1,8 @@
+use std::{any::Any, collections::HashMap};
+
 use crate::failure::failure::{Failure, FailureType};
 use anyhow::anyhow;
+use postcard::{from_bytes, to_slice};
 
 
 // Major release when there is a breaking change to the packet structure or protocol.
@@ -17,59 +20,76 @@ pub enum QueryOrNotify {
 
 pub fn parse_command(data: Vec<u8>) -> Result<Box<dyn NetworkCommand + Send + Sync>, Failure> {
     println!("command size: {} bytes", data.len()); // Debug line
-    let cmd_number = data.get(0).ok_or(Failure::from((anyhow!("failed to get command number"), FailureType::Warning)))?
-        .to_owned();
+    let cmd_number = data[0];
 
     match cmd_number {
-        DefaultCommand::ID => {return Ok(Box::new(DefaultCommand{}));},
-        Skip::ID => {return Ok(Box::new(Skip{}));},
-        Echo::ID => {
-            let parsed_data = Echo::parse(data)?;
-            return Ok(Box::new(parsed_data));
-        },
-        GetOnlineUsers::ID => {return Ok(Box::new(GetOnlineUsers{}));},
-        _ => {return Err(Failure::from((anyhow!("invalid command"), FailureType::Warning)));}
-    };
+        DefaultCommand::ID => Ok(Box::new(DefaultCommand{})),
+        Skip::ID => Ok(Box::new(Skip{})),
+        Echo::ID => Ok(Box::new(Echo::parse(data)?)),
+        GetOnlineUsers::ID => Ok(Box::new(GetOnlineUsers::parse(data)?)),
+        _ => Err(Failure::from((anyhow!("invalid command"), FailureType::Warning)))
+    }
 }
 
 pub fn serialize(boxed_cmd: &Box<dyn NetworkCommand + Send + Sync>) -> Result<Vec<u8>, Failure> {
     let mut data = vec![boxed_cmd.number()];
     data.append(&mut boxed_cmd.serialize()?);
-    println!("serialized command into: {} bytes", data.len()); // Debug line
     Ok(data)
 }
 
-pub trait NetworkCommand {
+pub trait NetworkCommand: Any {
     fn number(&self) -> u8; // numbers should be changed when any functionality changes as we are NOT maintaining backwards compatability
     fn serialize(&self) -> Result<Vec<u8>, Failure>;
     fn parse(data: Vec<u8>) -> Result<Self, Failure> where Self: Sized;
     fn query_or_notify(&self) -> QueryOrNotify;
+    fn as_any(&self) -> &dyn Any;
 }
 
 pub struct DefaultCommand {}
 pub struct Skip {}
 pub struct Echo {
-    echo_type: EchoType,
-    echo_target: String
+    pub echo_type: EchoType,
+    pub echo_target: String
 }
-pub struct GetOnlineUsers {}
+#[derive(Clone, Debug)]
+pub struct GetOnlineUsers {
+    pub users: HashMap<u16, String>
+}
+pub struct RequestUserData {}
 
 pub enum EchoType {
     Group = 0,
     User = 1
 }
 
-impl DefaultCommand {
-    pub const ID: u8 = 0;
+impl EchoType {
+    fn parse(data: u8) -> Result<Self, Failure> {
+        match data {
+            x if x == EchoType::Group as u8 => Ok(EchoType::Group),
+            x if x == EchoType::User as u8 => Ok(EchoType::User),
+            _ => Err(Failure::from((anyhow!("invalid echotype"), FailureType::Warning)))
+        }
+    }
 }
-impl Skip {
-    pub const ID: u8 = 1;
+
+pub trait NetworkCommandID {
+    const ID: u8;
 }
-impl Echo {
-    pub const ID: u8 = 2;
+
+impl NetworkCommandID for DefaultCommand {
+    const ID: u8 = 0;
 }
-impl GetOnlineUsers {
-    pub const ID: u8 = 3;
+impl NetworkCommandID for Skip {
+    const ID: u8 = 1;
+}
+impl NetworkCommandID for Echo {
+    const ID: u8 = 2;
+}
+impl NetworkCommandID for GetOnlineUsers {
+    const ID: u8 = 3;
+}
+impl NetworkCommandID for RequestUserData {
+    const ID: u8 = 4;
 }
 
 impl NetworkCommand for DefaultCommand {
@@ -87,6 +107,8 @@ impl NetworkCommand for DefaultCommand {
     fn query_or_notify(&self) -> QueryOrNotify {
         QueryOrNotify::Query
     }
+
+    fn as_any(&self) -> &dyn Any { self }
 }
 
 impl NetworkCommand for Skip {
@@ -103,6 +125,8 @@ impl NetworkCommand for Skip {
     fn query_or_notify(&self) -> QueryOrNotify {
         QueryOrNotify::Notify
     }
+
+    fn as_any(&self) -> &dyn Any { self }
 }
 
 impl NetworkCommand for Echo {
@@ -119,13 +143,7 @@ impl NetworkCommand for Echo {
     }
 
     fn parse(data: Vec<u8>) -> Result<Self, Failure> where Self: Sized {
-        let id_group = EchoType::Group as u8;
-        let is_user = EchoType::User as u8;
-        let echo_type = match data[1] {
-            id_group => EchoType::Group,
-            id_user => EchoType::User
-        };
-
+        let echo_type = EchoType::parse(data[1])?;
         let target_data = data[2..].to_vec();
         let echo_target = String::from_utf8(target_data)
             .map_err(|e| Failure::from((anyhow!("failed to parse echo target: {e}"), FailureType::Warning)))?;
@@ -139,6 +157,9 @@ impl NetworkCommand for Echo {
     fn query_or_notify(&self) -> QueryOrNotify {
         QueryOrNotify::Query
     }
+
+    fn as_any(&self) -> &dyn Any { self }
+
 }
 
 impl NetworkCommand for GetOnlineUsers {
@@ -146,15 +167,44 @@ impl NetworkCommand for GetOnlineUsers {
         GetOnlineUsers::ID
     }
     fn serialize(&self) -> Result<Vec<u8>, Failure> {
-        Ok(vec![])
+        let mut data = Vec::new();
+        data.append(&mut [GetOnlineUsers::ID].to_vec());
+        let mut buffer = [0u8; 512];
+        let user_data = to_slice(&self.users, &mut buffer)
+            .map_err(|e| Failure::from((anyhow!("failed to serialize GetOnlineUsers: {e}"), FailureType::Warning)))?;
+        data.append(&mut user_data.to_vec());
+
+        Ok(data)
     }
-    fn parse(_data: Vec<u8>) -> Result<Self, Failure> where Self: Sized {
-        Ok(GetOnlineUsers {})
+    fn parse(data: Vec<u8>) -> Result<Self, Failure> where Self: Sized {
+        let users: HashMap<u16, String> = from_bytes(&data[1..])
+            .map_err(|e| Failure::from((anyhow!("failed to parse GetOnlineUsers: {e}"), FailureType::Warning)))?;
+
+        Ok(GetOnlineUsers { users })
     }
 
     fn query_or_notify(&self) -> QueryOrNotify {
         QueryOrNotify::Query
     }
+
+    fn as_any(&self) -> &dyn Any { self }
+
+}
+
+impl NetworkCommand for RequestUserData {
+    fn number(&self) -> u8 {
+        RequestUserData::ID
+    }
+    fn serialize(&self) -> Result<Vec<u8>, Failure> {
+        Ok(vec![])
+    }
+    fn parse(_data: Vec<u8>) -> Result<Self, Failure> where Self: Sized {
+        Ok(RequestUserData {})
+    }
+    fn query_or_notify(&self) -> QueryOrNotify {
+        QueryOrNotify::Query
+    }
+    fn as_any(&self) -> &dyn Any { self }
 }
 
 
@@ -218,7 +268,6 @@ impl Packet {
         }
         data.append(&mut vec![self.payload.number()]);
         data.append(&mut serialize(&self.payload)?);
-        println!("serialized packet into: {} bytes", data.len()); // Debug line
         Ok(data)
     }
 
