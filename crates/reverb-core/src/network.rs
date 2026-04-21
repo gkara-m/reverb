@@ -61,7 +61,7 @@ pub struct OnlineUsers {
 #[derive(Debug, Clone)]
 pub struct GetOnlineUsers {}
 #[derive(Debug, Clone)]
-pub struct RequestUserData {}
+pub struct UserData {}
 #[derive(Debug, Clone)]
 pub enum EchoType {
     Group = 0,
@@ -94,7 +94,7 @@ impl NetworkCommandID for Echo {
 impl NetworkCommandID for OnlineUsers {
     const ID: u8 = 3;
 }
-impl NetworkCommandID for RequestUserData {
+impl NetworkCommandID for UserData {
     const ID: u8 = 4;
 }
 impl NetworkCommandID for GetOnlineUsers {
@@ -217,15 +217,15 @@ impl NetworkCommand for GetOnlineUsers {
     fn as_any(&self) -> &dyn Any { self }
 }
 
-impl NetworkCommand for RequestUserData {
+impl NetworkCommand for UserData {
     fn number(&self) -> u8 {
-        RequestUserData::ID
+        UserData::ID
     }
     fn serialize(&self) -> Result<Vec<u8>, Failure> {
         Ok(vec![])
     }
     fn parse(_data: Vec<u8>) -> Result<Self, Failure> where Self: Sized {
-        Ok(RequestUserData {})
+        Ok(UserData {})
     }
     fn query_or_notify(&self) -> QueryOrNotify {
         QueryOrNotify::Query
