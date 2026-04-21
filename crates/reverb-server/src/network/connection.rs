@@ -6,7 +6,6 @@ use reverb_core::{network::*, failure::failure::{Failure, FailureType}};
 use crate::{SERVER_GROUP, SERVER_NAME, NEXT_ID, USERS, network::packet_handling::{handle_packet, handle_user_info}};
 
 pub async fn handle_connection(conn: Incoming) -> Result<(), Failure> {
-    // Wait for the connection handshake to complete
     let conn_bi = conn.await
         .map_err(|e| Failure::from((e.into(), FailureType::Warning)))?;
     println!("Client connected");
@@ -15,6 +14,7 @@ pub async fn handle_connection(conn: Incoming) -> Result<(), Failure> {
     let user_info_packet = request_user_info(&conn_bi).await?;
     handle_user_info(user_info_packet);
 
+    // separate stream handlers to avoid bidirectional handler stalling unidiractional handler
     tokio::spawn(async move {
         loop {
             if let Err(e) = handle_bi(&conn_bi).await {
@@ -23,7 +23,6 @@ pub async fn handle_connection(conn: Incoming) -> Result<(), Failure> {
             }
         }
     });
-
     tokio::spawn(async move {
         loop {
             if let Err(e) = handle_uni(&conn_uni).await {
@@ -36,9 +35,10 @@ pub async fn handle_connection(conn: Incoming) -> Result<(), Failure> {
     Ok(())
 }
 
+// atomically swap the hashmap stored in USERS for the updated one
+// scales poorly as user count increases due to clone()
 pub fn add_user(user: User) -> u16 {
-    let id = NEXT_ID.fetch_add(1, Ordering::Relaxed); // panics if exceeds 65535
-
+    let id = NEXT_ID.fetch_add(1, Ordering::Relaxed); // wraps around when full overwriting existing users 
     let mut map = (**USERS.load()).clone();
     map.insert(id, user);
     USERS.store(Arc::new(map));
@@ -63,7 +63,6 @@ async fn handle_bi(conn: &Connection) -> Result<(), Failure> {
     
     Ok(())
 }
-
 async fn handle_uni(conn: &Connection) -> Result<(), Failure> {
     let recv = conn.accept_uni().await
         .map_err(|e| Failure::from((e.into(), FailureType::Warning)))?;
@@ -72,7 +71,7 @@ async fn handle_uni(conn: &Connection) -> Result<(), Failure> {
     let packet = Packet::parse(&data)?;
     handle_packet(packet)?;
 
-    Err(Failure::from((anyhow!("feature not implemented yet"), FailureType::Fatal)))
+    Ok(())
 } 
 
 async fn read_incoming(mut recv: RecvStream) -> Result<Vec<u8>, Failure> {
@@ -80,6 +79,7 @@ async fn read_incoming(mut recv: RecvStream) -> Result<Vec<u8>, Failure> {
         .map_err(|e| Failure::from((e.into(), FailureType::Warning)))
 }
 
+// send user data request and parse into Packet
 async fn request_user_info(conn: &Connection) -> Result<Packet, Failure> {
     let (mut send, mut recv) = conn.open_bi().await
         .map_err(|e| Failure::from((e.into(), FailureType::Warning)))?;
