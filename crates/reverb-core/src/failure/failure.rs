@@ -1,11 +1,13 @@
 use anyhow::Error as AnyError;
+use std::sync::Arc;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Failure {
-    Fatal(AnyError, String),
-    Warning(AnyError, String),
+    Fatal(Arc<AnyError>, String),
+    Warning(Arc<AnyError>, String),
 }
 
+#[derive(Debug, Clone)]
 pub enum FailureType {
     Fatal,
     Warning,
@@ -31,7 +33,7 @@ impl std::fmt::Display for Failure {
 
 impl From<(anyhow::Error, FailureType)> for Failure {
     fn from((err, failure_type): (anyhow::Error, FailureType)) -> Self {
-        let e: AnyError = err;
+        let e: Arc<AnyError> = Arc::new(err);
         match failure_type {
             FailureType::Fatal => Failure::Fatal(e, String::new()),
             FailureType::Warning => Failure::Warning(e, String::new()),
@@ -41,7 +43,7 @@ impl From<(anyhow::Error, FailureType)> for Failure {
 
 impl From<(anyhow::Error, &str, FailureType)> for Failure {
     fn from((err, msg, failure_type): (anyhow::Error, &str, FailureType)) -> Self {
-        let e: AnyError = err;
+        let e: Arc<AnyError> = Arc::new(err);
         match failure_type {
             FailureType::Fatal => Failure::Fatal(e, msg.into()),
             FailureType::Warning => Failure::Warning(e, msg.into()),

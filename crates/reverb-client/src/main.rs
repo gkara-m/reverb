@@ -61,79 +61,12 @@ fn main() {
     });
 
     for command in receive {
+        internal.handle_command(command.clone());// TODO , clone is maybe to expensive?
+        cli::handle_command(command.clone()); //TODO handle the errors aswell
         match match command {
-            Command::Play => internal.play(),
-            Command::Pause => internal.pause(),
-            Command::IsSongPlaying(sender) => match internal.is_song_playing() {
-                Ok(is_playing) => sender
-                    .send(is_playing)
-                    .map_err(|e| Failure::from((e.into(), FailureType::Warning))),
-                Err(e) => Err(e),
-            },
-            Command::PlayNew(song) => internal.play_new(song),
-            Command::CurrentSong(sender) => match internal.current_song() {
-                Ok(song) => sender.send(song)
-                    .map_err(|e| Failure::from((e.into(), FailureType::Warning))),
-                Err(e) => Err(e),
-            },
-            Command::PlaylistNew {
-                name,
-                external_type,
-            } => internal.playlist_new(&name, external_type),
-            Command::PlaylistAdd(playlist, song) => internal.playlist_add(&playlist, song),
-            Command::PlaylistRemove(playlist, index) => internal.playlist_remove(&playlist, index),
-            Command::PlaylistMoveSong {playlist, from, to } => internal.playlist_move_song(&playlist, from, to),
-            Command::PlaylistGetSongs(playlist, sender) => {
-                match internal.playlist_get_songs(&playlist) {
-                    Ok(songs) => 
-                        sender.send(songs)
-                        .map_err(|e| Failure::from((e.into(), FailureType::Warning))),
-                    Err(e) => Err(e),
-                }
-            },
-            Command::PlaylistSetName(playlist, name) => internal.playlist_set_name(&playlist, &name),
-            Command::PlaylistGetSong {playlist, song, index } => match internal.playlist_get_song(&playlist, index) {
-                Ok(s) => 
-                    song.send(s)
-                    .map_err(|e| Failure::from((e.into(), FailureType::Warning))),
-                Err(e) => Err(e),
-            },
-            Command::PlaylistCopyTo(from, to) => internal.playlist_copy_to(&from, &to),
-            Command::PlaylistAddPlaylist(from, to) => {
-                internal.playlist_add_playlist(&from, &to)
-            }
-            Command::PlaylistClear(playlist) => internal.playlist_clear(&playlist),
-            Command::QueueShuffle => {
-                internal.queue_shuffle();
-                Ok(())
-            }
-            Command::QueueAdd(song) => {
-                internal.queue_add(song);
-                Ok(())
-            }
-            Command::QueueRemove(index) => internal.queue_remove(index),
-            Command::QueueNext => internal.queue_next(),
-            Command::QueuePlaylist(playlist) => internal.queue_playlist(&playlist),
-            Command::QueueGetSongs(sender) => sender
-                .send(internal.queue_get_songs())
-                .map_err(|e| Failure::from((e.into(), FailureType::Warning))),
-            Command::QueueClear => {
-                internal.queue_clear();
-                Ok(())
-            }
             Command::Shutdown => break,
-            Command::UpdateAutoskip => internal.update_autoskip(),
-            Command::SongDuration(sender) => sender
-                .send(internal.song_duration())
-                .map_err(|e| Failure::from((e.into(), FailureType::Warning))),
-            Command::SongDurationGone(sender) => sender
-                    .send(internal.song_duration_gone())
-                    .map_err(|e| Failure::from((e.into(), FailureType::Warning))),
-            Command::ServerConnect => {internal.connect_to_server()},
-            Command::ServerUpdateStatus(status) => {internal.update_server_connection_status(status); Ok(())},
-            Command::ServerAdd(name, address, certificate) => {internal.add_server(name, address, certificate)},
-            Command::ServerScanOnline => internal.scan_online_users(),
             Command::Failure(failure) => Err(failure),
+            _ => Ok(()),
         } {
             Ok(_) => {},
             Err(failure) => match failure.failure_type() {
@@ -166,7 +99,7 @@ fn main() {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Command {
     Play,
     Pause,

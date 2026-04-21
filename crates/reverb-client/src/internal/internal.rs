@@ -21,6 +21,85 @@ pub struct Internal {
     ui_update_sender: Sender<()>,
 }
 
+// command handling
+impl Internal {
+    pub fn handle_command(&mut self, command: Command) -> Result<(), Failure> {
+        match command {
+                        Command::Play => self.play(),
+            Command::Pause => self.pause(),
+            Command::IsSongPlaying(sender) => match self.is_song_playing() {
+                Ok(is_playing) => sender
+                    .send(is_playing)
+                    .map_err(|e| Failure::from((e.into(), FailureType::Warning))),
+                Err(e) => Err(e),
+            },
+            Command::PlayNew(song) => self.play_new(song),
+            Command::CurrentSong(sender) => match self.current_song() {
+                Ok(song) => sender.send(song)
+                    .map_err(|e| Failure::from((e.into(), FailureType::Warning))),
+                Err(e) => Err(e),
+            },
+            Command::PlaylistNew {
+                name,
+                external_type,
+            } => self.playlist_new(&name, external_type),
+            Command::PlaylistAdd(playlist, song) => self.playlist_add(&playlist, song),
+            Command::PlaylistRemove(playlist, index) => self.playlist_remove(&playlist, index),
+            Command::PlaylistMoveSong {playlist, from, to } => self.playlist_move_song(&playlist, from, to),
+            Command::PlaylistGetSongs(playlist, sender) => {
+                match self.playlist_get_songs(&playlist) {
+                    Ok(songs) => 
+                        sender.send(songs)
+                        .map_err(|e| Failure::from((e.into(), FailureType::Warning))),
+                    Err(e) => Err(e),
+                }
+            },
+            Command::PlaylistSetName(playlist, name) => self.playlist_set_name(&playlist, &name),
+            Command::PlaylistGetSong {playlist, song, index } => match self.playlist_get_song(&playlist, index) {
+                Ok(s) => 
+                    song.send(s)
+                    .map_err(|e| Failure::from((e.into(), FailureType::Warning))),
+                Err(e) => Err(e),
+            },
+            Command::PlaylistCopyTo(from, to) => self.playlist_copy_to(&from, &to),
+            Command::PlaylistAddPlaylist(from, to) => {
+                self.playlist_add_playlist(&from, &to)
+            }
+            Command::PlaylistClear(playlist) => self.playlist_clear(&playlist),
+            Command::QueueShuffle => {
+                self.queue_shuffle();
+                Ok(())
+            }
+            Command::QueueAdd(song) => {
+                self.queue_add(song);
+                Ok(())
+            }
+            Command::QueueRemove(index) => self.queue_remove(index),
+            Command::QueueNext => self.queue_next(),
+            Command::QueuePlaylist(playlist) => self.queue_playlist(&playlist),
+            Command::QueueGetSongs(sender) => sender
+                .send(self.queue_get_songs())
+                .map_err(|e| Failure::from((e.into(), FailureType::Warning))),
+            Command::QueueClear => {
+                self.queue_clear();
+                Ok(())
+            }
+            Command::UpdateAutoskip => self.update_autoskip(),
+            Command::SongDuration(sender) => sender
+            .send(self.song_duration())
+            .map_err(|e| Failure::from((e.into(), FailureType::Warning))),
+            Command::SongDurationGone(sender) => sender
+            .send(self.song_duration_gone())
+            .map_err(|e| Failure::from((e.into(), FailureType::Warning))),
+            Command::ServerConnect => {self.connect_to_server()},
+            Command::ServerUpdateStatus(status) => {self.update_server_connection_status(status); Ok(())},
+            Command::ServerAdd(name, address, certificate) => {self.add_server(name, address, certificate)},
+            Command::ServerScanOnline => self.scan_online_users(),
+            _ => Ok(()),
+        }
+    }
+}
+
 // general functions for internal state management
 impl Internal {
     pub fn new(

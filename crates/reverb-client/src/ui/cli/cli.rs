@@ -159,6 +159,12 @@ pub fn run_cli(update_interval: u64) -> Result<(), Failure> {
     Ok(())
 }
 
+pub fn handle_command(command: Command) -> Result<(), Failure> {
+    match command {
+        _ => Ok(()),
+    }
+}
+
 pub fn print_failure(err: Failure) {
     println!("{}\n use help for help", err);
 }
