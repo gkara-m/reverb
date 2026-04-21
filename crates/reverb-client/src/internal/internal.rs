@@ -1,4 +1,4 @@
-use reverb_core::network::{GetOnlineUsers, Packet};
+use reverb_core::network::{GetOnlineUsers, OnlineUsers, Packet};
 use crate::{
     CONFIG, Command, MAIN_SENDER, external::external::{self, External, ExternalRun, ExternalType}, internal::{
         internet, playlist::Playlist, queue::Queue, song::Song

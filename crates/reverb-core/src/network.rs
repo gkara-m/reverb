@@ -26,7 +26,7 @@ pub fn parse_command(data: Vec<u8>) -> Result<Box<dyn NetworkCommand + Send + Sy
         DefaultCommand::ID => Ok(Box::new(DefaultCommand{})),
         Skip::ID => Ok(Box::new(Skip{})),
         Echo::ID => Ok(Box::new(Echo::parse(data)?)),
-        GetOnlineUsers::ID => Ok(Box::new(GetOnlineUsers::parse(data)?)),
+        OnlineUsers::ID => Ok(Box::new(OnlineUsers::parse(data)?)),
         _ => Err(Failure::from((anyhow!("invalid command"), FailureType::Warning)))
     }
 }
@@ -52,9 +52,11 @@ pub struct Echo {
     pub echo_target: String
 }
 #[derive(Clone, Debug)]
-pub struct GetOnlineUsers {
+pub struct OnlineUsers {
     pub users: HashMap<u16, String>
 }
+
+pub struct GetOnlineUsers {}
 pub struct RequestUserData {}
 
 pub enum EchoType {
@@ -85,12 +87,16 @@ impl NetworkCommandID for Skip {
 impl NetworkCommandID for Echo {
     const ID: u8 = 2;
 }
-impl NetworkCommandID for GetOnlineUsers {
+impl NetworkCommandID for OnlineUsers {
     const ID: u8 = 3;
 }
 impl NetworkCommandID for RequestUserData {
     const ID: u8 = 4;
 }
+impl NetworkCommandID for GetOnlineUsers {
+    const ID: u8 = 5;
+}
+
 
 impl NetworkCommand for DefaultCommand {
     fn number(&self) -> u8 {
@@ -162,13 +168,13 @@ impl NetworkCommand for Echo {
 
 }
 
-impl NetworkCommand for GetOnlineUsers {
+impl NetworkCommand for OnlineUsers {
     fn number(&self) -> u8 {
-        GetOnlineUsers::ID
+        OnlineUsers::ID
     }
     fn serialize(&self) -> Result<Vec<u8>, Failure> {
         let mut data = Vec::new();
-        data.append(&mut [GetOnlineUsers::ID].to_vec());
+        data.append(&mut [OnlineUsers::ID].to_vec());
         let mut buffer = [0u8; 512];
         let user_data = to_slice(&self.users, &mut buffer)
             .map_err(|e| Failure::from((anyhow!("failed to serialize GetOnlineUsers: {e}"), FailureType::Warning)))?;
@@ -180,7 +186,7 @@ impl NetworkCommand for GetOnlineUsers {
         let users: HashMap<u16, String> = from_bytes(&data[1..])
             .map_err(|e| Failure::from((anyhow!("failed to parse GetOnlineUsers: {e}"), FailureType::Warning)))?;
 
-        Ok(GetOnlineUsers { users })
+        Ok(OnlineUsers { users })
     }
 
     fn query_or_notify(&self) -> QueryOrNotify {
@@ -189,6 +195,22 @@ impl NetworkCommand for GetOnlineUsers {
 
     fn as_any(&self) -> &dyn Any { self }
 
+}
+
+impl NetworkCommand for GetOnlineUsers {
+    fn number(&self) -> u8 {
+        GetOnlineUsers::ID
+    }
+    fn serialize(&self) -> Result<Vec<u8>, Failure> {
+        Ok(vec![])
+    }
+    fn parse(_data: Vec<u8>) -> Result<Self, Failure> where Self: Sized {
+        Ok(GetOnlineUsers {})
+    }
+    fn query_or_notify(&self) -> QueryOrNotify {
+        QueryOrNotify::Query
+    }
+    fn as_any(&self) -> &dyn Any { self }
 }
 
 impl NetworkCommand for RequestUserData {
