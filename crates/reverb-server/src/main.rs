@@ -1,4 +1,4 @@
-use std::{collections::HashMap, sync::{LazyLock, Arc, atomic::{AtomicU16, Ordering}}};
+use std::{collections::HashMap, sync::{LazyLock, atomic::AtomicU16}};
 use anyhow::anyhow;
 use quinn::Endpoint;
 use arc_swap::ArcSwap;
@@ -63,28 +63,3 @@ async fn run(endpoint: &Endpoint) -> Result<(), Failure> {
     Ok(())
 }
 
-fn handle_packet(packet: Packet) -> Result<Option<Packet>, Failure> {
-    match packet.payload.number() {
-        DefaultCommand::ID => {Ok(Some(Packet::new(SERVER_NAME, SERVER_GROUP, Box::new(DefaultCommand{}))?))},
-        GetOnlineUsers::ID => {
-            let outgoing_command = command_handling::handle_get_online_users(packet);
-            Ok(Some(Packet {
-                version: NETWORK_VERSION,
-                username: SERVER_NAME.to_string(),
-                group: SERVER_GROUP.to_string(), 
-                payload: outgoing_command
-            }))
-        },
-        _ => {Err(Failure::from((anyhow!("packet handling error: command not found"), FailureType::Warning)))}
-    }
-}
-
-fn add_user(user: User) -> u16 {
-    let id = NEXT_ID.fetch_add(1, Ordering::Relaxed); // panics if exceeds 65535
-
-    let mut map = (**USERS.load()).clone();
-    map.insert(id, user);
-    USERS.store(Arc::new(map));
-
-    id
-}

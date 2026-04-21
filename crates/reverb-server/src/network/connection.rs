@@ -1,8 +1,9 @@
+use std::sync::{Arc, atomic::Ordering};
 use anyhow::anyhow;
 use quinn::{Connection, Incoming, RecvStream};
 
 use reverb_core::{network::*, failure::failure::{Failure, FailureType}};
-use crate::{SERVER_GROUP, SERVER_NAME, add_user, handle_packet};
+use crate::{SERVER_GROUP, SERVER_NAME, NEXT_ID, USERS, network::packet_handling::{handle_packet, handle_user_info}};
 
 pub async fn handle_connection(conn: Incoming) -> Result<(), Failure> {
     // Wait for the connection handshake to complete
@@ -11,7 +12,7 @@ pub async fn handle_connection(conn: Incoming) -> Result<(), Failure> {
     println!("Client connected");
     let conn_uni = conn_bi.clone();
 
-    let user_info_packet = request_user_data(&conn_bi).await?;
+    let user_info_packet = request_user_info(&conn_bi).await?;
     handle_user_info(user_info_packet);
 
     tokio::spawn(async move {
@@ -33,6 +34,16 @@ pub async fn handle_connection(conn: Incoming) -> Result<(), Failure> {
     });
 
     Ok(())
+}
+
+pub fn add_user(user: User) -> u16 {
+    let id = NEXT_ID.fetch_add(1, Ordering::Relaxed); // panics if exceeds 65535
+
+    let mut map = (**USERS.load()).clone();
+    map.insert(id, user);
+    USERS.store(Arc::new(map));
+
+    id
 }
 
 async fn handle_bi(conn: &Connection) -> Result<(), Failure> {
@@ -58,7 +69,8 @@ async fn handle_uni(conn: &Connection) -> Result<(), Failure> {
         .map_err(|e| Failure::from((e.into(), FailureType::Warning)))?;
 
     let data = read_incoming(recv).await?;
-    let packet = Packet::parse(&data)?; // TODO
+    let packet = Packet::parse(&data)?;
+    handle_packet(packet)?;
 
     Err(Failure::from((anyhow!("feature not implemented yet"), FailureType::Fatal)))
 } 
@@ -68,7 +80,7 @@ async fn read_incoming(mut recv: RecvStream) -> Result<Vec<u8>, Failure> {
         .map_err(|e| Failure::from((e.into(), FailureType::Warning)))
 }
 
-async fn request_user_data(conn: &Connection) -> Result<Packet, Failure> {
+async fn request_user_info(conn: &Connection) -> Result<Packet, Failure> {
     let (mut send, mut recv) = conn.open_bi().await
         .map_err(|e| Failure::from((e.into(), FailureType::Warning)))?;
     let request_packet = Packet {
@@ -83,22 +95,10 @@ async fn request_user_data(conn: &Connection) -> Result<Packet, Failure> {
         .map_err(|e| Failure::from((e.into(), FailureType::Warning)))?;
     let incoming_data = recv.read_to_end(1024).await
         .map_err(|e| Failure::from((e.into(), FailureType::Warning)))?;
+
     Packet::parse(&incoming_data)
-
 }
 
-fn handle_user_info(packet: Packet) -> u16 {
-    let username = packet.username;
-    let group = packet.group;
-    let availability = UserAvailability::ClosedToEcho;
-    let user = User {
-        username,
-        group,
-        availability
-    };
-
-    add_user(user)
-}
 
 #[derive(Debug, Clone)]
 pub enum UserAvailability {
