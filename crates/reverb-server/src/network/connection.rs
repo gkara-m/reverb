@@ -39,6 +39,7 @@ pub async fn handle_connection(conn: Incoming) -> Result<(), Failure> {
 pub fn add_user(user: User) -> u16 {
     let id = NEXT_ID.fetch_add(1, Ordering::Relaxed); // wraps around when full overwriting existing users 
     let mut map = (**USERS.load()).clone();
+    for (uid, user) in &map {println!("{uid} {}", user.username)}; // DEBUG
     map.insert(id, user);
     USERS.store(Arc::new(map));
     println!("added user: id {id}"); // DEBUG

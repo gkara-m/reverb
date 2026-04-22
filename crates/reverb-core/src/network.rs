@@ -23,10 +23,12 @@ pub fn parse_command(data: Vec<u8>) -> Result<Box<dyn NetworkCommand + Send + Sy
     let cmd_number = data[0];
 
     match cmd_number {
-        DefaultCommand::ID => Ok(Box::new(DefaultCommand{})),
-        Skip::ID => Ok(Box::new(Skip{})),
+        DefaultCommand::ID => Ok(Box::new(DefaultCommand::parse(data)?)),
+        Skip::ID => Ok(Box::new(Skip::parse(data)?)),
         Echo::ID => Ok(Box::new(Echo::parse(data)?)),
         OnlineUsers::ID => Ok(Box::new(OnlineUsers::parse(data)?)),
+        GetOnlineUsers::ID => Ok(Box::new(GetOnlineUsers::parse(data)?)),
+        UserData::ID => Ok(Box::new(UserData::parse(data)?)),
         _ => Err(Failure::from((anyhow!("invalid command"), FailureType::Warning)))
     }
 }
@@ -147,7 +149,8 @@ impl NetworkCommand for Echo {
     fn serialize(&self) -> Result<Vec<u8>, Failure> {
         let mut data = match self.echo_type {
             EchoType::Group => vec![EchoType::Group as u8],
-            EchoType::User => vec![EchoType::User as u8]
+            EchoType::User => vec![EchoType::User as u8],
+            _ => {return Err(Failure::from((anyhow!("failed to serialize Echo: EchoType not found"), FailureType::Warning)))}
         };
         data.extend_from_slice(self.echo_target.as_bytes());
         Ok(data)
@@ -178,18 +181,16 @@ impl NetworkCommand for OnlineUsers {
         OnlineUsers::ID
     }
     fn serialize(&self) -> Result<Vec<u8>, Failure> {
-        let mut data = Vec::new();
-        data.append(&mut [OnlineUsers::ID].to_vec());
         let mut buffer = [0u8; 512];
         let user_data = to_slice(&self.users, &mut buffer)
-            .map_err(|e| Failure::from((anyhow!("failed to serialize GetOnlineUsers: {e}"), FailureType::Warning)))?;
-        data.append(&mut user_data.to_vec());
+            .map_err(|e| Failure::from((anyhow!("failed to serialize OnlineUsers: {e}"), FailureType::Warning)))?;
+        let data = user_data.to_vec();
 
         Ok(data)
     }
     fn parse(data: Vec<u8>) -> Result<Self, Failure> where Self: Sized {
         let users: HashMap<u16, String> = from_bytes(&data[1..])
-            .map_err(|e| Failure::from((anyhow!("failed to parse GetOnlineUsers: {e}"), FailureType::Warning)))?;
+            .map_err(|e| Failure::from((anyhow!("failed to parse OnlineUsers: {e}"), FailureType::Warning)))?;
 
         Ok(OnlineUsers { users })
     }
