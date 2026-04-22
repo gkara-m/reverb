@@ -1,6 +1,7 @@
-use std::{collections::HashMap, sync::{LazyLock, atomic::AtomicU16}};
+use std::sync::{LazyLock, atomic::AtomicU16};
 use quinn::Endpoint;
 use arc_swap::ArcSwap;
+use im::HashMap as ImHashMap;
 
 use reverb_core::failure::failure::Failure;
 use crate::network::connection::{self, User};
@@ -17,7 +18,7 @@ const _VERSION: &str = "0.1.0";
 const SERVER_NAME: &str = "server";
 const SERVER_GROUP: &str = "server";
 
-static USERS: LazyLock<ArcSwap<HashMap<u16, User>>> = LazyLock::new(|| {ArcSwap::from_pointee(HashMap::new())});
+static USERS: LazyLock<ArcSwap<ImHashMap<u16, User>>> = LazyLock::new(|| {ArcSwap::from_pointee(ImHashMap::new())});
 static NEXT_ID: AtomicU16 = AtomicU16::new(1);
 
 /// Entry point for the server. Installs the default crypto provider, starts the async runtime,
