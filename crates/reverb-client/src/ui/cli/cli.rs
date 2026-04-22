@@ -1,5 +1,6 @@
 use anyhow::anyhow;
-use reverb_core::network::{NetworkCommandID, OnlineUsers};
+use reverb_core::network_command::ID::NetworkCommandID;
+use reverb_core::network_command::online_users::OnlineUsers;
 use std::sync::mpsc::Sender;
 use std::sync::{Mutex, Arc};
 use once_cell::sync::Lazy;
@@ -174,11 +175,11 @@ pub fn handle_command(command: Command) -> Result<(), Failure> {
             println!("Response username: {}", packet.username);
             println!("Response group: {}", packet.group);
             match packet.payload.number() {
-                reverb_core::network::DefaultCommand::ID => {
+                reverb_core::network_command::default_command::DefaultCommand::ID => {
                     println!("{:#?}", packet);
                     Ok(())
                 },
-                reverb_core::network::OnlineUsers::ID => {
+                reverb_core::network_command::online_users::OnlineUsers::ID => {
                     if let Some(online_users) = packet.payload.as_any().downcast_ref::<OnlineUsers>() {
                         println!("Online users: {}", online_users.users.iter().map(|(_, username)| username.clone()).collect::<Vec<String>>().join(", "));
                     } else {

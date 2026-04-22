@@ -2,7 +2,7 @@ use std::sync::mpsc;
 use anyhow::{Result, anyhow};
 
 use crate::{CONFIG, DATA_FOLDER, config::internet::{self, ServerConfig}, internal::internet::communicator};
-use reverb_core::{failure::failure::{Failure, FailureType}, network::*};
+use reverb_core::{network_command::helpers::NetworkCommand, failure::failure::{Failure, FailureType}, network::*};
 
 
 

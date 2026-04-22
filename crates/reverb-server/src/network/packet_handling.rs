@@ -1,6 +1,6 @@
 use anyhow::anyhow;
 
-use reverb_core::{network::*, failure::failure::{Failure, FailureType}};
+use reverb_core::{network_command::{ID::NetworkCommandID, default_command::DefaultCommand, get_online_users::GetOnlineUsers}, failure::failure::{Failure, FailureType}, network::*};
 use crate::{SERVER_NAME, SERVER_GROUP, command_handling, network::connection::{UserAvailability, User, add_user}};
 
 

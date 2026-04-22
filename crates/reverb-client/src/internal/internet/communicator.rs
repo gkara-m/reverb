@@ -7,7 +7,7 @@ use rustls::pki_types::CertificateDer;
 use anyhow::{Result, anyhow};
 
 use crate::{CONFIG, Command, MAIN_SENDER, config::internet::ServerConfig, };
-use reverb_core::{failure::failure::{Failure, FailureType}, network::{Packet, QueryOrNotify}};
+use reverb_core::{network_command::helpers::QueryOrNotify, failure::failure::{Failure, FailureType}, network::Packet};
 
 
 pub(super) fn start_communicator_thread(server_config: ServerConfig) {
@@ -105,7 +105,7 @@ async fn connect_to(server_config: ServerConfig) -> Result<Connection, Failure> 
     let packet = Packet::new(
         CONFIG.get().ok_or(Failure::from((anyhow!("Config not created"), FailureType::Fatal)))?.username.clone().as_str(),
         "none",
-        Box::new(reverb_core::network::UserData {})
+        Box::new(reverb_core::network_command::user_data::UserData {})
     )?;
     notify(conn.clone(), packet).await?;
 
