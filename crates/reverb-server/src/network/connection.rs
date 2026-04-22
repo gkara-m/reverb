@@ -3,7 +3,7 @@ use anyhow::anyhow;
 use quinn::{Connection, Incoming, RecvStream};
 
 use reverb_core::{network::*, failure::failure::{Failure, FailureType}};
-use crate::{SERVER_GROUP, SERVER_NAME, NEXT_ID, USERS, network::packet_handling::{handle_packet, handle_user_info}};
+use crate::{NEXT_ID, USERS, network::packet_handling::{handle_packet, handle_user_info}};
 
 pub async fn handle_connection(conn: Incoming) -> Result<(), Failure> {
     let conn_bi = conn.await
@@ -11,8 +11,7 @@ pub async fn handle_connection(conn: Incoming) -> Result<(), Failure> {
     println!("Client connected");
     let conn_uni = conn_bi.clone();
 
-    let user_info_packet = request_user_info(&conn_bi).await?;
-    handle_user_info(user_info_packet);
+    receive_user_info(&conn_uni).await?;
 
     // separate stream handlers to avoid bidirectional handler stalling unidiractional handler
     tokio::spawn(async move {
@@ -74,31 +73,19 @@ async fn handle_uni(conn: &Connection) -> Result<(), Failure> {
     Ok(())
 } 
 
+async fn receive_user_info(conn: &Connection) -> Result<(), Failure> {
+    let recv = conn.accept_uni().await
+        .map_err(|e| Failure::from((e.into(), FailureType::Warning)))?;
+    let data = read_incoming(recv).await?;
+    let packet = Packet::parse(&data)?;
+    handle_user_info(packet);
+    Ok(())
+}
+
 async fn read_incoming(mut recv: RecvStream) -> Result<Vec<u8>, Failure> {
     recv.read_to_end(1024).await
         .map_err(|e| Failure::from((e.into(), FailureType::Warning)))
 }
-
-// send user data request and parse into Packet
-async fn request_user_info(conn: &Connection) -> Result<Packet, Failure> {
-    let (mut send, mut recv) = conn.open_bi().await
-        .map_err(|e| Failure::from((e.into(), FailureType::Warning)))?;
-    let request_packet = Packet {
-        version: NETWORK_VERSION,
-        username: SERVER_NAME.to_string(),
-        group:SERVER_GROUP.to_string(),
-        payload: Box::new(UserData {})
-    };
-    send.write_all(&request_packet.serialize()?).await
-        .map_err(|e| Failure::from((e.into(), FailureType::Warning)))?;
-    send.finish()
-        .map_err(|e| Failure::from((e.into(), FailureType::Warning)))?;
-    let incoming_data = recv.read_to_end(1024).await
-        .map_err(|e| Failure::from((e.into(), FailureType::Warning)))?;
-
-    Packet::parse(&incoming_data)
-}
-
 
 #[derive(Debug, Clone)]
 pub enum UserAvailability {

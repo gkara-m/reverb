@@ -45,6 +45,7 @@ pub trait NetworkCommand: Any {
     fn as_any(&self) -> &dyn Any;
 }
 
+// TODO write macro to handle these derives
 #[derive(Debug, Clone)]
 pub struct DefaultCommand {}
 #[derive(Debug, Clone)]
