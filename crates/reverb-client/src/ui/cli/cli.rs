@@ -133,12 +133,18 @@ pub fn run_cli(update_interval: u64) -> Result<(), Failure> {
     .add("server add", vec!["add"], " <name> <address> <certificate_path> : Add a server configuration", Some(|args| {
         let mut parts = args.splitn(3, ' ');
         match (parts.next(), parts.next(), parts.next()) {
-            (Some(name), Some(address), Some(certificate_path)) => ui::add_server(name.to_string(), address.to_string(), certificate_path.to_string()),
+            (Some(name), Some(address), Some(certificate_path)) => ui::server_add(name.to_string(), address.to_string(), certificate_path.to_string()),
             _ => Err(Failure::from((anyhow!("Invalid input for server add command: {}", args), FailureType::Warning))),
         }
     }), Args, Some("server"))
-    .add("server connect", vec!["connect", "con"], " : Connect to the server", Some(|_| ui::connect_to_server()), NoArgs, Some("server"))
-    .add("server scan", vec!["scan", "s"], " : Ask server for users open to echo", Some(|_| ui::get_online_users()), NoArgs, Some("server"));
+    .add("server connect", vec!["connect", "con"], " : Connect to the server", Some(|_| ui::server_connect()), NoArgs, Some("server"))
+    .add("server scan", vec!["scan", "s"], " : Ask server for users open to echo", Some(|_| ui::server_get_online_users()), NoArgs, Some("server"))
+    .add("server set echo availability", vec!["set-echo", "echo"], " <true/false> : Set whether you are open to echoing with other users", Some(|args| {
+        match args.parse::<bool>() {
+            Ok(availability) => ui::server_set_echo_availability(availability),
+            Err(e) => Err(Failure::from((e.into(), FailureType::Warning))),
+        }
+    }), Args, Some("server"));
 
 
     // input thread

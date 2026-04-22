@@ -144,6 +144,7 @@ pub enum Command {
     ServerUpdateStatus(internal::internet::connection::ConnectionStatus),
     ServerGetOnlineUsers,
     ServerResponse(Packet),
+    ServerSetEchoAvailability(bool),
     Failure(Failure),
 }
 

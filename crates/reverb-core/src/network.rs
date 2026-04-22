@@ -66,6 +66,9 @@ pub struct GetOnlineUsers {}
 #[derive(Debug, Clone)]
 pub struct UserData {}
 #[derive(Debug, Clone)]
+pub struct SetEchoAvailability(pub bool);
+
+#[derive(Debug, Clone)]
 pub enum EchoType {
     Group = 0,
     User = 1
@@ -102,6 +105,33 @@ impl NetworkCommandID for UserData {
 }
 impl NetworkCommandID for GetOnlineUsers {
     const ID: u8 = 5;
+}
+impl NetworkCommandID for SetEchoAvailability {
+    const ID: u8 = 6;
+}
+
+impl NetworkCommand for SetEchoAvailability {
+    fn number(&self) -> u8 {
+        SetEchoAvailability::ID
+    }
+    fn serialize(&self) -> Result<Vec<u8>, Failure> {
+        Ok(vec![self.0 as u8])
+    }
+    fn parse(data: Vec<u8>) -> Result<Self, Failure> where Self: Sized {
+        if data.len() != 1 {
+            return Err(Failure::from((anyhow!("invalid data length for SetEchoAvailability"), FailureType::Warning)));
+        }
+        let availability = match data[0] {
+            0 => false,
+            1 => true,
+            _ => return Err(Failure::from((anyhow!("invalid value for SetEchoAvailability"), FailureType::Warning)))
+        };
+        Ok(SetEchoAvailability(availability))
+    }
+    fn query_or_notify(&self) -> QueryOrNotify {
+        QueryOrNotify::Notify
+    }
+    fn as_any(&self) -> &dyn Any { self }
 }
 
 

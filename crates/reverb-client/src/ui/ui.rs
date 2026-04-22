@@ -153,17 +153,22 @@ pub(super) fn queue_clear() -> Result<(), Failure> {
     .map_err(|e| Failure::from((e.into(), "queue_clear", FailureType::Fatal)))
 }
 
-pub(super) fn connect_to_server() -> Result<(), Failure> {
+pub(super) fn server_connect() -> Result<(), Failure> {
     MAIN_SENDER.get().unwrap().clone().send(Command::ServerConnect)
     .map_err(|e| Failure::from((e.into(), "connect_to_server", FailureType::Fatal)))
 }
 
-pub(super) fn add_server(name: String, address: String, certificate_path: String) -> Result<(), Failure> {
+pub(super) fn server_add(name: String, address: String, certificate_path: String) -> Result<(), Failure> {
     MAIN_SENDER.get().unwrap().clone().send(Command::ServerAdd(name, address, certificate_path))
     .map_err(|e| Failure::from((e.into(), "add_server", FailureType::Fatal)))
 }
 
-pub(super) fn get_online_users() -> Result<(), Failure> {
+pub(super) fn server_get_online_users() -> Result<(), Failure> {
     MAIN_SENDER.get().unwrap().clone().send(Command::ServerGetOnlineUsers)
     .map_err(|e| Failure::from((e.into(), "get_online_users", FailureType::Fatal)))
+}
+
+pub(super) fn server_set_echo_availability(availability: bool) -> Result<(), Failure> {
+    MAIN_SENDER.get().unwrap().clone().send(Command::ServerSetEchoAvailability(availability))
+    .map_err(|e| Failure::from((e.into(), "set_echo_availability", FailureType::Fatal)))
 }
