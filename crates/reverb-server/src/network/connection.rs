@@ -41,6 +41,7 @@ pub fn add_user(user: User) -> u16 {
     let mut map = (**USERS.load()).clone();
     map.insert(id, user);
     USERS.store(Arc::new(map));
+    println!("added user: id {id}"); // DEBUG
 
     id
 }
@@ -76,6 +77,7 @@ async fn handle_uni(conn: &Connection) -> Result<(), Failure> {
 async fn receive_user_info(conn: &Connection) -> Result<(), Failure> {
     let recv = conn.accept_uni().await
         .map_err(|e| Failure::from((e.into(), FailureType::Warning)))?;
+    println!("received user info"); // DEBUG
     let data = read_incoming(recv).await?;
     let packet = Packet::parse(&data)?;
     handle_user_info(packet);

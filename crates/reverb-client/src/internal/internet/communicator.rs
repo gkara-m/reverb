@@ -153,7 +153,7 @@ async fn query(conn: Connection, packet: Packet) -> Result<(), Failure> {
 
 async fn notify(conn: Connection, packet: Packet) -> Result<(), Failure> {
     
-    println!("Sending notification to server: ");
+    println!("Sending notification to server: "); // CLIENT DEBUG
 
     // Open a unidirectional stream to server 
     let mut send = conn.open_uni().await

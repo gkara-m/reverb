@@ -22,7 +22,7 @@ pub fn startup() -> Result<Endpoint, Failure> {
             .map_err(|e| Failure::from((e.into(), FailureType::Fatal)))?));
     // Set transport-level options: here, disable unidirectional streams
     let transport_config = Arc::get_mut(&mut server_config.transport).unwrap();
-    transport_config.max_concurrent_uni_streams(0_u8.into());
+    transport_config.max_concurrent_uni_streams(16_u8.into());
 
     // --- Start the QUIC endpoint (server) ---
     let endpoint = quinn::Endpoint::server(server_config, LISTEN_ADDR.parse()
