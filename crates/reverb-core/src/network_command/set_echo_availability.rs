@@ -14,10 +14,10 @@ impl NetworkCommand for SetEchoAvailability {
         Ok(vec![self.0 as u8])
     }
     fn parse(data: Vec<u8>) -> Result<Self, Failure> where Self: Sized {
-        if data.len() != 1 {
+        if data.len() != 2 {
             return Err(Failure::from((anyhow!("invalid data length for SetEchoAvailability"), FailureType::Warning)));
         }
-        let availability = match data[0] {
+        let availability = match data[1] {
             0 => false,
             1 => true,
             _ => return Err(Failure::from((anyhow!("invalid value for SetEchoAvailability"), FailureType::Warning)))

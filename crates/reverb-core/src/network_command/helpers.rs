@@ -22,6 +22,7 @@ pub fn parse_command(data: Vec<u8>) -> Result<Box<dyn NetworkCommand + Send + Sy
         OnlineUsers::ID => Ok(Box::new(OnlineUsers::parse(data)?)),
         GetOnlineUsers::ID => Ok(Box::new(GetOnlineUsers::parse(data)?)),
         UserData::ID => Ok(Box::new(UserData::parse(data)?)),
+        SetEchoAvailability::ID => Ok(Box::new(SetEchoAvailability::parse(data)?)),
         _ => Err(Failure::from((anyhow!("invalid command"), FailureType::Warning)))
     }
 }
