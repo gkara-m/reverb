@@ -18,6 +18,7 @@ pub async fn handle_connection(conn: Incoming) -> Result<(), Failure> {
         loop {
             if let Err(e) = handle_bi(&conn_bi, &user_id).await {
                 eprintln!("Server bi_connection error: {e}");
+                remove_user(&user_id);
                 return;
             }
         }
@@ -26,11 +27,13 @@ pub async fn handle_connection(conn: Incoming) -> Result<(), Failure> {
         loop {
             if let Err(e) = handle_uni(&conn_uni, &user_id).await {
                 eprintln!("Server uni_connection error: {e}");
+                remove_user(&user_id);
                 return;
             }
         }
     });
 
+    remove_user(&user_id);
     Ok(())
 }
 
@@ -41,6 +44,9 @@ pub fn add_user(user: User) -> u16 {
     USERS.rcu(|user_hashmap| Arc::new(user_hashmap.update(id, user.clone())));
 
     id
+}
+pub fn remove_user(user_id: &u16) {
+    USERS.rcu(|user_hashmap| Arc::new(user_hashmap.without(user_id)));
 }
 
 async fn handle_bi(conn: &Connection, user_id: &u16) -> Result<(), Failure> {
