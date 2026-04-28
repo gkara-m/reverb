@@ -17,7 +17,6 @@ pub fn handle_packet(packet: Packet, user_id: &u16) -> Result<Option<Packet>, Fa
             }))
         },
         SetEchoAvailability::ID => {
-            println!("matched SetEchoAvailability"); // debug
             command_handling::handle_set_echo_availability(packet, user_id)?;
             Ok(None)
         },

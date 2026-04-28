@@ -63,12 +63,9 @@ async fn handle_bi(conn: &Connection, user_id: &u16) -> Result<(), Failure> {
 async fn handle_uni(conn: &Connection, user_id: &u16) -> Result<(), Failure> {
     let recv = conn.accept_uni().await
         .map_err(|e| Failure::from((e.into(), FailureType::Warning)))?;
-    println!("accepted uni stream"); //debug
 
     let data = read_incoming(recv).await?;
-    println!("read incoming"); //debug
     let packet = Packet::parse(&data)?;
-    print!("Parsed Packet"); // debug
     handle_packet(packet, user_id)?;
 
     Ok(())

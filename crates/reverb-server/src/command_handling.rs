@@ -3,13 +3,13 @@ use crate::connection::UserAvailability;
 
 use anyhow::anyhow;
 
+use std::collections::HashSet;
 use reverb_core::{failure::failure::{Failure, FailureType}, network::*, network_command::{helpers::NetworkCommand, online_users::OnlineUsers, set_echo_availability::SetEchoAvailability}};
 use crate::USERS;
 
 pub fn handle_get_online_users(_packet: Packet) -> Box<dyn NetworkCommand + Send + Sync> {
-    // let command = try_get_online_users(packet.payload)?;
     let users_guard = USERS.load();
-    let open_users: HashMap<u16, String> = users_guard.iter()
+    let open_users: HashSet<(u16, String)> = users_guard.iter()
         .filter(|(_, user)| matches!(user.availability, UserAvailability::OpenToEcho))
         .map(|(&id, user)| (id, user.username.clone())).collect();
     
@@ -25,7 +25,6 @@ fn try_get_set_echo_availability(item: &Box<dyn NetworkCommand + Send + Sync>) -
 }
 
 pub fn handle_set_echo_availability(packet: Packet, user_id: &u16) -> Result<(), Failure> {
-    println!("trying get set echo availability"); //debug
     let command = try_get_set_echo_availability(packet.payload())?;
     let mut user = USERS.load()[user_id].clone();
     let echo_availability = match command.0 {

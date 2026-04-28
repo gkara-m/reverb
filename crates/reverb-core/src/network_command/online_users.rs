@@ -1,4 +1,4 @@
-use std::{any::Any, collections::HashMap};
+use std::{any::Any, collections::HashSet};
 
 use crate::{network_command::{ID::NetworkCommandID, helpers::{NetworkCommand, QueryOrNotify}}, failure::failure::{Failure, FailureType}};
 use anyhow::anyhow;
@@ -6,7 +6,7 @@ use postcard::{from_bytes, to_slice};
 
 #[derive(Debug, Clone)]
 pub struct OnlineUsers {
-    pub users: HashMap<u16, String>
+    pub users: HashSet<(u16, String)>
 }
 
 impl NetworkCommand for OnlineUsers {
@@ -22,7 +22,7 @@ impl NetworkCommand for OnlineUsers {
         Ok(data)
     }
     fn parse(data: Vec<u8>) -> Result<Self, Failure> where Self: Sized {
-        let users: HashMap<u16, String> = from_bytes(&data[1..])
+        let users: HashSet<(u16, String)> = from_bytes(&data[1..])
             .map_err(|e| Failure::from((anyhow!("failed to parse OnlineUsers: {e}"), FailureType::Warning)))?;
 
         Ok(OnlineUsers { users })
