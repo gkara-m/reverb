@@ -54,6 +54,7 @@ fn main() {
         }
     };
 
+    // start CLI thread
     thread::spawn(move || {
         match cli::run_cli(100) {
             Ok(_) => println!("CLI exited successfully"),

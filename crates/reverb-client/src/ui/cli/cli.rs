@@ -181,7 +181,7 @@ pub fn handle_command(command: Command) -> Result<(), Failure> {
                 },
                 reverb_core::network_command::online_users::OnlineUsers::ID => {
                     if let Some(online_users) = packet.payload.as_any().downcast_ref::<OnlineUsers>() {
-                        println!("Online users: {}", online_users.users.iter().map(|(_, username)| username.clone()).collect::<Vec<String>>().join(", "));
+                        println!("Online users: {:#?}", online_users.users);
                     } else {
                         println!("Failed to parse online users from server response");
                     }

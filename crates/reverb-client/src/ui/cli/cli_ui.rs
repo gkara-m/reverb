@@ -74,22 +74,10 @@ pub(super) fn run_ui(
                 print_failure(e);
             }
 
-            let half_width;
-            let queue_width;
-            let playlist_width;
-
-            if width % 2 == 0 {
-                half_width = width / 2;
-                queue_width = half_width - 1;
-                playlist_width = half_width;
-            } else {
-                half_width = (width + 1) / 2;
-                queue_width = half_width - 1;
-                playlist_width = half_width - 1;
-            }
+            let third_width = (width - 2) / 3;
 
             if let Err(e) = queue_queue(
-                (queue_width, height - 20),
+                (third_width, height - 20),
                 (0, 2),
                 &mut stdout,
             ) {
@@ -97,16 +85,24 @@ pub(super) fn run_ui(
             }
 
             if let Err(e) = queue_draw_line(
-                (half_width - 1, 2),
-                (half_width - 1, height - 20),
+                (third_width + 1, 2),
+                (third_width + 1, height - 20),
                 &mut stdout,
             ) {
                 print_failure(e);
             }
 
             if let Err(e) = queue_playlist(
-                (playlist_width, height - 20),
-                (half_width, 2),
+                (third_width, height - 20),
+                (third_width + 2, 2),
+                &mut stdout,
+            ) {
+                print_failure(e);
+            }
+
+            if let Err(e) = queue_draw_line(
+                (2 * third_width + 2, 2),
+                (2 * third_width + 2, height - 20),
                 &mut stdout,
             ) {
                 print_failure(e);
@@ -359,6 +355,11 @@ fn create_song_list(size: (u16, u16), songs: Vec<song::Song>, text: &mut Vec<Str
     }
 }
 
+// pushes a str to the given string using width aware formatting, follows these rules:
+// - if the str can fit in the same line (taking into account the same_line_separator), it is added to the string with the same_line_separator before it
+// - if the str cannot fit in the same line, but can fit in a new line (taking into account the new_line_start),
+//       the string is padded with spaces to full line length and added to the passed list
+// 
 fn push_width_aware(
     string: &mut String,
     to_push: &str,
@@ -391,4 +392,21 @@ fn push_width_aware(
     } else {
         string.push_str(&format!("{}{}", same_line_separator, to_push));
     }
+}
+
+
+// show text in right third of the terminal (defined as starting from (integer division) ((width-2)/3)*2+2 and finishing at width-1) and starting from line 2 and finishing at height-20
+fn show_text_in_right_third(text: &str) -> Result<(), Failure> {
+    let mut stdout = io::stdout();
+    let (width, height) = match terminal::size() {
+        Ok((width, height)) => (width, height),
+        Err(e) => {
+            print_failure(Failure::from((e.into(), FailureType::Warning)));
+            (80, 24)
+        }
+    };
+    
+    let third_width = (width - 2) / 3;
+
+    return Ok(());
 }
