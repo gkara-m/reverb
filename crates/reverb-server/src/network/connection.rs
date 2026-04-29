@@ -33,7 +33,6 @@ pub async fn handle_connection(conn: Incoming) -> Result<(), Failure> {
         }
     });
 
-    remove_user(&user_id);
     Ok(())
 }
 

@@ -14,7 +14,6 @@ mod command_handling;
 // The address and port the server will listen on
 const LISTEN_ADDR: &str = "127.0.0.1:4433";
 // The server version, included in responses for client verification
-const _VERSION: &str = "0.1.0";
 const SERVER_NAME: &str = "server";
 const SERVER_GROUP: &str = "server";
 
