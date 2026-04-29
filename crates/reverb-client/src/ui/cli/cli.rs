@@ -170,10 +170,6 @@ pub fn run_cli(update_interval: u64) -> Result<(), Failure> {
 pub fn handle_command(command: Command) -> Result<(), Failure> {
     match command {
         Command::ServerResponse(packet) => {
-            println!("Received response from server: ");
-            println!("Response version: {:?}", packet.version());
-            println!("Response username: {}", packet.username);
-            println!("Response group: {}", packet.group);
             match packet.payload.number() {
                 reverb_core::network_command::default_command::DefaultCommand::ID => {
                     println!("{:#?}", packet);
