@@ -177,7 +177,12 @@ pub fn handle_command(command: Command) -> Result<(), Failure> {
                 },
                 reverb_core::network_command::online_users::OnlineUsers::ID => {
                     if let Some(online_users) = packet.payload.as_any().downcast_ref::<OnlineUsers>() {
-                        cli_ui::show_text_in_right_third(&format!("Online users:\n{:#?}", online_users.users));
+                        let mut users = String::new();
+                        for user in &online_users.users {
+                            users.push_str(user.1.as_str());
+                            users.push('\n');
+                        }
+                        cli_ui::show_text_in_right_third(&format!("Online users:\n{}", users));
                     } else {
                         println!("Failed to parse online users from server response");
                     }
