@@ -7,7 +7,7 @@ use once_cell::sync::Lazy;
 
 use crate::ui::cli::startup::{self, Startup};
 use crate::{Command, DATA_FOLDER};
-use crate::ui::cli::cli_ui::run_ui;
+use crate::ui::cli::cli_ui::{self, run_ui};
 use crate::ui::cli::command_spec::CommandCallType::{Args, NoArgs, NotCallable};
 use crate::ui::cli::command_spec::CommandSpec;
 use crate::ui::ui;
@@ -181,7 +181,7 @@ pub fn handle_command(command: Command) -> Result<(), Failure> {
                 },
                 reverb_core::network_command::online_users::OnlineUsers::ID => {
                     if let Some(online_users) = packet.payload.as_any().downcast_ref::<OnlineUsers>() {
-                        println!("Online users: {:#?}", online_users.users);
+                        cli_ui::show_text_in_right_third(&format!("Online users:\n{:#?}", online_users.users));
                     } else {
                         println!("Failed to parse online users from server response");
                     }
