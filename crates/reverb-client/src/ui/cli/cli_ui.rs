@@ -74,8 +74,11 @@ pub(super) fn run_ui(
                 print_failure(e);
             }
 
-            let third_width = (width - 2) / 3;
 
+            let usable = width.saturating_sub(2);
+            let third_width = usable / 3;
+
+            // Left section
             if let Err(e) = queue_queue(
                 (third_width, height - 20),
                 (0, 2),
@@ -84,25 +87,28 @@ pub(super) fn run_ui(
                 print_failure(e);
             }
 
+            // First vertical line
             if let Err(e) = queue_draw_line(
-                (third_width + 1, 2),
-                (third_width + 1, height - 20),
+                (third_width, 2),
+                (third_width, height - 20),
                 &mut stdout,
             ) {
                 print_failure(e);
             }
 
+            // Middle section
             if let Err(e) = queue_playlist(
                 (third_width, height - 20),
-                (third_width + 2, 2),
+                (third_width + 1, 2),
                 &mut stdout,
             ) {
                 print_failure(e);
             }
 
+            // Second vertical line
             if let Err(e) = queue_draw_line(
-                (2 * third_width + 2, 2),
-                (2 * third_width + 2, height - 20),
+                (third_width * 2 + 1, 2),
+                (third_width * 2 + 1, height - 20),
                 &mut stdout,
             ) {
                 print_failure(e);
@@ -355,11 +361,18 @@ fn create_song_list(size: (u16, u16), songs: Vec<song::Song>, text: &mut Vec<Str
     }
 }
 
-// pushes a str to the given string using width aware formatting, follows these rules:
-// - if the str can fit in the same line (taking into account the same_line_separator), it is added to the string with the same_line_separator before it
-// - if the str cannot fit in the same line, but can fit in a new line (taking into account the new_line_start),
-//       the string is padded with spaces to full line length and added to the passed list
-// 
+// Appends a string to a line buffer with width-aware formatting for terminal UIs.
+//
+// Behavior:
+// - If `to_push` fits on the current line (with `same_line_separator`), it is appended with the separator.
+// - If it doesn't fit, the current line is padded to `max_length`, pushed to `list`, and the buffer is cleared.
+// - If `to_push` fits on a new line (with `new_line_start`), it starts a new line with that prefix.
+// - If it still doesn't fit, it is truncated with ellipsis and pushed as a new line.
+//
+// this edits in place the list passed in with the lines to print and the string passed in with the last line built (so that it can be used for the next call to this function)
+// after last call the string should be pushed to the list and cleared
+//
+// This is used to build lines for terminal output, ensuring no line exceeds `max_length`.
 fn push_width_aware(
     string: &mut String,
     to_push: &str,
@@ -389,6 +402,8 @@ fn push_width_aware(
         } else {
             string.push_str(&format!("{}{}", new_line_start, to_push));
         }
+    } else if string.chars().count() == 0 {
+        string.push_str(&format!("{}", to_push));
     } else {
         string.push_str(&format!("{}{}", same_line_separator, to_push));
     }
@@ -396,7 +411,7 @@ fn push_width_aware(
 
 
 // show text in right third of the terminal (defined as starting from (integer division) ((width-2)/3)*2+2 and finishing at width-1) and starting from line 2 and finishing at height-20
-fn show_text_in_right_third(text: &str) -> Result<(), Failure> {
+pub fn show_text_in_right_third(text: &str) {
     let mut stdout = io::stdout();
     let (width, height) = match terminal::size() {
         Ok((width, height)) => (width, height),
@@ -405,8 +420,52 @@ fn show_text_in_right_third(text: &str) -> Result<(), Failure> {
             (80, 24)
         }
     };
-    
-    let third_width = (width - 2) / 3;
 
-    return Ok(());
+    let usable = width.saturating_sub(2);
+    let third_width = usable / 3;
+    let right_width = third_width + (usable % 3);
+    let right_start = third_width * 2 + 2;
+
+    let _ = queue!(
+        stdout,
+        cursor::SavePosition,
+    );
+
+    let mut current_line = 2;
+
+    for in_line in text.split('\n') {
+        let mut out_line = String::new();
+        let mut out_lines = Vec::new();
+        for word in in_line.split_whitespace() {
+            push_width_aware(&mut out_line, word, "  ", " ", &mut out_lines, right_width);
+        }
+        if out_line.chars().count() > 0 {
+            out_line.push_str(&" ".repeat(right_width as usize - out_line.chars().count() as usize));
+            out_lines.push(out_line);
+        }
+        for out_line in out_lines.iter() {
+            let _ = queue!(
+                stdout,
+                cursor::MoveTo(right_start, current_line as u16),
+                Print(out_line),
+            );
+            current_line += 1;
+            if current_line >= height - 20 {
+                break;
+            }
+        }
+    }
+    for i in current_line..(height - 19) {
+        let _ = queue!(
+            stdout,
+            cursor::MoveTo(right_start, i),
+            Print(" ".repeat(right_width as usize)),
+        );
+    }
+    let _ = queue!(
+        stdout,
+        cursor::RestorePosition,
+    );
+
+    let _ = stdout.flush();
 }

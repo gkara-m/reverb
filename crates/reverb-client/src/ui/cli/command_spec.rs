@@ -2,6 +2,8 @@ use std::{collections::HashMap};
 
 use reverb_core::failure::failure::Failure;
 
+use crate::ui::cli::cli_ui;
+
 pub(super) struct CommandSpec {
     nodes: HashMap<String, CommandSpecNode>,
 }
@@ -103,7 +105,13 @@ impl CommandSpecNode {
     }
 
     fn print_help(&self, command_spec: &CommandSpec, prefix: String, num_layers: usize) {
-        println!("{} {}{}", prefix, self.valid_aliases.join(" | "), self.help);
+        let mut out_string = String::from("Help:\n");
+        self.sprint_help(command_spec, prefix, num_layers, &mut out_string);
+        cli_ui::show_text_in_right_third(&out_string);
+    }
+
+    fn sprint_help(&self, command_spec: &CommandSpec, prefix: String, num_layers: usize, out_string: &mut String) {
+        out_string.push_str(&format!("{} {}{}\n", prefix, self.valid_aliases.join(" | "), self.help));
         if num_layers > 0 {
             let prefix = format!(
                 "{} {}",
@@ -112,14 +120,14 @@ impl CommandSpecNode {
             );
             for child in &self.children {
                 let node = command_spec.get(child).unwrap();
-                node.print_help(command_spec, format!("{} ", prefix), num_layers - 1);
+                node.sprint_help(command_spec, format!("{} ", prefix), num_layers - 1, out_string);
             }
         } else if self.children.len() > 0 {
-            println!(
-                "{} {} <args> | help (for more information on this command and its subcommands)",
+            out_string.push_str(&format!(
+                "{} {} <args> | help (for more information on this command and its subcommands)\n",
                 prefix,
                 self.valid_aliases.join(" | ")
-            );
+            ));
         }
     }
 }
