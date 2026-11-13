@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use crate::Song;
 use crate::external::local::{Local, LocalSong};
 use crate::external::placeholder::{PlaceholderExternalSong, PlaceholderRun};
+use crate::internal::playlist::m3u::M3USongInfo;
 use crate::internal::song::SongInfo;
 
 use reverb_core::failure::failure::{Failure, FailureType};
@@ -39,6 +40,12 @@ pub trait ExternalSongTrait {
     where
         Self: Sized;
     fn info(&self) -> Result<SongInfo, Failure>;
+
+    fn to_m3u_song_info(&self) -> Result<M3USongInfo, Failure>;
+
+    fn from_m3u_song_info(m3u_song_info: &M3USongInfo) -> Result<Self, Failure>
+    where
+        Self: Sized;
 }
 
 impl External for ExternalRun {
@@ -222,6 +229,17 @@ macro_rules! make_external_types {
             }
         }
 
+        impl PartialEq for ExternalType {
+            fn eq(&self, other: &Self) -> bool {
+                match (self, other) {
+                    $(
+                        (ExternalType::$backend, ExternalType::$backend) => true,
+                    )*
+                    _ => false,
+                }
+            }
+        }
+
         impl ExternalSongTrait for ExternalSong {
             // Note: This function is not intended to be used; it's here to satisfy the trait requirement.
             // Use ExternalType::new_external_song instead.
@@ -233,6 +251,23 @@ macro_rules! make_external_types {
                 match self {
                     $(
                         ExternalSong::$backend(song) => song.info(),
+                    )*
+                }
+            }
+            fn to_m3u_song_info(&self) -> Result<M3USongInfo, Failure> {
+                match self {
+                    $(
+                        ExternalSong::$backend(song) => song.to_m3u_song_info(),
+                    )*
+                }
+            }
+            fn from_m3u_song_info(m3u_song_info: &M3USongInfo) -> Result<Self, Failure>
+            where
+                Self: Sized
+            {
+                match m3u_song_info.external_type {
+                    $(
+                        ExternalType::$backend => <$song>::from_m3u_song_info(m3u_song_info).map(ExternalSong::$backend),
                     )*
                 }
             }
@@ -259,7 +294,7 @@ macro_rules! make_external_types {
         }
 
         pub fn get_new_external_run_from_song(song: &Song) -> Result<ExternalRun, Failure> {
-            match &song.song_type {
+            match &song.song_external {
                 $(
                     ExternalSong::$backend(_) => Ok(ExternalRun::$backend(<$run>::new(song)?)),
                 )*

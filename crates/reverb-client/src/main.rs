@@ -56,7 +56,8 @@ fn main() {
 
     // start CLI thread
     thread::spawn(move || {
-        match cli::run_cli(100) {
+        println!("Starting CLI...");
+        match cli::run_cli(100, false) {
             Ok(_) => println!("CLI exited successfully"),
             Err(e) => MAIN_SENDER.get().unwrap().send(Command::Failure(e)).unwrap(),
         }

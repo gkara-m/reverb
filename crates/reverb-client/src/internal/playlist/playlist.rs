@@ -1,18 +1,18 @@
-use std::path::PathBuf;
+use std::{fs::File, path::PathBuf};
 use anyhow::anyhow;
 use serde::{Deserialize, Serialize};
 
-use crate::{config::config::config, external::external::ExternalType, internal::song::Song};
+use crate::{config::config::config, external::external::ExternalType, internal::{playlist::m3u::{file_to_m3u, m3u_to_playlist, playlist_to_m3u_string}, song::Song}};
 use reverb_core::failure::failure::{Failure, FailureType};
 
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Playlist {
-    name: String,
-    songs: Vec<Song>,
-    external_type: Option<ExternalType>,
+    pub(super) name: String,
+    pub(super) songs: Vec<Song>,
+    pub(super) external_type: Option<ExternalType>,
 }
-
+    
 
 impl Playlist {
     pub fn new(name: &str, external_type: Option<ExternalType>) -> Result<Playlist, Failure> {
@@ -32,11 +32,11 @@ impl Playlist {
         Ok(playlist)
     }
 
-    pub(super) fn add(&mut self, song: &Song) {
+    pub fn add(&mut self, song: &Song) {
         self.songs.push(song.clone());
     }
 
-    pub(super) fn remove(&mut self, index: usize) -> Result<(), Failure> {
+    pub fn remove(&mut self, index: usize) -> Result<(), Failure> {
         if index >= self.songs.len() {
             Err(Failure::from((anyhow!("invalid song index: {}", index), FailureType::Warning)))
         } else {
@@ -45,11 +45,11 @@ impl Playlist {
         }
     }
 
-    pub(super) fn clear(&mut self) {
+    pub fn clear(&mut self) {
         self.songs.clear();
     }
 
-    pub(super) fn get_songs(&self) -> Vec<Song> {
+    pub fn get_songs(&self) -> Vec<Song> {
         self.songs.clone()
     }
 
@@ -60,19 +60,19 @@ impl Playlist {
         }
     }
 
-    pub(super) fn get_name(&self) -> String {
+    pub fn get_name(&self) -> String {
         self.name.clone()
     }
 
-    pub(super) fn set_name(&mut self, name: &str) -> Result<(), Failure> {
+    pub fn set_name(&mut self, name: &str) -> Result<(), Failure> {
         let dir_str = config()?.data_folder.clone();
         let mut dir = PathBuf::from(dir_str);
         dir.push("playlists");
-        let new_path = dir.join(format!("{}.toml", name));
+        let new_path = dir.join(format!("{}.m3u", name));
         if new_path.exists() {
             return Err(Failure::from((anyhow!("A playlist with the name '{}' already exists", name), FailureType::Warning)));
         }
-        let old_path = dir.join(format!("{}.toml", &self.name));
+        let old_path = dir.join(format!("{}.m3u", &self.name));
         if old_path.exists() {
             std::fs::rename(&old_path, &new_path).map_err(|e| Failure::from((e.into(), FailureType::Warning)))?;
         }
@@ -80,7 +80,7 @@ impl Playlist {
         Ok(())
     }
 
-    pub(super) fn move_song(&mut self, from: usize, to: usize) -> Result<(), Failure> {
+    pub fn move_song(&mut self, from: usize, to: usize) -> Result<(), Failure> {
         if from >= self.songs.len() || to >= self.songs.len() {
             Err(Failure::from((anyhow!("invalid song indices: from {}, to {}", from, to), FailureType::Warning)))
         } else {
@@ -90,13 +90,13 @@ impl Playlist {
         }
     }
 
-    pub(super) fn save(&self) -> Result<(), Failure> {
+    pub fn save(&self) -> Result<(), Failure> {
         let dir_str = config()?.data_folder.clone();
         let mut dir = PathBuf::from(dir_str);
         dir.push("playlists");
         match std::fs::write(
-            dir.join(format!("{}.toml", &self.name)),
-            toml::to_string(self).map_err(|e| Failure::from((e.into(), FailureType::Warning)))?,
+            dir.join(format!("{}.m3u", &self.name)),
+            playlist_to_m3u_string(self)?,
         ) {
             Err(e) => Err(Failure::from((e.into(), FailureType::Warning))),
             Ok(_) => Ok(()),
@@ -104,21 +104,26 @@ impl Playlist {
     }
 
     pub fn load(name: &str) -> Result<Playlist, Failure> {
+        println!("Loading playlist: {}", name);
         let dir_str = config()?.data_folder.clone();
+        println!("Data folder: {}", dir_str);
         let mut dir = PathBuf::from(dir_str);
+        println!("Playlist directory: {:?}", dir);
         dir.push("playlists");
+        println!("Full playlist path: {:?}", dir.join(format!("{}.m3u", name)));
 
-        Ok(toml::from_str(
-            &std::fs::read_to_string(dir.join(format!("{}.toml", name)))
+        let m3u = file_to_m3u(
+            File::open(dir.join(format!("{}.m3u", name)))
             .map_err(|e| Failure::from((e.into(), "playlist_load", FailureType::Warning)))?
-        ).map_err(|e| Failure::from((e.into(), "playlist_load, playlist does not exist", FailureType::Warning)))?)
+        )?;
+        m3u_to_playlist(m3u)
     }
 
-    pub(super) fn iter(&self) -> std::slice::Iter<'_, Song> {
+    pub fn iter(&self) -> std::slice::Iter<'_, Song> {
         self.songs.iter()
     }
 
-    pub(super) fn get_type(&self) -> Option<ExternalType> {
+    pub fn get_type(&self) -> Option<ExternalType> {
         self.external_type.clone()
     }
 }

@@ -3,7 +3,7 @@ use anyhow::anyhow;
 use rand::{seq::SliceRandom, rng};
 use serde::{Deserialize, Serialize};
 
-use crate::{internal::{playlist::Playlist, song::Song}};
+use crate::internal::{playlist::playlist::Playlist, song::Song};
 use reverb_core::failure::failure::{Failure, FailureType};
 
 

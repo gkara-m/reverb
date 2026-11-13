@@ -133,6 +133,7 @@ impl CommandSpecNode {
         let mut out_string = String::from("Help:\n");
         self.parent(command_spec)
             .sprint_help(command_spec, num_layers, &mut out_string);
+        println!("{}", out_string.trim_end());
         cli_ui::show_text_in_right_third(&out_string);
     }
 

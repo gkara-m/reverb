@@ -1,7 +1,7 @@
 use reverb_core::network_command::get_online_users::GetOnlineUsers;
 use reverb_core::network_command::set_echo_availability::SetEchoAvailability;
 use crate::{Command, MAIN_SENDER, config::internet::{server_config, update_server_config}, external::external::{self, External, ExternalRun, ExternalType}, internal::{
-        internet, playlist::Playlist, queue::Queue, song::Song
+        internet, playlist::playlist::Playlist, queue::Queue, song::Song
     }
 };
 use reverb_core::{failure::failure::{Failure, FailureType}};
@@ -122,7 +122,7 @@ impl Internal {
 
     pub fn play_new(&mut self, song: Song) -> Result<(), Failure> {
         self.stop()?;
-        if !song.song_type.same_type(&self.current_external) {
+        if !song.song_external.same_type(&self.current_external) {
             self.current_external = external::get_new_external_run_from_song(&song)?;
         }
         self.queue.queued_songs[0] = song;

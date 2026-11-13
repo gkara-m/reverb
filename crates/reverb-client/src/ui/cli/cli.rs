@@ -19,7 +19,7 @@ use reverb_core::failure::failure::{Failure, FailureType};
 
 pub(super) static PLAYLIST: Lazy<Arc<Mutex<String>>> = Lazy::new(|| Arc::new(Mutex::new("default playlist".to_string())));
 
-pub fn run_cli(update_interval: u64) -> Result<(), Failure> {
+pub fn run_cli(update_interval: u64, run_gui: bool) -> Result<(), Failure> {
 
     // load the last played playlist
     let startup = Startup::load()?;
@@ -149,12 +149,17 @@ pub fn run_cli(update_interval: u64) -> Result<(), Failure> {
     // input thread
     let (input_tx, input_rx) = std::sync::mpsc::channel::<String>();
 
-    let renderer = run_ui(input_tx, update_interval);
+    println!("Starting UI...");
+    let renderer = run_ui(input_tx, update_interval, run_gui);
 
 
     println!("Please enter command or type 'help' for help.");
 
     for input in input_rx {
+        let trimmed = input.trim();
+        if !trimmed.is_empty() {
+            println!("> {}", trimmed);
+        }
         match command_spec.call(input.as_str()) {
             Err(err) => print_failure(err),
             Ok(_) => {}

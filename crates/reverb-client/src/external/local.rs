@@ -6,9 +6,7 @@ use serde::{Deserialize, Serialize};
 use std::{fs::File, io::BufReader, path::Path, time::Duration, vec};
 
 use crate::{
-    external::external::{External, ExternalSong::LOCAL, ExternalSongTrait}, 
-    internal::song::{Song, SongInfo},
-    config::config::config,
+    config::config::config, external::external::{External, ExternalSong::LOCAL, ExternalSongTrait, ExternalType}, internal::song::{Song, SongInfo},
 };
 
 use reverb_core::failure::failure::{Failure, FailureType};
@@ -85,6 +83,41 @@ impl ExternalSongTrait for LocalSong {
             )))
         }
     }
+
+    fn from_m3u_song_info(m3u_song_info: &crate::internal::playlist::m3u::M3USongInfo) -> Result<Self, Failure>
+    where
+        Self: Sized
+    {
+        if m3u_song_info.external_type != ExternalType::LOCAL {
+            return Err(Failure::from((
+                anyhow!("Invalid external type for LocalSong: {:?}", m3u_song_info.external_type),
+                FailureType::Warning,
+            )));
+        }
+        let path = Path::new(&config()?.local_song_folder_path).join(&m3u_song_info.uri);
+        if path.exists() {
+            Ok(LocalSong {
+                song_path: path.to_string_lossy().to_string(),
+                duration: m3u_song_info.duration,
+            })
+        } else {
+            Err(Failure::from((
+                std::io::Error::new(std::io::ErrorKind::NotFound, "File does not exist").into(),
+                FailureType::Warning,
+            )))
+        }
+    }
+
+    fn to_m3u_song_info(&self) -> Result<crate::internal::playlist::m3u::M3USongInfo, Failure> {
+        Ok(crate::internal::playlist::m3u::M3USongInfo {
+            title: self.info()?.title.clone(),
+            artists: self.info()?.artists.clone(),
+            external_type: ExternalType::LOCAL,
+            duration: self.get_duration(),
+            uri: self.song_path.clone(),
+            additional_properties: None,
+        })
+    }
 }
 
 impl External for Local {
@@ -148,7 +181,7 @@ impl External for Local {
 
 impl Local {
     fn load_new(&mut self, song: &Song) -> Result<(), Failure> {
-        if let LOCAL(ref local_song) = song.song_type {
+        if let LOCAL(ref local_song) = song.song_external {
             self.stop()?;
             let decoder = load_decoder(&local_song.song_path)?;
             self.song_duration = local_song.get_duration();

@@ -22,7 +22,7 @@ impl StartupData {
     pub(super) fn new_default() -> Result<StartupData, Failure> {
         println!("Attempting to initialize Startup Song");
         let song = Song {
-            song_type: ExternalSong::LOCAL(LocalSong::new("default_song.mp3")?),
+            song_external: ExternalSong::LOCAL(LocalSong::new("default_song.mp3")?),
             info: SongInfo {
                 title: "Default Song".to_string(),
                 artists: vec!["Unknown Artist".to_string()],

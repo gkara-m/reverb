@@ -2,14 +2,20 @@ use anyhow::anyhow;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    external::external::{ExternalSong, ExternalSongTrait, ExternalType},
+    external::external::{ExternalSong, ExternalSongTrait, ExternalType}, internal::playlist::m3u::M3USongInfo,
 };
 use reverb_core::failure::failure::{Failure, FailureType};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Song {
-    pub song_type: ExternalSong,
+    pub song_external: ExternalSong,
     pub info: SongInfo,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct SongInfo {
+    pub title: String,
+    pub artists: Vec<String>,
 }
 
 impl Song {
@@ -21,7 +27,7 @@ impl Song {
                 let external_song = external_type.new_external_song(external_info)?;
                 Ok(Song {
                     info: external_song.info()?,
-                    song_type: external_song,
+                    song_external: external_song,
                 })
             }
             None => Err(Failure::from((
@@ -33,7 +39,7 @@ impl Song {
 
     pub fn default() -> Result<Song, Failure> {
         Ok(Song {
-            song_type: ExternalSong::LOCAL(crate::external::local::LocalSong::new(
+            song_external: ExternalSong::LOCAL(crate::external::local::LocalSong::new(
                 "sample/default_song.mp3",
             )?),
             info: SongInfo {
@@ -42,10 +48,9 @@ impl Song {
             },
         })
     }
+
+    pub fn to_m3u_song_info(&self) -> Result<M3USongInfo, Failure> {
+        self.song_external.to_m3u_song_info()
+    }
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct SongInfo {
-    pub title: String,
-    pub artists: Vec<String>,
-}

@@ -1358,6 +1358,7 @@ dependencies = [
  "rodio",
  "rustls",
  "serde",
+ "serde_json",
  "tokio",
  "toml",
 ]

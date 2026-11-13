@@ -17,12 +17,14 @@ use crate::{
 pub(super) fn run_ui(
     input_tx: Sender<String>,
     update_interval: u64,
+    run_gui: bool,
 ) -> std::thread::JoinHandle<()> {
     std::thread::spawn(move || {
         let stdin = io::stdin();
         for line in stdin.lock().lines() {
             match line {
                 Ok(line) => {
+                    println!("> {}", line);
                     if let Err(e) = input_tx.send(line) {
                         print_failure(Failure::from((e.into(), FailureType::Fatal)));
                         if let Err(e) = MAIN_SENDER.get().unwrap().clone().send(Command::Shutdown) {
@@ -48,76 +50,85 @@ pub(super) fn run_ui(
         }
     });
 
-    //renderer thread
-    let renderer = std::thread::spawn(move || {
-        let mut stdout = io::stdout();
-        loop {
-            std::thread::sleep(std::time::Duration::from_millis(update_interval));
+    let renderer;
+    if run_gui {
+        //renderer thread
+        renderer = std::thread::spawn(move || {
+            let mut stdout = io::stdout();
+            loop {
+                std::thread::sleep(std::time::Duration::from_millis(update_interval));
 
-            // check line length
-            let (width, height) = match terminal::size() {
-                Ok((width, height)) => (width, height),
-                Err(e) => {
-                    print_failure(Failure::from((e.into(), FailureType::Warning)));
-                    (80, 24)
+                // check line length
+                let (width, height) = match terminal::size() {
+                    Ok((width, height)) => (width, height),
+                    Err(e) => {
+                        print_failure(Failure::from((e.into(), FailureType::Warning)));
+                        (80, 24)
+                    }
+                };
+
+                //render
+                let _ = queue!(stdout, cursor::SavePosition);
+
+                if let Err(e) = queue_progress_bar(width, (0, 1), &mut stdout) {
+                    print_failure(e);
                 }
-            };
 
-            //render
-            let _ = queue!(stdout, cursor::SavePosition);
+                if let Err(e) = queue_song_name(width, (0, 0), &mut stdout) {
+                    print_failure(e);
+                }
 
-            if let Err(e) = queue_progress_bar(width, (0, 1), &mut stdout) {
-                print_failure(e);
+
+                let usable = width.saturating_sub(2);
+                let third_width = usable / 3;
+
+                // Left section
+                if let Err(e) = queue_queue(
+                    (third_width, height - 20),
+                    (0, 2),
+                    &mut stdout,
+                ) {
+                    print_failure(e);
+                }
+
+                // First vertical line
+                if let Err(e) = queue_draw_line(
+                    (third_width, 2),
+                    (third_width, height - 20),
+                    &mut stdout,
+                ) {
+                    print_failure(e);
+                }
+
+                // Middle section
+                if let Err(e) = queue_playlist(
+                    (third_width, height - 20),
+                    (third_width + 1, 2),
+                    &mut stdout,
+                ) {
+                    print_failure(e);
+                }
+
+                // Second vertical line
+                if let Err(e) = queue_draw_line(
+                    (third_width * 2 + 1, 2),
+                    (third_width * 2 + 1, height - 20),
+                    &mut stdout,
+                ) {
+                    print_failure(e);
+                }
+
+                let _ = queue!(stdout, cursor::RestorePosition,);
+                let _ = stdout.flush();
             }
-
-            if let Err(e) = queue_song_name(width, (0, 0), &mut stdout) {
-                print_failure(e);
+        });
+    } else { // this is dumb as hell TODO: fix this
+        renderer = std::thread::spawn(move || {
+            loop {
+                std::thread::sleep(std::time::Duration::from_millis(update_interval));
             }
-
-
-            let usable = width.saturating_sub(2);
-            let third_width = usable / 3;
-
-            // Left section
-            if let Err(e) = queue_queue(
-                (third_width, height - 20),
-                (0, 2),
-                &mut stdout,
-            ) {
-                print_failure(e);
-            }
-
-            // First vertical line
-            if let Err(e) = queue_draw_line(
-                (third_width, 2),
-                (third_width, height - 20),
-                &mut stdout,
-            ) {
-                print_failure(e);
-            }
-
-            // Middle section
-            if let Err(e) = queue_playlist(
-                (third_width, height - 20),
-                (third_width + 1, 2),
-                &mut stdout,
-            ) {
-                print_failure(e);
-            }
-
-            // Second vertical line
-            if let Err(e) = queue_draw_line(
-                (third_width * 2 + 1, 2),
-                (third_width * 2 + 1, height - 20),
-                &mut stdout,
-            ) {
-                print_failure(e);
-            }
-
-            let _ = queue!(stdout, cursor::RestorePosition,);
-            let _ = stdout.flush();
-        }
-    });
+        });
+    }
 
     renderer
 }
@@ -337,7 +348,7 @@ fn create_song_list(size: (u16, u16), songs: Vec<song::Song>, text: &mut Vec<Str
                 }
 
                 // add type
-                let external_type = format!("({})", song.song_type.as_type());
+                let external_type = format!("({})", song.song_external.as_type());
                 push_width_aware(
                     &mut song_text,
                     &external_type.to_string(),
