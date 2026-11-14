@@ -157,9 +157,6 @@ pub fn run_cli(update_interval: u64, run_gui: bool) -> Result<(), Failure> {
 
     for input in input_rx {
         let trimmed = input.trim();
-        if !trimmed.is_empty() {
-            println!("> {}", trimmed);
-        }
         match command_spec.call(input.as_str()) {
             Err(err) => print_failure(err),
             Ok(_) => {}
