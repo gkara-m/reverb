@@ -1,7 +1,7 @@
 use reverb_core::network_command::get_online_users::GetOnlineUsers;
 use reverb_core::network_command::set_echo_availability::SetEchoAvailability;
 use crate::{Command, MAIN_SENDER, config::internet::{server_config, update_server_config}, external::external::{self, External, ExternalRun, ExternalType}, internal::{
-        internet, playlist::{self, playlist::Playlist}, queue::Queue, song::Song
+        internet, playlist::playlist::Playlist, queue::Queue, song::Song
     }
 };
 use reverb_core::{failure::failure::{Failure, FailureType}};

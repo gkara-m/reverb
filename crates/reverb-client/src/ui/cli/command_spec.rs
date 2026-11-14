@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use anyhow::anyhow;
 use reverb_core::failure::failure::{Failure, FailureType};
 
-use crate::ui::cli::{cli_ui, command_spec::CommandCallType::{Args, NoArgs}};
+use crate::ui::cli::{cli_ui, command_spec::CommandCallType::Args};
 
 static HELP_ALIASES: [&str; 2] = ["help", "h"];
 pub(super) struct CommandSpec {

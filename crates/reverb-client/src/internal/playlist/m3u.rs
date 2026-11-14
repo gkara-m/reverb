@@ -4,7 +4,7 @@ use reverb_core::failure::failure::{Failure, FailureType};
 use anyhow::anyhow;
 use serde::{Deserialize, Serialize};
 
-use crate::{external::{self, external::{ExternalSong, ExternalSongTrait, ExternalType}}, internal::{playlist::playlist::Playlist, song::{Song, SongInfo}}};
+use crate::{external::external::{ExternalSong, ExternalSongTrait, ExternalType}, internal::{playlist::playlist::Playlist, song::{Song, SongInfo}}};
 
 static REVERB_PLAYLIST_INFO: &str = "#REVERBPLAYLISTINFO:";
 static REVERB_SONG_INFO: &str = "#REVERBSONGINFO:";

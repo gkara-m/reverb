@@ -1,10 +1,9 @@
-use anyhow::anyhow;
 use serde::{Deserialize, Serialize};
 
 use crate::{
     external::external::{ExternalSong, ExternalSongTrait, ExternalType}, internal::playlist::m3u::M3USongInfo,
 };
-use reverb_core::failure::failure::{Failure, FailureType};
+use reverb_core::failure::failure::Failure;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Song {

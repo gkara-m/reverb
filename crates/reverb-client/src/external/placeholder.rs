@@ -36,7 +36,7 @@ impl ExternalSongTrait for PlaceholderExternalSong {
         todo!()
     }
 
-    fn determine_is_this_type_from_uri(uri: &str) -> Result<bool, Failure> {
+    fn determine_is_this_type_from_uri(_uri: &str) -> Result<bool, Failure> {
         Ok(false)
     }
 }

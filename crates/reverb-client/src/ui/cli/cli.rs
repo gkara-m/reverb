@@ -156,7 +156,6 @@ pub fn run_cli(update_interval: u64, run_gui: bool) -> Result<(), Failure> {
     println!("Please enter command or type 'help' for help.");
 
     for input in input_rx {
-        let trimmed = input.trim();
         match command_spec.call(input.as_str()) {
             Err(err) => print_failure(err),
             Ok(_) => {}
