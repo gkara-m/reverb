@@ -60,7 +60,7 @@ impl ExternalSongTrait for LocalSong {
         }
     }
 
-    fn new(path_str: &str) -> Result<Self, Failure> {
+    fn from_uri(path_str: &str) -> Result<Self, Failure> {
         let path = Path::new(&config()?.local_song_folder_path).join(path_str);
 
         let duration = {
@@ -117,6 +117,17 @@ impl ExternalSongTrait for LocalSong {
             uri: self.song_path.clone(),
             additional_properties: None,
         })
+    }
+
+    fn determine_is_this_type_from_uri(uri: &str) -> Result<bool, Failure> {
+        // check if the uri is a relative path in the local song folder
+        let path = Path::new(&config()?.local_song_folder_path).join(uri);
+        if path.exists() {
+            return Ok(true);
+        }
+        // check if the uri is an absolute path
+        let path = Path::new(uri);
+        Ok(path.exists())
     }
 }
 

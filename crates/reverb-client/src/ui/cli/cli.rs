@@ -52,7 +52,7 @@ pub fn run_cli(update_interval: u64, run_gui: bool) -> Result<(), Failure> {
         }
         Ok(())
     }), NoArgs, None)?
-    .add("queue add", vec!["add", "a"], " <song_type> <song_info> : Add a song to the queue", Some(|args| {
+    .add("queue add", vec!["add", "a"], " <song-URI> : Add a song to the queue", Some(|args| {
         let song = Song::new(args)?;
         ui::queue_add(song)
     }), Args, Some("queue"))?
@@ -67,7 +67,7 @@ pub fn run_cli(update_interval: u64, run_gui: bool) -> Result<(), Failure> {
     .add("queue current playlist", vec!["playlist", "p"], " : Add current playlist songs to the queue", Some(|_| ui::queue_playlist(PLAYLIST.lock().unwrap().as_str())), NoArgs, Some("queue"))?
     .add("queue shuffle", vec!["shuffle", "sh", "s"], " : Shuffle the queue", Some(|_| ui::queue_shuffle()), NoArgs, Some("queue"))?
     // play sub-commands
-    .add("play new", vec!["new", "n"], " <song-type> <song-info> : Play a new song from the given info", Some(|args| {
+    .add("play new", vec!["new", "n"], " <song-URI> : Play a new song from the given URI", Some(|args| {
         let song = Song::new(args)?;
         ui::play_new(song)
     }), Args, Some("play"))?
@@ -80,7 +80,7 @@ pub fn run_cli(update_interval: u64, run_gui: bool) -> Result<(), Failure> {
         }
         Ok(())
     }), NoArgs, None)?
-    .add("playlist add", vec!["add", "a"], " <song_type> <song_info> : Add a song to the playlist (or 'playlist add playlist <name>')", Some(|args| {
+    .add("playlist add", vec!["add", "a"], " <song-URI> : Add a song to the playlist (or 'playlist add playlist <name>')", Some(|args| {
         if args.starts_with("playlist ") {
             let name = args.strip_prefix("playlist ").unwrap();
             ui::playlist_add_playlist(PLAYLIST.lock().unwrap().as_str(), name)

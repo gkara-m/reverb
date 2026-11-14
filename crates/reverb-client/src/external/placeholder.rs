@@ -18,7 +18,7 @@ impl ExternalSongTrait for PlaceholderExternalSong {
         todo!()
     }
 
-    fn new(_info: &str) -> Result<Self, Failure>
+    fn from_uri(_info: &str) -> Result<Self, Failure>
     where
         Self: Sized,
     {
@@ -34,6 +34,10 @@ impl ExternalSongTrait for PlaceholderExternalSong {
         Self: Sized
     {
         todo!()
+    }
+
+    fn determine_is_this_type_from_uri(uri: &str) -> Result<bool, Failure> {
+        Ok(false)
     }
 }
 

@@ -241,7 +241,28 @@ pub(super) fn file_to_m3u(file: File) -> Result<M3UPlaylist, Failure> {
             }
         }
     } else {
-        todo!()
+        // TODO: need to allow the user to decide weather to convert or not.
+        println!("reading standard m3u playlist this may take a while...");
+        name = "Converted Playlist";
+        external_type = None;
+        let mut current_line = String::new();
+        while {
+            current_line.clear();
+            match reader.read_line(&mut current_line) {
+                Ok(0) => false, // EOF
+                Ok(_) => true,
+                Err(e) => {
+                    return Err(Failure::from((e.into(), FailureType::Warning)));
+                }
+            }
+        } {
+            println!("reading URI: {}", current_line);
+            if current_line.starts_with('#') || current_line.trim().is_empty() {
+                continue; // skip comments and empty lines
+            } else {
+                m3u_song_infos.push(SongCreationInfo::FromURI(current_line.trim().to_string()));
+            }
+        }
     }
 
     Ok(M3UPlaylist {

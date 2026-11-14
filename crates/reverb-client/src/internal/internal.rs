@@ -1,7 +1,7 @@
 use reverb_core::network_command::get_online_users::GetOnlineUsers;
 use reverb_core::network_command::set_echo_availability::SetEchoAvailability;
 use crate::{Command, MAIN_SENDER, config::internet::{server_config, update_server_config}, external::external::{self, External, ExternalRun, ExternalType}, internal::{
-        internet, playlist::playlist::Playlist, queue::Queue, song::Song
+        internet, playlist::{self, playlist::Playlist}, queue::Queue, song::Song
     }
 };
 use reverb_core::{failure::failure::{Failure, FailureType}};
@@ -230,12 +230,14 @@ impl Internal {
         playlist.save()
     }
 
-    fn load_playlist(&mut self, playlist: &str) -> Result<&mut Playlist, Failure> {
-        if !self.playlists.contains(playlist) {
-            let playlist = Playlist::load(playlist)?;
+    fn load_playlist(&mut self, playlist_name: &str) -> Result<&mut Playlist, Failure> {
+        let mut playlist_name = playlist_name.to_string();
+        if !self.playlists.contains(playlist_name.as_str()) {
+            let playlist = Playlist::load(playlist_name.as_str())?;
+            playlist_name = playlist.get_name();
             self.playlists.put(playlist.get_name(), playlist);
         }
-        Ok(self.playlists.get_mut(playlist).unwrap())
+        Ok(self.playlists.get_mut(playlist_name.as_str()).unwrap())
     }
 }
 
