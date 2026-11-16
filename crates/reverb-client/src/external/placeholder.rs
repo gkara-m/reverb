@@ -3,8 +3,7 @@ use std::time::Duration;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    external::external::{External, ExternalSongTrait},
-    internal::song,
+    external::external::{External, ExternalSongTrait}, internal::{playlist::m3u::M3USongInfo, song},
 };
 
 use reverb_core::failure::failure::Failure;
@@ -19,11 +18,26 @@ impl ExternalSongTrait for PlaceholderExternalSong {
         todo!()
     }
 
-    fn new(_info: &str) -> Result<Self, Failure>
+    fn from_uri(_info: &str) -> Result<Self, Failure>
     where
         Self: Sized,
     {
         todo!()
+    }
+
+    fn to_m3u_song_info(&self) -> Result<M3USongInfo, Failure> {
+        todo!()
+    }
+
+    fn from_m3u_song_info(_m3u_song_info: &M3USongInfo) -> Result<Self, Failure>
+    where
+        Self: Sized
+    {
+        todo!()
+    }
+
+    fn determine_is_this_type_from_uri(_uri: &str) -> Result<bool, Failure> {
+        Ok(false)
     }
 }
 

@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use anyhow::anyhow;
 use reverb_core::failure::failure::{Failure, FailureType};
 
-use crate::ui::cli::{cli_ui, command_spec::CommandCallType::{Args, NoArgs}};
+use crate::ui::cli::{cli_ui, command_spec::CommandCallType::Args};
 
 static HELP_ALIASES: [&str; 2] = ["help", "h"];
 pub(super) struct CommandSpec {
@@ -133,6 +133,7 @@ impl CommandSpecNode {
         let mut out_string = String::from("Help:\n");
         self.parent(command_spec)
             .sprint_help(command_spec, num_layers, &mut out_string);
+        println!("{}", out_string.trim_end());
         cli_ui::show_text_in_right_third(&out_string);
     }
 

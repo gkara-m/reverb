@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use crate::Song;
 use crate::external::local::{Local, LocalSong};
 use crate::external::placeholder::{PlaceholderExternalSong, PlaceholderRun};
+use crate::internal::playlist::m3u::M3USongInfo;
 use crate::internal::song::SongInfo;
 
 use reverb_core::failure::failure::{Failure, FailureType};
@@ -30,15 +31,21 @@ pub trait External {
     fn song_duration_gone(&self) -> Result<Duration, Failure>;
 
     fn song_duration(&self) -> Result<Duration, Failure>;
-
-    // fn get_song_info(&self, song: &Song) -> Result<SongInfo, Failure>;
 }
 
 pub trait ExternalSongTrait {
-    fn new(info: &str) -> Result<Self, Failure>
+    fn from_uri(info: &str) -> Result<Self, Failure>
     where
         Self: Sized;
     fn info(&self) -> Result<SongInfo, Failure>;
+
+    fn to_m3u_song_info(&self) -> Result<M3USongInfo, Failure>;
+
+    fn from_m3u_song_info(m3u_song_info: &M3USongInfo) -> Result<Self, Failure>
+    where
+        Self: Sized;
+
+    fn determine_is_this_type_from_uri(uri: &str) -> Result<bool, Failure>;
 }
 
 impl External for ExternalRun {
@@ -80,10 +87,6 @@ impl External for ExternalRun {
     fn song_duration(&self) -> Result<Duration, Failure> {
         self.as_external().song_duration()
     }
-
-    //fn get_song_info(&self, song: &Song) -> Result<SongInfo, Failure> {
-    //    self.as_external().get_song_info(song)
-    //}
 }
 
 /*
@@ -203,10 +206,19 @@ macro_rules! make_external_types {
                 }
             }
 
+            pub fn get_from_uri(uri: &str) -> Result<ExternalType, Failure> {
+                $(
+                    if <$song>::determine_is_this_type_from_uri(uri)? {
+                        return Ok(ExternalType::$backend);
+                    }
+                )*
+                Err(Failure::from((anyhow!("Unknown external type for URI: {}", uri), FailureType::Warning)))
+            }
+
             pub fn new_external_song(&self, string: &str) -> Result<ExternalSong, Failure> {
                 match self {
                     $(
-                        ExternalType::$backend => <$song>::new(string).map(ExternalSong::$backend),
+                        ExternalType::$backend => <$song>::from_uri(string).map(ExternalSong::$backend),
                     )*
                 }
             }
@@ -222,11 +234,22 @@ macro_rules! make_external_types {
             }
         }
 
+        impl PartialEq for ExternalType {
+            fn eq(&self, other: &Self) -> bool {
+                match (self, other) {
+                    $(
+                        (ExternalType::$backend, ExternalType::$backend) => true,
+                    )*
+                    _ => false,
+                }
+            }
+        }
+
         impl ExternalSongTrait for ExternalSong {
             // Note: This function is not intended to be used; it's here to satisfy the trait requirement.
             // Use ExternalType::new_external_song instead.
             // TODO: this will be chnaged later to remove confusion
-            fn new(_info: &str) -> Result<Self, Failure> where Self: Sized {
+            fn from_uri(_info: &str) -> Result<Self, Failure> where Self: Sized {
                 Err(Failure::from((anyhow!("Use ExternalType::new_external_song instead"), FailureType::Fatal)))
             }
             fn info(&self) -> Result<crate::internal::song::SongInfo, Failure> {
@@ -234,6 +257,31 @@ macro_rules! make_external_types {
                     $(
                         ExternalSong::$backend(song) => song.info(),
                     )*
+                }
+            }
+            fn to_m3u_song_info(&self) -> Result<M3USongInfo, Failure> {
+                match self {
+                    $(
+                        ExternalSong::$backend(song) => song.to_m3u_song_info(),
+                    )*
+                }
+            }
+            fn from_m3u_song_info(m3u_song_info: &M3USongInfo) -> Result<Self, Failure>
+            where
+                Self: Sized
+            {
+                match m3u_song_info.external_type {
+                    $(
+                        ExternalType::$backend => <$song>::from_m3u_song_info(m3u_song_info).map(ExternalSong::$backend),
+                    )*
+                }
+            }
+            fn determine_is_this_type_from_uri(uri: &str) -> Result<bool, Failure> {
+                match uri {
+                    $(
+                        _ if <$song>::determine_is_this_type_from_uri(uri)? => Ok(true),
+                    )*
+                    _ => Ok(false),
                 }
             }
         }
@@ -259,7 +307,7 @@ macro_rules! make_external_types {
         }
 
         pub fn get_new_external_run_from_song(song: &Song) -> Result<ExternalRun, Failure> {
-            match &song.song_type {
+            match &song.song_external {
                 $(
                     ExternalSong::$backend(_) => Ok(ExternalRun::$backend(<$run>::new(song)?)),
                 )*
