@@ -74,7 +74,7 @@ pub fn config() -> Result<arc_swap::Guard<std::sync::Arc<Config>>, Failure> {
 }
 
 /// updates the config values, only the fields that are Some will be updated, the rest will keep their old value
-pub fn update_config(log_level: Option<&str>, data_folder: Option<&str>, local_song_folder_path: Option<&str>, username: Option<&str>) -> Result<(), Failure> {
+pub fn update_config(data_folder: Option<&str>, local_song_folder_path: Option<&str>, username: Option<&str>) -> Result<(), Failure> {
     // if the server config is loaded, update the fields that are Some and keep the old value for the fields that are None
     let cfg = CONFIG.get().ok_or(Failure::from((anyhow!("Config not created"), FailureType::Fatal)))?;
     cfg.rcu(|cfg| {
