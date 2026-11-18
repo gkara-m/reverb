@@ -1,6 +1,7 @@
 use std::sync::{Arc, atomic::Ordering};
 use anyhow::anyhow;
 use quinn::{Connection, Incoming, RecvStream};
+use log::{debug, error, info};
 
 use reverb_core::{network::*, failure::failure::{Failure, FailureType}};
 use crate::{NEXT_ID, USERS, network::packet_handling::{handle_packet, handle_user_info}};
@@ -8,7 +9,7 @@ use crate::{NEXT_ID, USERS, network::packet_handling::{handle_packet, handle_use
 pub async fn handle_connection(conn: Incoming) -> Result<(), Failure> {
     let conn_bi = conn.await
         .map_err(|e| Failure::from((e.into(), FailureType::Warning)))?;
-    println!("Client connected");
+    info!("Client connected");
     let conn_uni = conn_bi.clone();
 
     let user_id = receive_user_info(&conn_uni).await?;
@@ -17,7 +18,7 @@ pub async fn handle_connection(conn: Incoming) -> Result<(), Failure> {
     tokio::spawn(async move {
         loop {
             if let Err(e) = handle_bi(&conn_bi, &user_id).await {
-                eprintln!("Server bi_connection error: {e}");
+                error!("Server bi_connection error: {e}");
                 remove_user(&user_id);
                 return;
             }
@@ -26,7 +27,7 @@ pub async fn handle_connection(conn: Incoming) -> Result<(), Failure> {
     tokio::spawn(async move {
         loop {
             if let Err(e) = handle_uni(&conn_uni, &user_id).await {
-                eprintln!("Server uni_connection error: {e}");
+                error!("Server uni_connection error: {e}");
                 remove_user(&user_id);
                 return;
             }
@@ -79,7 +80,7 @@ async fn handle_uni(conn: &Connection, user_id: &u16) -> Result<(), Failure> {
 async fn receive_user_info(conn: &Connection) -> Result<u16, Failure> {
     let recv = conn.accept_uni().await
         .map_err(|e| Failure::from((e.into(), FailureType::Warning)))?;
-    println!("received user info"); // DEBUG
+    debug!("Received user info");
     let data = read_incoming(recv).await?;
     let packet = Packet::parse(&data)?;
     Ok(handle_user_info(packet))

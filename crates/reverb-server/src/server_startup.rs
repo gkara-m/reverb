@@ -6,6 +6,7 @@ use rustls::pki_types::{CertificateDer, PrivateKeyDer, PrivatePkcs8KeyDer};
 use reverb_core::failure::failure::{Failure, FailureType};
 
 use crate::LISTEN_ADDR;
+use log::info;
 
 
 pub fn startup() -> Result<Endpoint, Failure> {
@@ -28,7 +29,7 @@ pub fn startup() -> Result<Endpoint, Failure> {
     let endpoint = quinn::Endpoint::server(server_config, LISTEN_ADDR.parse()
         .map_err(|e: std::net::AddrParseError| Failure::from((e.into(), FailureType::Fatal)))?) // address parse error
         .map_err(|e| Failure::from((e.into(), FailureType::Fatal)))?;
-    println!("Server listening and waiting for one client...");
+    info!("Server listening and waiting for one client...");
 
     Ok(endpoint)
 }

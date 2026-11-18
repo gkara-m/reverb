@@ -1,5 +1,6 @@
 use std::{fs, net::SocketAddr, sync::Arc};
 
+use log::{debug, error, info};
 use quinn::{Connection, TransportConfig};
 use quinn_proto::crypto::rustls::QuicClientConfig;
 use rustls::pki_types::CertificateDer;
@@ -15,7 +16,7 @@ pub(super) fn start_communicator_thread() {
     std::thread::spawn(move || {
         match tokio::runtime::Runtime::new().unwrap().block_on(async{
             let conn = connect_to_server().await?;
-            MAIN_SENDER.get().unwrap().clone().send(Command::ServerUpdateStatus(crate::internal::internet::connection::ConnectionStatus::Connected(tx))).unwrap_or_else(|e| eprintln!("Failed to send server update status command: {}", e));
+            MAIN_SENDER.get().unwrap().clone().send(Command::ServerUpdateStatus(crate::internal::internet::connection::ConnectionStatus::Connected(tx))).unwrap_or_else(|e| error!("Failed to send server update status command: {}", e));
             for packet in rx {
                 // Handle incoming messages
                 match packet.payload.query_or_notify() {
@@ -25,24 +26,24 @@ pub(super) fn start_communicator_thread() {
             }
             Ok(())
         }) {
-            Ok(_) => println!("Communicator thread exited normally"),
+            Ok(_) => info!("Communicator thread exited normally"),
             Err(e) => {
-                MAIN_SENDER.get().unwrap().clone().send(Command::Failure(e)).unwrap_or_else(|e| eprintln!("Failed to send failure command: {}", e));
-                MAIN_SENDER.get().unwrap().clone().send(Command::ServerUpdateStatus(crate::internal::internet::connection::ConnectionStatus::NotConnected)).unwrap_or_else(|e| eprintln!("Failed to send server update status command: {}", e));
+                MAIN_SENDER.get().unwrap().clone().send(Command::Failure(e)).unwrap_or_else(|e| error!("Failed to send failure command: {}", e));
+                MAIN_SENDER.get().unwrap().clone().send(Command::ServerUpdateStatus(crate::internal::internet::connection::ConnectionStatus::NotConnected)).unwrap_or_else(|e| error!("Failed to send server update status command: {}", e));
             }
         };
     });
 }
 
 async fn connect_to_server() -> Result<Connection, Failure> {
-    println!("Starting connection process to server: {}", server_config()?.server_address);
+    info!("Starting connection process to server: {}", server_config()?.server_address);
     // Locate the directory where the server's certificate is stored (shared location)
     let data_folder = &config()?.data_folder;
     let path = std::path::Path::new(data_folder); // TODO add command to add it to the config
     let cert_path = path.join(&server_config()?.server_cert_path);
 
 
-    println!("Loading server certificate from: {:?}", cert_path);
+    debug!("Loading server certificate from: {:?}", cert_path);
 
     // Create an empty root certificate store
     let mut roots = rustls::RootCertStore::empty();
@@ -96,11 +97,11 @@ async fn connect_to_server() -> Result<Connection, Failure> {
         .map_err(|e| Failure::from((e.into(), FailureType::Warning)))?;
     let conn = connecting.await
         .map_err(|e| Failure::from((e.into(), FailureType::Warning)))?;
-    println!("Successfully connected to server at {}", server_config()?.server_address);
+    info!("Successfully connected to server at {}", server_config()?.server_address);
 
 
     // send notification with complete header for server to identify us
-    println!("sending information about self to server");
+    debug!("sending information about self to server");
     let packet = Packet::new(
         config()?.username.clone().as_str(),
         "none",
@@ -117,7 +118,7 @@ async fn connect_to_server() -> Result<Connection, Failure> {
 
 async fn query(conn: Connection, packet: Packet) -> Result<(), Failure> {
 
-    println!("Sending query to server: ");
+    debug!("Sending query to server");
 
     // Open a bidirectional stream to the server
     let (mut send, mut recv) = conn.open_bi().await
@@ -131,21 +132,21 @@ async fn query(conn: Connection, packet: Packet) -> Result<(), Failure> {
     // Indicate that no more data will be sent on this stream
     send.finish()
     .map_err(|e| Failure::from((e.into(), "closing the sending data over internet", FailureType::Warning)))?;
-    println!("Sent: ");
+    debug!("Sent query");
 
     // Wait for the server's response and print it
     match recv.read_to_end(1024).await {
         Ok(data) => {
             let response_packet = Packet::parse(&data)?;
-            println!("Received response from server: ");
-            println!("Response version: {:?}", response_packet.version());
-            println!("Response username: {}", response_packet.username());
-            println!("Response group: {}", response_packet.group());
+            debug!("Received response from server");
+            debug!("Response version: {:?}", response_packet.version());
+            debug!("Response username: {}", response_packet.username());
+            debug!("Response group: {}", response_packet.group());
             MAIN_SENDER.get().unwrap().clone().send(Command::ServerResponse(response_packet))
-            .unwrap_or_else(|e| eprintln!("Failed to send server response command to main sender: {}", e));
+            .unwrap_or_else(|e| error!("Failed to send server response command to main sender: {}", e));
         }
         Err(e) => {
-            eprintln!("Receive error: {e}");
+            error!("Receive error: {e}");
         }
     }
 
@@ -154,7 +155,7 @@ async fn query(conn: Connection, packet: Packet) -> Result<(), Failure> {
 
 async fn notify(conn: Connection, packet: Packet) -> Result<(), Failure> {
     
-    println!("Sending notification to server: "); // CLIENT DEBUG
+    debug!("Sending notification to server");
 
     // Open a unidirectional stream to server 
     let mut send = conn.open_uni().await
@@ -169,7 +170,7 @@ async fn notify(conn: Connection, packet: Packet) -> Result<(), Failure> {
     send.finish()
     .map_err(|e| Failure::from((e.into(), "closing the sending data over internet", FailureType::Warning)))?;
     
-    println!("Sent!");
+    debug!("Sent notification");
 
     Ok(())
 }

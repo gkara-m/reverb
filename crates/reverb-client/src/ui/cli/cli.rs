@@ -16,6 +16,7 @@ use crate::{
 };
 
 use reverb_core::failure::failure::{Failure, FailureType};
+use log::{info, warn};
 
 pub(super) static PLAYLIST: Lazy<Arc<Mutex<String>>> = Lazy::new(|| Arc::new(Mutex::new("default playlist".to_string())));
 
@@ -149,7 +150,8 @@ pub fn run_cli(update_interval: u64, run_gui: bool) -> Result<(), Failure> {
     // input thread
     let (input_tx, input_rx) = std::sync::mpsc::channel::<String>();
 
-    println!("Starting UI...");
+    info!("Starting UI");
+
     let renderer = run_ui(input_tx, update_interval, run_gui);
 
 
@@ -183,7 +185,7 @@ pub fn handle_command(command: Command) -> Result<(), Failure> {
                         }
                         cli_ui::show_text_in_right_third(&format!("Online users:\n{}", users));
                     } else {
-                        println!("Failed to parse online users from server response");
+                        warn!("Failed to parse online users from server response");
                     }
                     Ok(())
                 },

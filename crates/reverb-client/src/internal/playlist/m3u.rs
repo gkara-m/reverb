@@ -1,5 +1,6 @@
 use std::{collections::HashMap, fs::File, io::BufRead, time::Duration};
 
+use log::{debug, info};
 use reverb_core::failure::failure::{Failure, FailureType};
 use anyhow::anyhow;
 use serde::{Deserialize, Serialize};
@@ -242,7 +243,7 @@ pub(super) fn file_to_m3u(file: File) -> Result<M3UPlaylist, Failure> {
         }
     } else {
         // TODO: need to allow the user to decide weather to convert or not.
-        println!("reading standard m3u playlist this may take a while...");
+        info!("Reading standard M3U playlist this may take a while");
         name = "Converted Playlist";
         external_type = None;
         let mut current_line = String::new();
@@ -256,7 +257,7 @@ pub(super) fn file_to_m3u(file: File) -> Result<M3UPlaylist, Failure> {
                 }
             }
         } {
-            println!("reading URI: {}", current_line);
+            debug!("Reading URI: {}", current_line.trim());
             if current_line.starts_with('#') || current_line.trim().is_empty() {
                 continue; // skip comments and empty lines
             } else {

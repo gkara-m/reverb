@@ -1,6 +1,7 @@
 use std::{fs::File, path::PathBuf};
 use anyhow::anyhow;
 use serde::{Deserialize, Serialize};
+use log::{debug, info};
 
 use crate::{config::config::config, external::external::ExternalType, internal::{playlist::m3u::{file_to_m3u, m3u_to_playlist, playlist_to_m3u_string}, song::Song}};
 use reverb_core::failure::failure::{Failure, FailureType};
@@ -104,13 +105,13 @@ impl Playlist {
     }
 
     pub fn load(name: &str) -> Result<Playlist, Failure> {
-        println!("Loading playlist: {}", name);
+        info!("Loading playlist: {}", name);
         let dir_str = config()?.data_folder.clone();
-        println!("Data folder: {}", dir_str);
+        debug!("Data folder: {}", dir_str);
         let mut dir = PathBuf::from(dir_str);
-        println!("Playlist directory: {:?}", dir);
+        debug!("Playlist directory: {:?}", dir);
         dir.push("playlists");
-        println!("Full playlist path: {:?}", dir.join(format!("{}.m3u", name)));
+        debug!("Full playlist path: {:?}", dir.join(format!("{}.m3u", name)));
 
         let m3u = file_to_m3u(
             File::open(dir.join(format!("{}.m3u", name)))

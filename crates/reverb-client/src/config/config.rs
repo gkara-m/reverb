@@ -2,6 +2,7 @@ use arc_swap::ArcSwap;
 use serde::{Deserialize, Serialize};
 use rand::random_range;
 use anyhow::anyhow;
+use log::{debug, info};
 
 use reverb_core::failure::failure::{Failure, FailureType};
 use once_cell::sync::OnceCell;
@@ -47,18 +48,18 @@ impl Config {
 
     // Check for config file, create default if not exists
     pub(super) fn load() -> Result<(), Failure> {
-        println!("Reading config... ");
+        info!("Reading config... ");
         let content = match std::fs::read_to_string(format!("{}config.toml", CONFIG_FOLDER)) {
             Ok(c) => Ok(c),
             Err(_) => {
-                println!("Config file not found, creating default... ");
+                debug!("Config file not found, creating default... ");
                 let default = Config::new_default()?;
                 toml::to_string(&default).map_err(|e| Failure::from((e.into(), FailureType::Fatal)))?;
                 Err(Failure::from((anyhow!("First run?: \n Default config created in {} \n check config and restart \n exiting automatically", CONFIG_FOLDER), FailureType::Warning)))
             }
         }?;
 
-        println!("Setting global variables... ");
+        info!("Setting global variables... ");
         //read config
         let config: Config = toml::from_str(&content).map_err(|e| Failure::from((e.into(), FailureType::Fatal)))?;
         CONFIG.set(ArcSwap::new(std::sync::Arc::new(config))).map_err(|_| Failure::from((anyhow!("Failed to set global config"), FailureType::Fatal)))?;

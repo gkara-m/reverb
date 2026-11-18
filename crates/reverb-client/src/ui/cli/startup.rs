@@ -1,5 +1,6 @@
 use std::path::Path;
 
+use log::{debug, info, warn};
 use reverb_core::failure::failure::{Failure, FailureType};
 
 use crate::{config::config::config, internal::playlist::playlist::Playlist};
@@ -25,34 +26,34 @@ impl Startup {
     }
 
     pub(super) fn load() -> Result<Startup, Failure> {
-        println!("Loading startup playlist...");
-        println!("Loading last played playlist...");
+        info!("Loading startup playlist");
+        info!("Loading last played playlist");
         let path = Path::new(&config()?.data_folder.clone()).join("cli_startup.toml");
-        println!("Startup file path: {:?}", path);
+        debug!("Startup file path: {:?}", path);
         let startup = 
         if path.exists() {
-            println!("Startup file exists, loading...");
+            debug!("Startup file exists, loading...");
             let content = std::fs::read_to_string(&path).map_err(|e| Failure::from((e.into(), FailureType::Fatal)))?;
-            println!("Startup file content: {}", content);
+            debug!("Startup file content: {}", content);
             toml::from_str(&content).map_err(|e| Failure::from((e.into(), FailureType::Fatal)))?
         } else {
-            println!("Startup file does not exist, creating default startup...");
+            info!("Startup file does not exist, creating default startup...");
             Playlist::new("default playlist", None)?;
-            println!("Default playlist created.");
+            info!("Default playlist created.");
             Startup {
                 last_played_playlist: "default playlist".into(),
             }
         };
-        println!("Startup loaded: last played playlist: {}", startup.last_played_playlist);
+        info!("Startup loaded: last played playlist: {}", startup.last_played_playlist);
         match Playlist::load(&startup.last_played_playlist) {
-            Ok(_) => {println!("Last played playlist '{}' loaded successfully.", startup.last_played_playlist);},
+            Ok(_) => {info!("Last played playlist '{}' loaded successfully", startup.last_played_playlist);},
             Err(e) => {
-                println!("Failed to load last played playlist '{}', error: {}. Attempting to continue with default playlist", startup.last_played_playlist, e);
+                warn!("Failed to load last played playlist '{}': {}. Continuing with default playlist", startup.last_played_playlist, e);
                 Playlist::new(&startup.last_played_playlist, None)?;
             }
         }
         startup.save()?;
-        println!("Startup saved.");
+        info!("Startup loaded and saved");
         Ok(startup)
     }
 }

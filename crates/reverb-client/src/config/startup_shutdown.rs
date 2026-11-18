@@ -1,11 +1,12 @@
 use std::path::Path;
 use anyhow::anyhow;
+use log::{info, warn};
 
 use crate::{config::{config::{Config, config}, data::StartupData}, internal::internal::Internal};
 use reverb_core::failure::failure::{Failure, FailureType};
 
 pub fn startup() -> Result<Internal, Failure> {
-    println!("Starting up... ");
+    info!("Starting up... ");
 
     Config::load()?;
 
@@ -13,7 +14,7 @@ pub fn startup() -> Result<Internal, Failure> {
     let data_folder = Path::new(&config.data_folder);
     
     // if exists, use it if not create and use
-    println!("Loading startup data... ");
+    info!("Loading startup data... ");
     let mut startup_data ;
     if data_folder.join("startup.toml").exists() {
         startup_data = toml::from_str(
@@ -23,11 +24,11 @@ pub fn startup() -> Result<Internal, Failure> {
     } else {
         std::fs::create_dir_all(data_folder).map_err(|e| Failure::from((e.into(), "create_dir_all failed", FailureType::Fatal)))?;
         startup_data = StartupData::new_default().map_err(|_| Failure::from((anyhow!("StartupData::new_default() Failed"), FailureType::Fatal)))?;
-        println!("First run?: \n Default startup data created in {} \n no need to restart, continuing automatically\n enjoy REVERB!", data_folder.display());
+        info!("First run: default startup data created in {}; continuing automatically", data_folder.display());
     }
 
     if !startup_data.last_shutdown_clean {
-        println!("Warning: Last shutdown was not clean, data may be corrupted, lost or incorrect. \n Attempting to continue... ");
+        warn!("Last shutdown was not clean; data may be corrupted, lost or incorrect - attempting to continue");
     }
 
     startup_data.last_shutdown_clean = false;
@@ -38,15 +39,15 @@ pub fn startup() -> Result<Internal, Failure> {
 }
 
 pub fn shutdown (internal: &Internal) -> Result<(), Failure> {
-    println!("Shutting down... ");
+    info!("Shutting down");
 
-    println!("Saving startup data... ");
+    info!("Saving startup data... ");
     StartupData {
         queue: internal.queue_get().clone(),
         last_shutdown_clean: true,
     }.save()?;
 
-    println!("Shutting down internal... ");
+    info!("Shutting down internal components ...");
     internal.shutdown()?;
 
     Ok(())

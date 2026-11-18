@@ -1,3 +1,4 @@
+use log::{debug, info};
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -20,7 +21,7 @@ pub(super) struct StartupData {
 
 impl StartupData {
     pub(super) fn new_default() -> Result<StartupData, Failure> {
-        println!("Attempting to initialize Startup Song");
+        debug!("Initializing default startup song");
         let song = Song {
             song_external: ExternalSong::LOCAL(LocalSong::from_uri("default_song.mp3")?),
             info: SongInfo {
@@ -28,14 +29,14 @@ impl StartupData {
                 artists: vec!["Unknown Artist".to_string()],
             },
         };
-        println!("Successfully initialized Startup Song");
+        info!("Initialized startup song");
         let startup_data = StartupData {
             queue: Queue::new(song),
             last_shutdown_clean: true,
         };
-        println!("Successfully initialized StartupData");
+        debug!("Initialized startup data");
         startup_data.save()?;
-        println!("Successfully saved StartupData");
+        info!("Saved startup data");
         Ok(startup_data)
     }
 
