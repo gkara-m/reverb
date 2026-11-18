@@ -1,7 +1,7 @@
 use std::{env, thread};
 use std::{sync::mpsc, time::Duration};
 
-use internal::song::Song;
+use log::{error, info, warn};
 use once_cell::sync::OnceCell;
 use reverb_core::network::Packet;
 use ui::cli::cli;
@@ -19,14 +19,21 @@ mod external;
 mod internal;
 mod ui;
 
+use internal::song::Song;
+
 
 pub static MAIN_SENDER: OnceCell<mpsc::Sender<Command>> = OnceCell::new();
 
 fn main() {
     unsafe {// safe since there are no other threads running yet
         env::set_var("RUST_BACKTRACE", "1");
+        if env::var("RUST_LOG").is_err() {
+            env::set_var("RUST_LOG", "trace"); // default log level if not set by user, currently set to trace for development
+        }
     }
 
+    // initialise the logger
+    env_logger::init();
 
     //clear terminal first without clearing scrollback buffer
     let (_, height) = match crossterm::terminal::size() {
@@ -45,20 +52,20 @@ fn main() {
 
     let mut internal = match startup() {
         Ok(i) => {
-            println!("Startup successful!");
+            info!("Startup successful");
             i
         }
         Err(e) => {
-            eprintln!("Startup error: {} \n exiting", e);
+            error!("Startup error: {} - exiting", e);
             return;
         }
     };
 
     // start CLI thread
     thread::spawn(move || {
-        println!("Starting CLI...");
+        info!("Starting CLI");
         match cli::run_cli(100, false) {
-            Ok(_) => println!("CLI exited successfully"),
+            Ok(_) => info!("CLI exited successfully"),
             Err(e) => MAIN_SENDER.get().unwrap().send(Command::Failure(e)).unwrap(),
         }
     });
@@ -94,20 +101,16 @@ fn main() {
     loop {
         match shutdown(&internal) {
             Ok(_) => {
-                println!("Shutdown successfull \n exiting");
+                info!("Shutdown successful - exiting");
                 break;
             }
             Err(e) => match e.failure_type() {
                 FailureType::Fatal => {
-                    eprintln!("Fatal Shutdown error: {} \n exiting immediately see logs for details",
-                        e
-                    );
+                    error!("Fatal shutdown error: {} - exiting immediately", e);
                     break;
                 }
                 FailureType::Warning => {
-                    eprintln!("Shutdown warning: {} trying again press ^C to force exit \r",
-                        e
-                    );
+                    warn!("Shutdown warning: {} - trying again; press Ctrl+C to force exit", e);
                 }
             },
         }

@@ -4,6 +4,7 @@ use crate::network_command::ID::NetworkCommandID;
 use crate::failure::failure::{Failure, FailureType};
 use crate::network_command::{default_command::DefaultCommand, echo::Echo, get_online_users::GetOnlineUsers, online_users::OnlineUsers, set_echo_availability::SetEchoAvailability, skip::Skip, user_data::UserData};
 use anyhow::anyhow;
+use log::debug;
 
 pub enum QueryOrNotify {
     Query,
@@ -12,7 +13,7 @@ pub enum QueryOrNotify {
 
 // parse data to the apporpriate command from the netowrk
 pub fn parse_command(data: Vec<u8>) -> Result<Box<dyn NetworkCommand + Send + Sync>, Failure> {
-    println!("command size: {} bytes", data.len()); // Debug line
+    debug!("command size: {} bytes", data.len());
     let cmd_number = data[0];
 
     match cmd_number {

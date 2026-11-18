@@ -5,6 +5,7 @@ use crate::{Command, MAIN_SENDER, config::internet::{server_config, update_serve
     }
 };
 use reverb_core::{failure::failure::{Failure, FailureType}};
+use log::warn;
 
 use std::{num::NonZeroUsize, sync::mpsc};
 use lru::LruCache;
@@ -304,16 +305,16 @@ impl Internal {
                     }
                     if time_left < Duration::from_secs(1) {
                         match sender.send(Command::QueueNext) {
-                            Err(e) => println!(
-                                "Failed to send QueueNext command queue may not skip automatically: {}",
+                            Err(e) => warn!(
+                                "Failed to send QueueNext command; queue may not skip automatically: {}",
                                 e
                             ),
                             _ => (),
                         };
                     } else {
                         match sender.send(Command::UpdateAutoskip) {
-                            Err(e) => println!(
-                                "Failed to send UpdateAutoskip command queue may not skip automatically: {}",
+                            Err(e) => warn!(
+                                "Failed to send UpdateAutoskip command; queue may not skip automatically: {}",
                                 e
                             ),
                             _ => (),

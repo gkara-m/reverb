@@ -1,5 +1,6 @@
 use std::sync::mpsc;
 use anyhow::{Result, anyhow};
+use log::{debug, info};
 
 use crate::{config::{config::config, internet::server_config}, internal::internet::communicator};
 use reverb_core::{network_command::helpers::NetworkCommand, failure::failure::{Failure, FailureType}, network::*};
@@ -39,7 +40,7 @@ impl InternetClient {
                 self.connection_status = ConnectionStatus::Connecting;
 
                 let server_config = server_config()?;
-                println!("Attempting to connect to server at {} with name {} and certificate path {}", server_config.server_address, server_config.server_name, server_config.server_cert_path);
+                info!("Attempting to connect to server at {} with name {} and certificate path {}", server_config.server_address, server_config.server_name, server_config.server_cert_path);
                 communicator::start_communicator_thread();
                 Ok(())
             },
@@ -47,7 +48,7 @@ impl InternetClient {
     }
 
     pub fn send_message(&mut self, command: Box<dyn NetworkCommand + Send + Sync>) -> Result<(), Failure> {
-        println!("Attempting to send message to server: ");
+        debug!("Attempting to send message to server");
         let packet = Packet::new(
             config()?.username.as_str(),
             self.group.clone().unwrap_or_else(|| "none".to_string()).as_str(),

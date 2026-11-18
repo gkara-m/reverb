@@ -3,11 +3,10 @@ use std::time::Duration;
 use anyhow::anyhow;
 use serde::{Deserialize, Serialize};
 
-use crate::Song;
 use crate::external::local::{Local, LocalSong};
 use crate::external::placeholder::{PlaceholderExternalSong, PlaceholderRun};
 use crate::internal::playlist::m3u::M3USongInfo;
-use crate::internal::song::SongInfo;
+use crate::internal::song::{Song, SongInfo};
 
 use reverb_core::failure::failure::{Failure, FailureType};
 

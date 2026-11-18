@@ -2,6 +2,7 @@ use std::fmt;
 
 use crate::{network_command::{default_command::DefaultCommand, helpers::{NetworkCommand, parse_command, serialize}}, failure::failure::{Failure, FailureType}}; 
 use anyhow::anyhow;
+use log::debug;
 
 
 // Major release when there is a breaking change to the packet structure or protocol.
@@ -62,7 +63,7 @@ impl Packet {
     }
 
     pub fn parse(_data: &[u8]) -> Result<Packet, Failure> {
-        println!("data length to parse: {} bytes", _data.len()); // Debug line
+        debug!("data length to parse: {} bytes", _data.len());
         if _data.len() < 52 {
             return Err(Failure::from((anyhow!("Data too short to be a valid packet"), FailureType::Warning)));
         }

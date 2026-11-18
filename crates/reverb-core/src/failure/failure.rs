@@ -1,5 +1,5 @@
 use anyhow::Error as AnyError;
-use std::sync::Arc;
+use std::{env, sync::Arc};
 
 #[derive(Debug, Clone)]
 pub enum Failure {
@@ -28,12 +28,28 @@ impl std::fmt::Display for Failure {
             Failure::Fatal(e, msg) => (e, msg),
             Failure::Warning(e, msg) => (e, msg),
         };
-        write!(f, "{} \n{}", if msg.is_empty() {
-            e.to_string()
-        } else {
-            format!("{}: {}", msg, e)
-        }, 
-        e.backtrace())
+        match self.failure_type() {
+            // if fetal, always print the backtrace, if warning, only print the backtrace if the log level is trace or debug
+            FailureType::Fatal => write!(f, "{} \n{}", if msg.is_empty() {
+                    e.to_string()
+                } else {
+                    format!("{}: {}", msg, e)
+                }, 
+                e.backtrace()),
+            FailureType::Warning => match env::var("RUST_LOG").unwrap_or("trace".to_string()).to_lowercase().as_str() {
+                "trace" | "debug" => write!(f, "{} \n{}", if msg.is_empty() {
+                    e.to_string()
+                } else {
+                    format!("{}: {}", msg, e)
+                }, 
+                e.backtrace()),
+                _ => write!(f, "{}", if msg.is_empty() {
+                    e.to_string()
+                } else {
+                    format!("{}: {}", msg, e)
+                }),
+            },
+        }
     }
 }
 

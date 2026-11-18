@@ -10,6 +10,8 @@ mod network;
 mod server_startup;
 mod command_handling;
 
+use log::{error, info};
+
 
 // The address and port the server will listen on
 const LISTEN_ADDR: &str = "127.0.0.1:4433";
@@ -26,21 +28,22 @@ static NEXT_ID: AtomicU16 = AtomicU16::new(1);
 
 #[tokio::main]
 async fn main() {
+    env_logger::init();
     let _ = rustls::crypto::ring::default_provider().install_default();
-    println!("Server starting on {}", LISTEN_ADDR);
+    info!("Server starting on {}", LISTEN_ADDR);
 
     // run server startup
     let endpoint = match server_startup::startup() {
         Ok(endpoint) => endpoint,
         Err(failure) => {
-            eprintln!("Server startup error: {failure}");
+            error!("Server startup error: {failure}");
             std::process::exit(1);
         }
     };
 
     loop {
         if let Err(e) = run(&endpoint).await {
-            eprintln!("Server runtime error: {e}");
+            error!("Server runtime error: {e}");
             if let Failure::Fatal(_, _) = e {
                 std::process::exit(2)
             }
@@ -54,7 +57,7 @@ async fn run(endpoint: &Endpoint) -> Result<(), Failure> {
     if let Some(conn) = endpoint.accept().await {
         tokio::spawn(async move {
             if let Err(e) = connection::handle_connection(conn).await {
-                eprintln!("Server runtime error: error handling connection: {e}")
+                error!("Server runtime error: error handling connection: {e}")
             };
         });
     }
